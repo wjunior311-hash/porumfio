@@ -249,7 +249,7 @@ const itemCatalog=[
  {name:"Traje da corte",cat:"Vestuário",price:"T$ 100",spaces:1,data:"Diplomacia",desc:"Traje refinado para ambientes da nobreza."},
  {name:"Veste de seda",cat:"Vestuário",price:"T$ 25",spaces:1,data:"—",desc:"Roupa elegante de seda."},
  {name:"Mochila de aventureiro",cat:"Equipamento",price:"T$ 50",spaces:0,data:"+2 carga",desc:"Mochila resistente cheia de bolsos.",effect:"+2 espaços de capacidade; não ocupa espaço."},
- {name:"Bálsamo restaurador",cat:"Alquímico",price:"T$ 10",spaces:0.5,data:"2d4 PV",desc:"Pasta verde e fedorenta de ervas medicinais.",effect:"Ação completa para consumir e recuperar 2d4 PV."},
+
  {name:"Essência de mana",cat:"Alquímico",price:"T$ 50",spaces:0.5,data:"1d4 PM",desc:"Poção de ervas raras e compostos alquímicos.",effect:"Ação padrão para beber e recuperar 1d4 PM."},
  {name:"Abraço da Noite",cat:"Alimentação divina",price:"T$ 3",spaces:0,data:"benefício até o fim do dia",desc:"Doce gelado dedicado a Tenebra.",effect:"Permite usar Carícia Sombria uma vez; se já possuir, pode usá-la causando 4d6 trevas."},
  {name:"Assado de Entranhas",cat:"Alimentação divina",price:"T$ 2",spaces:0,data:"+1 dano corpo a corpo",desc:"Assado que desperta instintos primais.",effect:"Uma vez até o fim do dia, +1 nas rolagens de dano corpo a corpo por uma cena."},
