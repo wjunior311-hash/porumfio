@@ -23,6 +23,10 @@ async function initCloud(){
     }
     cloudReady=true;
     cloudInitializing=false;
+    if(cloudDirty){
+      for(const name of Object.keys(state)) await syncCloud(name);
+      cloudDirty=false;
+    }
     subscribeCloud();
     render();
   }catch(err){
