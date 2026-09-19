@@ -170,9 +170,23 @@ function render(){
  bindBody();
 }
 function masterView(){
- const cards=Object.entries(state).map(([n,c])=>masterCard(n,c)).join("");
- return `<div class="master-banner"><div><div class="master-banner-kicker">⚔️ MESA DE JOGO</div><strong>CONTROLE DA MESA</strong><span>Gerencie recursos, condições e observações de toda a party.</span></div><div class="master-live"><i></i><b>AO VIVO</b><small>sincronizado</small></div></div><div class="master-summary"><div><span>PERSONAGENS</span><b>5</b></div><div><span>EM COMBATE</span><b>${Object.values(state).filter(c=>c.conditions.length).length}</b></div><div><span>EFEITOS ATIVOS</span><b>${Object.values(state).reduce((n,c)=>n+c.conditions.length,0)}</b></div></div><div class="master-grid">${cards}</div><div class="sync">● Sincronizado em tempo real com a mesa</div>`;
+ const entries=Object.entries(state);
+ const effects=entries.reduce((n,[,c])=>n+(c.conditions||[]).length,0);
+ const active=entries.filter(([,c])=>(c.conditions||[]).length).length;
+ const cards=entries.map(([n,c])=>masterCard(n,c)).join("");
+ return `<div class="master-banner">
+   <div><div class="master-banner-kicker">⚔️ MESA DE JOGO</div><strong>CONTROLE DA MESA</strong><span>Controle em tempo real • todos acompanham a batalha</span></div>
+   <div class="master-live"><i></i><b>MESA ATIVA</b><small>sincronizado</small></div>
+  </div>
+  <div class="master-summary">
+   <div><span>PERSONAGENS</span><b>${entries.length}</b></div>
+   <div><span>COM EFEITOS</span><b>${active}</b></div>
+   <div><span>EFEITOS ATIVOS</span><b>${effects}</b></div>
+  </div>
+  <div class="master-grid">${cards}</div>
+  <div class="master-footer"><span>⚔️ POR UM FIO</span><small>Controle da mesa em tempo real</small></div>`;
 }
+
 function masterCard(n,c){
  const hpPct=Math.max(0,Math.min(100,c.hp/c.maxHp*100)),mpPct=Math.max(0,Math.min(100,c.mp/c.maxMp*100));
  const chips=conditionCatalog.map(([ic,label])=>`<button class="condition-chip ${c.conditions.includes(label)?"on":""}" data-condition="${n}" data-value="${esc(label)}"><span>${ic}</span>${label}</button>`).join("");
