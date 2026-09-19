@@ -508,5 +508,15 @@ function uploadPhoto(e){
  reader.onload=()=>{state[selected].image=reader.result;save();render();};
  reader.readAsDataURL(file);
 }
-render();
+window.addEventListener("error",e=>{
+  console.error("Por Um Fio:",e.error||e.message);
+  const app=document.querySelector("#app");
+  if(app&&!app.innerHTML.trim()) app.innerHTML='<div style="padding:40px;color:#fff;font-family:system-ui"><h2>Por Um Fio</h2><p>O app encontrou um erro ao carregar.</p><button onclick="location.reload()" style="padding:12px 16px;border-radius:10px">Recarregar</button></div>';
+});
+if(!state[selected]) selected=Object.keys(state)[0]||"Hippion";
+try{migrate();render();}catch(err){
+  console.error("Por Um Fio — erro ao iniciar:",err);
+  const app=document.querySelector("#app");
+  if(app)app.innerHTML='<div style="padding:40px;color:#fff;font-family:system-ui"><h2>Por Um Fio</h2><p>Erro ao carregar a ficha. Recarregue a página.</p><button onclick="localStorage.removeItem(KEY);location.reload()" style="padding:12px 16px;border-radius:10px">Recuperar ficha</button></div>';
+}
 initCloud();
