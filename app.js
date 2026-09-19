@@ -161,7 +161,7 @@ function migrate(){
     if(typeof c.money!=="number" || !Number.isFinite(c.money)) c.money=Number(b.money)||0;
     c.maxLoad=10+(Number(c.attrs?.FOR)||0)*2;
     if(!Array.isArray(c.items)) c.items=clone(b.items);
-    c.items=c.items.map(x=>Array.isArray(x)?x:[x,1]);
+    c.items=c.items.map(x=>{if(Array.isArray(x))return [x[0],Number(x[1]??1),typeof x[2]==="string"?x[2]:""];return [x,1,""];});
     if(!Array.isArray(c.trained)) c.trained=clone(b.trained);
     if(!c.powers || !Array.isArray(c.powers) || typeof c.powers[0]==="string") c.powers=clone(b.powers);
     if(!c.skills) c.skills=clone(b.skills);
