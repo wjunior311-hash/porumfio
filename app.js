@@ -58,6 +58,7 @@ function subscribeCloud(){
     localStorage.setItem(KEY,JSON.stringify(state));
     remoteApplying=false;
     render();
+    if(cloudDirty) syncCloud();
   },err=>console.warn("Firebase listener:",err));
 }
 
@@ -115,9 +116,9 @@ const fixedCharacterImages={
 };
 
 function migrate(){
-  if(state.Zuri && state.Zuri._sheetVersion!==2){
+  if(state.Zuri && state.Zuri._sheetVersion!==3){
     const keep={image:state.Zuri.image||fixedCharacterImages.Zuri,conditions:Array.isArray(state.Zuri.conditions)?state.Zuri.conditions:[],masterNote:typeof state.Zuri.masterNote==="string"?state.Zuri.masterNote:""};
-    state.Zuri=clone(base.Zuri); Object.assign(state.Zuri,keep); state.Zuri._sheetVersion=2; cloudDirty=true;
+    state.Zuri=clone(base.Zuri); Object.assign(state.Zuri,keep); state.Zuri._sheetVersion=3; cloudDirty=true;
   }
   Object.entries(base).forEach(([name,b])=>{
     if(!state[name]) state[name]=clone(b);
