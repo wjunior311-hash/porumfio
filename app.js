@@ -141,8 +141,8 @@ const specialWeaponData={
   }
 };
 const itemCatalog=[
- {name:"Varinha arcana",cat:"Esotérico",price:"T$ 50",spaces:2,data:"CD +1",desc:"Uma varinha típica, feita de madeira de boa qualidade e entalhada com runas.",effect:"A CD para resistir a suas magias arcanas aumenta em +1."},
- {name:"Luva de Ferro",cat:"Esotérico",price:"T$ 50",spaces:1,data:"Bônus +1",desc:"Um conjunto de dedais interligados por correntes.",effect:"Suas magias arcanas pessoais que concedem bônus na Defesa ou em testes de resistência têm esse bônus aumentado em +1."},
+ {name:"Varinha arcana",cat:"Esotérico",price:"T$ 100",spaces:1,data:"CD +1",desc:"Uma varinha típica, feita de madeira de boa qualidade e entalhada com runas.",effect:"A CD para resistir a suas magias arcanas aumenta em +1."},
+ {name:"Luva de Ferro",cat:"Esotérico",price:"T$ 150",spaces:1,data:"Bônus +1",desc:"Um conjunto de dedais interligados por correntes.",effect:"Suas magias arcanas pessoais que concedem bônus na Defesa ou em testes de resistência têm esse bônus aumentado em +1."},
  {name:"Adaga",cat:"Arma simples",price:"T$ 2",spaces:1,data:"1d4 • crítico 19 • curto • perfuração",desc:"Faca afiada, facilmente escondida. Pode usar Destreza no ataque e pode ser arremessada.",effect:"+5 em Ladinagem para ocultá-la."},
  {name:"Espada curta",cat:"Arma simples",price:"T$ 10",spaces:1,data:"1d6 • crítico 19 • perfuração",desc:"Espada comum, usada por guardas e como arma secundária."},
  {name:"Foice",cat:"Arma simples",price:"T$ 4",spaces:1,data:"1d6 • crítico x3 • corte",desc:"Ferramenta agrícola com lâmina curva.",effect:"Arma tradicional de druidas."},
