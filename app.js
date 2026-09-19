@@ -139,15 +139,17 @@ const fixedCharacterImages={
 };
 
 function migrate(){
-  if(state.Neo && state.Neo._sheetVersion!==3){
+  if(state.Neo){
     state.Neo.attacks=clone(base.Neo.attacks);
     state.Neo.items=clone(base.Neo.items);
-    state.Neo._sheetVersion=3; cloudDirty=true;
+    state.Neo._sheetVersion=3;
+    cloudDirty=true;
   }
-  if(state.Hippion && state.Hippion._sheetVersion!==3){
+  if(state.Hippion){
     state.Hippion.attacks=clone(base.Hippion.attacks);
     state.Hippion.items=clone(base.Hippion.items);
-    state.Hippion._sheetVersion=3; cloudDirty=true;
+    state.Hippion._sheetVersion=3;
+    cloudDirty=true;
   }
   if(state.Zuri && state.Zuri._sheetVersion!==3){
     const keep={image:state.Zuri.image||fixedCharacterImages.Zuri,conditions:Array.isArray(state.Zuri.conditions)?state.Zuri.conditions:[],masterNote:typeof state.Zuri.masterNote==="string"?state.Zuri.masterNote:""};
