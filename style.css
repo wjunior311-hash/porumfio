@@ -102,3 +102,5 @@
 }
 
 @media (max-width: 760px){.skills{display:block!important;width:100%!important}.skills .skill{display:flex!important;width:100%!important;min-width:0!important;max-width:none!important;margin-bottom:8px}.skills .skill button{min-width:0!important;overflow:visible!important}.skills .skill-edit{flex:0 0 auto!important}.content{overflow-x:hidden!important}}
+
+.magic .power-text{white-space:pre-line}
