@@ -73,3 +73,5 @@
 @media(max-width:1200px){.master-grid{grid-template-columns:repeat(3,minmax(200px,1fr))!important}}
 @media(max-width:760px){.master-grid{grid-template-columns:repeat(2,minmax(160px,1fr))!important}}
 @media(max-width:520px){.master-grid{grid-template-columns:1fr!important}.master-card-top{min-height:290px}.master-avatar{height:290px!important}}
+
+.resource .controls{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.resource .controls button{min-width:0;padding:8px 4px;font-size:11px}
