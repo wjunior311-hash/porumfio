@@ -9,6 +9,10 @@ App de mesa para a campanha de Tormenta20.
 - Poderes
 - Inventário
 - Perícias com rolagem
+- Painel do Mestre com controle de todos os personagens
+- Controle de PV/PM pelo Mestre
+- Condições e estados de combate (incluindo Preso, Flanqueado, Envenenado e condições do sistema)
+- Anotações rápidas por personagem
 - Salvamento local no navegador
 
 ## Importante
