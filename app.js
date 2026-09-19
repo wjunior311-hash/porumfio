@@ -274,7 +274,7 @@ function magicView(){const list=magicData[selected]||[];if(!list.length)return '
  <div class="capacity-note ${full?"over":""}">Capacidade = 10 + 2 × Força (${c.attrs.FOR}). Cada item ocupa os espaços indicados na ficha.</div>
  <div class="slot-grid">${slots}</div>
  <div class="inventory-add"><input id="newitem" placeholder="Nome do item…"><input id="newsize" type="number" min="0" step="0.5" value="1" aria-label="Espaços"><button id="additem">+ Item</button></div>
- <div class="list">${c.items.map((p,i)=>`<div class="row item-row"><div class="item-icon">◈</div><div class="item-main"><b>${esc(p[0])}</b><div class="sub">${p[1]} espaço${p[1]==1?"":"s"}</div></div><button class="smallbtn" data-remove="${i}">×</button></div>`).join("")}</div>
+ <div class="list">${c.items.map((p,i)=>`<div class="row item-row"><div class="item-icon">◈</div><div class="item-main"><b>${esc(p[0])}</b><div class="sub">${p[1]} espaço${p[1]==1?"":"s"}</div><input class="item-note" data-item-note="${i}" value="${esc(p[2]||"")}" placeholder="Anotação do item…"></div><button class="smallbtn" data-remove="${i}" title="Remover item">×</button></div>`).join("")}</div>
  <div class="sync">Cada alteração fica salva neste aparelho.</div>`;
 }
 
@@ -290,9 +290,10 @@ function bindBody(){
  document.querySelectorAll("[data-attr]").forEach(i=>i.onchange=()=>{const v=Number(i.value);if(Number.isFinite(v)){state[selected].attrs[i.dataset.attr]=v;state[selected].maxLoad=capacity(state[selected]);save();render()}});
  document.querySelectorAll("[data-attack]").forEach(b=>b.onclick=()=>{const a=state[selected].attacks[Number(b.dataset.attack)],d=1+Math.floor(Math.random()*20),bonus=Number(a[1].replace("+",""));toast(a[0]+": d20 "+d+" + "+a[1]+" = "+(d+bonus))});
  document.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>{const n=b.dataset.skill,v=state[selected].skills[n];if(v==null)return toast(n+": perícia não disponível na ficha.");const d=1+Math.floor(Math.random()*20);toast(n+": d20 "+d+" + "+v+" = "+(d+v))});
+ document.querySelectorAll("[data-item-note]").forEach(i=>i.onchange=()=>{const idx=Number(i.dataset.itemNote);state[selected].items[idx][2]=i.value;save()});
  document.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{state[selected].items.splice(Number(b.dataset.remove),1);save();render()});
  const add=$("#additem");
- if(add)add.onclick=()=>{const name=$("#newitem").value.trim(),size=Number($("#newsize").value);if(!name)return; if(size<0)return; const c=state[selected];if(load(c)+size>capacity(c))return toast("A mochila não comporta esse item.");c.items.push([name,size]);save();render()};
+ if(add)add.onclick=()=>{const name=$("#newitem").value.trim(),size=Number($("#newsize").value);if(!name)return; if(size<0)return; const c=state[selected];if(load(c)+size>capacity(c))return toast("A mochila não comporta esse item.");c.items.push([name,size,""]);save();render()};
 }
 
 function uploadPhoto(e){
