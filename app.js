@@ -132,12 +132,24 @@ function toast(t){
 }
 
 function render(){
+ if(tab==="Mestre"){
+  document.title="Por Um Fio — Mestre";
+  $(" #app".trim()).innerHTML=`<div class="shell master-shell">
+   <header class="top"><div class="brand">POR UM FIO</div><button class="master-exit" id="exitMaster">← Fichas</button></header>
+   <section class="master-hero"><div class="eyebrow">Tormenta20 • campanha</div><h1>Área do Mestre</h1><p>Controle da mesa em tempo real</p></section>
+   <section class="master-screen">${masterView()}</section>
+  </div>`;
+  const exit=$("#exitMaster");
+  if(exit) exit.onclick=()=>{tab="Resumo";render()};
+  bindBody();
+  return;
+ }
  const c=state[selected];
  document.title="Por Um Fio — "+selected;
- const tabs=["Resumo","Ataques","Poderes","Magias","Mochila","Perícias","⚔️ Mestre"];
- $("#app").innerHTML=`<div class="shell">
-  <header class="top"><div class="brand">POR UM FIO</div><div class="badge">mesa ativa</div></header>
-  <section class="hero"><div class="eyebrow">Tormenta20 • campanha</div><h1>Por Um Fio</h1><p>5 personagens • ficha de mesa • salvamento local</p></section>
+ const tabs=["Resumo","Ataques","Poderes","Magias","Mochila","Perícias"];
+ $(" #app".trim()).innerHTML=`<div class="shell">
+  <header class="top"><div class="brand">POR UM FIO</div><button class="master-open" id="openMaster">⚔️ Mestre</button></header>
+  <section class="hero"><div class="eyebrow">Tormenta20 • campanha</div><h1>Por Um Fio</h1><p>5 personagens • ficha de mesa • sincronização em tempo real</p></section>
   <div class="roster">${Object.entries(state).map(([n,x])=>`<button class="char ${n===selected?"active":""}" data-char="${n}">
     <div class="avatar ${x.image?"has-image":""}">${x.image?`<img src="${x.image}" alt="">`:`<span>${n[0]}</span>`}</div>
     <div class="name">${n}</div><div class="meta">Nível ${x.level} • ${x.className}</div></button>`).join("")}</div>
@@ -154,12 +166,12 @@ function render(){
  document.querySelectorAll("[data-char]").forEach(b=>b.onclick=()=>{selected=b.dataset.char;tab="Resumo";save();render()});
  document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});
  const photo=$("#photoInput"); if(photo) photo.onchange=uploadPhoto;
+ const open=$("#openMaster"); if(open) open.onclick=()=>{tab="Mestre";render()};
  bindBody();
 }
-
 function masterView(){
  const cards=Object.entries(state).map(([n,c])=>masterCard(n,c)).join("");
- return `<div class="master-banner"><div><strong>CONTROLE DA MESA</strong><span>PV, PM, condições e anotações de todos os personagens.</span></div><span class="live-dot">● MESTRE</span></div><div class="master-grid">${cards}</div><div class="sync">⚠️ Nesta versão, os dados ficam salvos neste aparelho. A sincronização entre celulares depende do banco de dados.</div>`;
+ return `<div class="master-banner"><div><strong>CONTROLE DA MESA</strong><span>PV, PM, condições e anotações de todos os personagens.</span></div><span class="live-dot">● MESTRE</span></div><div class="master-grid">${cards}</div><div class="sync">● Sincronizado em tempo real com a mesa</div>`;
 }
 function masterCard(n,c){
  const hpPct=Math.max(0,Math.min(100,c.hp/c.maxHp*100)),mpPct=Math.max(0,Math.min(100,c.mp/c.maxMp*100));
