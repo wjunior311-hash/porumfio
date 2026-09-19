@@ -1,5 +1,59 @@
 const KEY="porumfio-v1";
 
+const firebaseConfig={
+  apiKey:"AIzaSyBx3o9HmKLndbsfeKj1EkP0nt_nFL2eEY",
+  authDomain:"por-um-fio.firebaseapp.com",
+  projectId:"por-um-fio",
+  storageBucket:"por-um-fio.firebasestorage.app",
+  messagingSenderId:"874474910219",
+  appId:"1:874474910219:web:88305c7b0179f3fa6dcd0e"
+};
+let db=null,cloudReady=false,remoteApplying=false,cloudUnsubscribe=null;
+
+function initCloud(){
+  if(!window.firebase)return;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.firestore();
+    firebase.auth().signInAnonymously().then(()=>{
+      cloudReady=true;
+      subscribeCloud();
+    }).catch(err=>console.warn("Firebase Auth:",err));
+  }catch(err){console.warn("Firebase:",err);}
+}
+function cloudSnapshot(){
+  const payload=clone(state);
+  Object.values(payload).forEach(c=>{c.image="";});
+  return payload;
+}
+function syncCloud(){
+  if(!cloudReady||!db||remoteApplying)return;
+  db.collection("campaign").doc("state").set({
+    state:cloudSnapshot(),
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(err=>console.warn("Firebase sync:",err));
+}
+function subscribeCloud(){
+  if(!db)return;
+  if(cloudUnsubscribe)cloudUnsubscribe();
+  cloudUnsubscribe=db.collection("campaign").doc("state").onSnapshot(snap=>{
+    if(!snap.exists){syncCloud();return;}
+    const remote=snap.data()?.state;
+    if(!remote)return;
+    remoteApplying=true;
+    const localImages={};
+    Object.entries(state).forEach(([n,c])=>{localImages[n]=c.image||"";});
+    state=remote;
+    migrate();
+    Object.entries(localImages).forEach(([n,img])=>{if(state[n]&&img)state[n].image=img;});
+    localStorage.setItem(KEY,JSON.stringify(state));
+    remoteApplying=false;
+    render();
+initCloud();
+  },err=>console.warn("Firebase listener:",err));
+}
+
+
 const magicData={Hippion:[["Comando","1º • Encantamento • Padrão • Curto • 1 rodada • 1 PM","Dá uma ordem irresistível: Fuja, Largue, Pare, Senta ou Venha."],["Sono","1º • Encantamento • Padrão • Curto • Cena • 1 PM","Se falhar, fica inconsciente e caído ou, em situação perigosa, exausto por 1 rodada e depois fatigado. Se passar, fica fatigado por 1d4 rodadas."]],Malekir:[["Adaga Mental","1º • Encantamento • Padrão • Curto • Instantânea • 1 PM","2d6 de dano psíquico e atordoado por 1 rodada; na resistência, metade do dano e sem condição."],["Armadura Arcana","1º • Abjuração • Padrão • Pessoal • Cena • 1 PM","+5 Defesa; cumulativo com outras magias, não com armaduras."],["Compreensão","1º • Adivinhação • Padrão • Toque • Cena • 1 PM","Entende textos e idiomas, comunica-se sem idioma comum e pode ouvir pensamentos de criatura tocada."],["Concentração de Combate","1º • Adivinhação • Livre • Pessoal • 1 rodada • 1 PM","Ao fazer ataque, rola dois dados e usa o melhor."],["Conjurar Monstro","1º • Convocação • Completa • Curto • Sustentada • 1 PM","Conjura monstro Pequeno de energia sob seu comando."],["Explosão de Chamas","1º • Evocação • Padrão • Pessoal • Instantânea • 1 PM","Leque de chamas causa 2d6 de fogo."],["Imagem Espelhada","1º • Ilusão • Padrão • Pessoal • Cena • 1 PM","Três cópias; +6 Defesa. Cada erro do inimigo remove uma imagem e reduz o bônus em 2."],["Seta Infalível de Talude","1º • Evocação • Padrão • Médio • Instantânea • 1 PM","Duas setas de energia, 1d4+1 essência cada."],["Toque Chocante","1º • Evocação • Padrão • Toque • Instantânea • 1 PM","2d8+2 eletricidade; armadura de metal impõe -5 no teste de resistência."]],Fani:[["Arma Mágica","1º • Transmutação • Padrão • Toque • Cena • 1 PM","+1 ataque e dano; pode usar atributo-chave de magia no ataque."],["Bênção","1º • Encantamento • Padrão • Curto • Cena • 1 PM","Aliados recebem +1 ataque e dano."],["Comando","1º • Encantamento • Padrão • Curto • 1 rodada • 1 PM","Ordem irresistível: Fuja, Largue, Pare, Senta ou Venha."],["Consagrar","1º • Evocação • Padrão • Longo • 1 dia • 1 PM","Maximiza PV curados por luz e dano de luz contra mortos-vivos na área."],["Controlar Plantas","1º • Transmutação • Padrão • Curto • Cena • 1 PM","Vegetação enreda criaturas e transforma área em terreno difícil."],["Curar Ferimentos","1º • Evocação • Padrão • Toque • Instantânea • 1 PM","Recupera 2d8+2 PV."]],Neo:[],Zuri:[["Adaga Mental","1º • Encantamento","Alvo sofre dano psíquico e pode ficar atordoado."],["Criar Ilusão","1º • Ilusão","Cria uma ilusão visual ou sonora."],["Flecha de Luz","1º • Evocação","Magia registrada na ficha de Zuri."]]};
 const base={
 Hippion:{race:"Sereia",origin:"Marujo",className:"Bucaneiro",level:4,deity:"Oceano",hp:44,maxHp:44,mp:12,maxMp:12,def:19,fort:8,ref:6,will:6,init:6,per:6,speed:9,attrs:{FOR:3,DES:2,CON:4,INT:1,SAB:0,CAR:4},
@@ -69,7 +123,8 @@ const load=c=>c.items.reduce((sum,i)=>sum+Number(i[1]||0),0);
 function save(){
   localStorage.setItem(KEY,JSON.stringify(state));
   localStorage.setItem(KEY+"-selected",selected);
-  const sync=$(".sync"); if(sync) sync.textContent="✓ Salvo neste aparelho";
+  if(cloudReady&&!remoteApplying)syncCloud();
+  const sync=$(".sync"); if(sync) sync.textContent=cloudReady?"✓ Sincronizado com a mesa":"✓ Salvo neste aparelho";
 }
 function toast(t){
   const e=$("#toast"); e.textContent=t; e.classList.add("show");
