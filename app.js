@@ -118,7 +118,8 @@ function body(c){
   <div class="sync">✓ Salvo neste aparelho</div>`;
  if(tab==="Ataques") return `<div class="list">${c.attacks.map((a,i)=>`<div class="row"><div><b>⚔️ ${esc(a[0])}</b><div class="sub">${a[1]} • ${a[2]} • ${a[3]} • ${a[4]} • ${a[5]}</div></div><button class="roll" data-attack="${i}">Rolar</button></div>`).join("")}</div><div class="sync">Rolagens são d20 locais.</div>`;
  if(tab==="Poderes") return `<div class="list powers">${c.powers.map(p=>`<details class="power"><summary><span class="power-icon">✦</span><b>${esc(p[0])}</b></summary><div class="power-text">${esc(p[1])}</div></details>`).join("")}</div>`;
- if(tab==="Magias") return magicView();\n if(tab==="Mochila") return inventory(c);
+ if(tab==="Magias") return magicView();
+ if(tab==="Mochila") return inventory(c);
  return `<div class="skills">${Object.entries(c.skills).map(([n,v])=>`<div class="skill ${c.trained.includes(n)?"trained":""}"><button data-skill="${esc(n)}">${c.trained.includes(n)?'<span class="trained-mark">◆</span>':""}${esc(n)}</button><b>${v==null?"—":"+"+v}</b></div>`).join("")}</div><div class="legend"><span class="trained-mark">◆</span> Perícia treinada</div><div class="sync">Toque em uma perícia para rolar.</div>`;
 }
 
