@@ -8,7 +8,7 @@ const firebaseConfig={
   messagingSenderId:"874474910219",
   appId:"1:874474910219:web:88305c7b0179f3fa6dcd0e"
 };
-let db=null,cloudReady=false,remoteApplying=false,cloudUnsubscribe=null;
+let db=null,cloudReady=false,remoteApplying=false,cloudUnsubscribe=null,cloudDirty=false;
 
 function initCloud(){
   if(!window.firebase)return;
@@ -17,8 +17,12 @@ function initCloud(){
     db=firebase.firestore();
     firebase.auth().signInAnonymously().then(()=>{
       cloudReady=true;
+      if(cloudDirty) syncCloud();
       subscribeCloud();
-    }).catch(err=>console.warn("Firebase Auth:",err));
+    }).catch(err=>{
+      console.error("Firebase Auth:",err);
+      const sync=$(".sync"); if(sync) sync.textContent="⚠️ Firebase não conectado";
+    });
   }catch(err){console.warn("Firebase:",err);}
 }
 function cloudSnapshot(){
@@ -28,10 +32,15 @@ function cloudSnapshot(){
 }
 function syncCloud(){
   if(!cloudReady||!db||remoteApplying)return;
-  db.collection("campaign").doc("state").set({
-    state:cloudSnapshot(),
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).catch(err=>console.warn("Firebase sync:",err));
+  const payload={state:cloudSnapshot(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  db.collection("campaign").doc("state").set(payload,{merge:false}).then(()=>{
+    cloudDirty=false;
+    const sync=$(".sync"); if(sync) sync.textContent="✓ Sincronizado em tempo real";
+  }).catch(err=>{
+    console.error("Firebase sync:",err);
+    const sync=$(".sync"); if(sync) sync.textContent="⚠️ Erro ao sincronizar";
+    toast("Não foi possível sincronizar com a mesa.");
+  });
 }
 function subscribeCloud(){
   if(!db)return;
@@ -122,8 +131,11 @@ const load=c=>c.items.reduce((sum,i)=>sum+Number(i[1]||0),0);
 function save(){
   localStorage.setItem(KEY,JSON.stringify(state));
   localStorage.setItem(KEY+"-selected",selected);
-  if(cloudReady&&!remoteApplying)syncCloud();
-  const sync=$(".sync"); if(sync) sync.textContent=cloudReady?"✓ Sincronizado com a mesa":"✓ Salvo neste aparelho";
+  if(!remoteApplying){
+    cloudDirty=true;
+    if(cloudReady)syncCloud();
+  }
+  const sync=$(".sync"); if(sync) sync.textContent=cloudReady?"⟳ Enviando para a mesa…":"⟳ Conectando à mesa…";
 }
 function toast(t){
   const e=$("#toast"); e.textContent=t; e.classList.add("show");
