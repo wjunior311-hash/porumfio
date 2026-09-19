@@ -141,7 +141,8 @@ const specialWeaponData={
   }
 };
 const itemCatalog=[
- {name:"Luva de Ferro",cat:"Esotérico",price:"T$ 150",spaces:1,data:"+1 bônus",desc:"Dedais interligados por correntes.",effect:"Aumenta em +1 os bônus concedidos por suas magias arcanas pessoais que dão bônus na Defesa ou em testes de resistência."},
+ {name:"Varinha arcana",cat:"Esotérico",price:"T$ 100",spaces:1,data:"CD +1",desc:"Uma varinha típica, feita de madeira de boa qualidade e entalhada com runas.",effect:"A CD para resistir a suas magias arcanas aumenta em +1."},
+ {name:"Luva de Ferro",cat:"Esotérico",price:"T$ 150",spaces:1,data:"Bônus +1",desc:"Um conjunto de dedais interligados por correntes.",effect:"Suas magias arcanas pessoais que concedem bônus na Defesa ou em testes de resistência têm esse bônus aumentado em +1."},
  {name:"Adaga",cat:"Arma simples",price:"T$ 2",spaces:1,data:"1d4 • crítico 19 • curto • perfuração",desc:"Faca afiada, facilmente escondida. Pode usar Destreza no ataque e pode ser arremessada.",effect:"+5 em Ladinagem para ocultá-la."},
  {name:"Espada curta",cat:"Arma simples",price:"T$ 10",spaces:1,data:"1d6 • crítico 19 • perfuração",desc:"Espada comum, usada por guardas e como arma secundária."},
  {name:"Foice",cat:"Arma simples",price:"T$ 4",spaces:1,data:"1d6 • crítico x3 • corte",desc:"Ferramenta agrícola com lâmina curva.",effect:"Arma tradicional de druidas."},
@@ -287,102 +288,49 @@ const fixedCharacterImages={
 };
 
 
-
 const activeEffectDefs={
-  Hippion:{
-    "Estilo de Duas Mãos":{type:"power",label:"Estilo de Duas Mãos",summary:"+5 nas rolagens de dano com arma corpo a corpo de duas mãos.",attackFilter:"twohand",damageBonus:5},
-    "Mestre do Tridente":{type:"power",label:"Mestre do Tridente",summary:"+2 dano com azagaias, lanças e tridentes.",attackFilter:"trident",damageBonus:2},
-    "Ataque Acrobático":{type:"power",label:"Ataque Acrobático",summary:"+2 no ataque e +2 no dano quando a condição do poder for cumprida.",attackBonus:2,damageBonus:2}
-  },
-  Malekir:{
-    "Luva de Ferro":{type:"item",label:"Luva de Ferro",summary:"Aumenta em +1 os bônus de Defesa ou resistência concedidos por suas magias arcanas pessoais.",defenseMagicBonus:1},
-    "Armadura Arcana":{type:"magic",label:"Armadura Arcana",summary:"+5 Defesa durante a cena.",defenseBonus:5},
-    "Imagem Espelhada":{type:"magic",label:"Imagem Espelhada",summary:"Bônus de Defesa enquanto a magia estiver ativa.",defenseBonus:6}
-  },
-  Fani:{
-    "Arma Mágica":{type:"magic",label:"Arma Mágica",summary:"+1 ataque e +1 dano para a arma tocada.",attackBonus:1,damageBonus:1},
-    "Bênção":{type:"magic",label:"Bênção",summary:"+1 ataque e +1 dano para aliados.",attackBonus:1,damageBonus:1}
-  },
-  Neo:{
-    "Ataque Furtivo":{type:"power",label:"Ataque Furtivo",summary:"+2d6 de dano quando o alvo estiver desprevenido, em alcance curto ou flanqueado.",damageDice:2},
-    "Cão de Briga":{type:"power",label:"Cão de Briga",summary:"Permite 1 ataque extra na primeira vez por cena em que fizer Agredir.",extraAttack:1},
-    "Adaga da Súplica":{type:"item",label:"Adaga da Súplica",summary:"Ativa a Súplica das Sombras: invisibilidade até atacar ou até o início do próximo turno.",conditionOnly:true}
-  },
-  Zuri:{
-    "Armadura Arcana":{type:"magic",label:"Armadura Arcana",summary:"+5 Defesa durante a cena.",defenseBonus:5}
-  }
+ Hippion:{powers:{
+  "Estilo de Duas Mãos":{label:"Estilo de Duas Mãos",summary:"+5 dano com armas corpo a corpo de duas mãos",damageBonus:5,attackFilter:a=>/Tridente do Nó Perfeito|Bordão/i.test(a[0])},
+  "Mestre do Tridente":{label:"Mestre do Tridente",summary:"+2 dano com azagaias, lanças e tridentes",damageBonus:2,attackFilter:a=>/Tridente|Lança|Azagaia/i.test(a[0])},
+  "Ataque Acrobático":{label:"Ataque Acrobático",summary:"+2 ataque e +2 dano quando a condição do poder foi cumprida",attackBonus:2,damageBonus:2}
+ }},
+ Malekir:{items:{
+  "Luva de Ferro":{label:"Luva de Ferro",summary:"+1 aos bônus de Defesa/resistência concedidos por magias arcanas pessoais"},
+  "Varinha arcana":{label:"Varinha Arcana",summary:"+1 na CD para resistir às magias arcanas"}
+ },magic:{
+  "Armadura Arcana":{label:"Armadura Arcana",summary:"+5 Defesa",defenseBonus:5},
+  "Imagem Espelhada":{label:"Imagem Espelhada",summary:"+6 Defesa inicialmente",defenseBonus:6}
+ }},
+ Fani:{magic:{
+  "Arma Mágica":{label:"Arma Mágica",summary:"+1 ataque e +1 dano para a arma tocada",attackBonus:1,damageBonus:1},
+  "Bênção":{label:"Bênção",summary:"+1 ataque e +1 dano para aliados",attackBonus:1,damageBonus:1}
+ }},
+ Neo:{powers:{
+  "Ataque Furtivo":{label:"Ataque Furtivo",summary:"+2d6 dano quando a condição do poder foi cumprida",damageDice:2},
+  "Cão de Briga":{label:"Cão de Briga",summary:"1 ataque extra na primeira ação agredir da cena",extraAttack:1}
+ },items:{
+  "Adaga da Súplica":{label:"Adaga da Súplica",summary:"Súplica das Sombras: invisibilidade até atacar ou início do próximo turno",conditionOnly:true}
+ }},
+ Zuri:{magic:{
+  "Armadura Arcana":{label:"Armadura Arcana",summary:"+5 Defesa",defenseBonus:5}
+ }}
 };
-function effectKey(name,e){return e.type+":"+name}
-function effectIsActive(c,name,e){return Array.isArray(c.activeEffects)&&c.activeEffects.includes(effectKey(name,e))}
-function effectToggle(name,e){
-  const c=state[selected]; if(!Array.isArray(c.activeEffects))c.activeEffects=[];
-  const k=effectKey(name,e);
-  c.activeEffects=c.activeEffects.includes(k)?c.activeEffects.filter(function(x){return x!==k}):c.activeEffects.concat(k);
-  save(); render();
-}
-function currentEffects(c){
-  const defs=activeEffectDefs[selected]||{};
-  return Object.entries(defs).filter(function(pair){return effectIsActive(c,pair[0],pair[1])}).map(function(pair){return {name:pair[0],e:pair[1]}});
-}
-function attackExtra(c,a){
-  let attackBonus=0,damageBonus=0,damageDice=0;
-  currentEffects(c).forEach(function(x){
-    const e=x.e;
-    const ok=!e.attackFilter ||
-      (e.attackFilter==="trident" && /tridente|lança|azagaia/i.test(a[0])) ||
-      (e.attackFilter==="twohand" && /tridente|bordão|montante|marreta|tacape|gadanho|alfange|alabarda|machado de guerra/i.test(a[0]));
-    if(ok){attackBonus+=Number(e.attackBonus)||0;damageBonus+=Number(e.damageBonus)||0;damageDice+=Number(e.damageDice)||0}
-  });
-  return {attackBonus:attackBonus,damageBonus:damageBonus,damageDice:damageDice};
+function effectId(type,name){return type+":"+name}
+function effectDefsFor(characterName){const all=activeEffectDefs[characterName]||{},out=[];for(const [type,defs] of Object.entries(all))for(const [name,def] of Object.entries(defs))out.push({...def,id:effectId(type,name),type,name});return out}
+function activeDefs(c){const ids=Array.isArray(c.activeEffects)?c.activeEffects:[];return effectDefsFor(selected).filter(d=>ids.includes(d.id))}
+function isActive(c,type,name){return Array.isArray(c.activeEffects)&&c.activeEffects.includes(effectId(type,name))}
+function toggleEffect(type,name){const c=state[selected];if(!Array.isArray(c.activeEffects))c.activeEffects=[];const id=effectId(type,name);c.activeEffects.includes(id)?c.activeEffects=c.activeEffects.filter(x=>x!==id):c.activeEffects.push(id);save();render()}
+function attackModifiers(c,a){const defs=activeDefs(c);let attackBonus=0,damageBonus=0,damageDice=0;defs.forEach(d=>{if(d.attackBonus&&(!d.attackFilter||d.attackFilter(a)))attackBonus+=d.attackBonus;if(d.damageBonus&&(!d.attackFilter||d.attackFilter(a)))damageBonus+=d.damageBonus;if(d.damageDice&&(!d.attackFilter||d.attackFilter(a)))damageDice+=d.damageDice});return {attackBonus,damageBonus,damageDice}}
+function comboSummary(c){
+ const rows=c.attacks.map(a=>{const m=attackModifiers(c,a);if(!(m.attackBonus||m.damageBonus||m.damageDice))return "";return `<div class="combo-row"><b>⚔️ ${esc(a[0])}</b><span>${m.attackBonus?`Ataque ${a[1]} → ${Number(a[1].replace("+",""))+m.attackBonus>=0?"+":""}${Number(a[1].replace("+",""))+m.attackBonus}`:""}${m.damageBonus?` • Dano +${m.damageBonus}`:""}${m.damageDice?` • +${m.damageDice}d6`:""}</span></div>`}).join("");
+ return rows?`<div class="combo-box"><div class="active-effects-title">⚔️ Combos de ataques</div>${rows}</div>`:"";
 }
 function defenseExtra(c){
-  let n=0;
-  const effects=currentEffects(c);
-  effects.forEach(function(x){n+=Number(x.e.defenseBonus)||0});
-  if(effects.some(function(x){return x.e.defenseMagicBonus}) && effects.some(function(x){return x.e.defenseBonus})) n+=1;
-  return n;
+ let n=activeDefs(c).reduce((sum,d)=>sum+(Number(d.defenseBonus)||0),0);
+ if(isActive(c,"items","Luva de Ferro")) n+=activeDefs(c).filter(d=>d.type==="magic"&&d.defenseBonus).length;
+ return n;
 }
-function bindActiveEffects(){
-  const c=state[selected],defs=activeEffectDefs[selected]||{};
-  if(!Array.isArray(c.activeEffects))c.activeEffects=[];
-  function makeButton(name,e){
-    const b=document.createElement("button");
-    b.type="button"; b.className="use-effect-btn"+(effectIsActive(c,name,e)?" used":"");
-    b.textContent=effectIsActive(c,name,e)?"USANDO":"USAR";
-    b.onclick=function(ev){ev.preventDefault();ev.stopPropagation();effectToggle(name,e)};
-    return b;
-  }
-  document.querySelectorAll(".power,.item-row").forEach(function(card){
-    const title=card.querySelector("summary b,.item-title-line b");
-    if(!title)return;
-    const name=title.textContent.trim(),e=defs[name];
-    if(e&&!card.querySelector(".use-effect-btn")){
-      const btn=makeButton(name,e);
-      const target=card.querySelector("summary")||card.querySelector(".item-title-line");
-      target.appendChild(btn);
-    }
-  });
-  if(tab==="Resumo"){
-    const content=document.querySelector(".content");
-    if(content&&!content.querySelector(".combo-panel")){
-      const effects=currentEffects(c),panel=document.createElement("div");
-      panel.className="combo-panel";
-      let html='<div class="combo-title">⚡ Combos e efeitos ativos</div>';
-      if(!effects.length) html+='<div class="combo-empty">Nenhum efeito temporário em uso.</div>';
-      effects.forEach(function(x){html+='<div class="combo-effect"><b>✓ '+esc(x.e.label)+'</b><span>'+esc(x.e.summary)+'</span></div>'});
-      c.attacks.forEach(function(a){const x=attackExtra(c,a);if(x.attackBonus||x.damageBonus||x.damageDice){html+='<div class="combo-attack"><b>⚔️ '+esc(a[0])+'</b><span>'+(x.attackBonus?"Ataque +"+x.attackBonus:"")+(x.damageBonus?" • Dano +"+x.damageBonus:"")+(x.damageDice?" • +"+x.damageDice+"d6":"")+'</span></div>'}});
-      panel.innerHTML=html;
-      content.insertBefore(panel,content.firstChild);
-    }
-    const def=document.querySelector('[data-stat="def"]')?.closest(".mini");
-    if(def&&defenseExtra(c)){const x=document.createElement("small");x.className="combo-extra-stat";x.textContent="+"+defenseExtra(c)+" extra ativo";def.appendChild(x)}
-  }
-  document.querySelectorAll("[data-attack]").forEach(function(b){b.onclick=function(ev){
-    ev.preventDefault();ev.stopPropagation();
-    const a=c.attacks[Number(b.dataset.attack)],d=1+Math.floor(Math.random()*20),baseBonus=Number(a[1].replace("+",""))||0,x=attackExtra(c,a),total=d+baseBonus+x.attackBonus;
-    toast(a[0]+": d20 "+d+" + "+baseBonus+(x.attackBonus?" + "+x.attackBonus+" extra":"")+" = "+total+(x.damageBonus||x.damageDice?" • dano "+a[2]+(x.damageBonus?" + "+x.damageBonus:"")+(x.damageDice?" + "+x.damageDice+"d6":""):""));
-  }});
-}
+function resistanceExtra(c){return activeDefs(c).reduce((n,d)=>n+(Number(d.resistanceBonus)||0),0)}
 function migrate(){
   if(state.Neo && state.Neo._sheetVersion!==3){
     state.Neo.attacks=clone(base.Neo.attacks);
@@ -413,6 +361,8 @@ function migrate(){
     c.image=fixedCharacterImages[name]||c.image||"";
     if(!Array.isArray(c.conditions)) c.conditions=[];
     if(typeof c.masterNote!=="string") c.masterNote="";
+    if(!Array.isArray(c.activeEffects)) c.activeEffects=[];
+    if(name==="Malekir" && !c.items.some(x=>String(x[0]).toLowerCase()==="luva de ferro")){c.items.push(["Luva de Ferro",1,"",1]);cloudDirty=true;}
   });
 }
 migrate();
@@ -496,18 +446,18 @@ function masterCard(n,c){
 }
 function body(c){
  if(tab==="Mestre") return masterView();
- if(tab==="Resumo") return `${c.conditions.length?`<div class="active-effects"><div class="active-effects-title">⚠️ Efeitos ativos</div><div class="active-effects-list">${c.conditions.map(v=>`<span>${esc(v)}</span>`).join("")}</div></div>`:""}<div class="bars"><div class="statcard resource hp-card"><div class="resource-top"><div class="label">Pontos de Vida</div><strong>${c.hp} / ${c.maxHp}</strong></div><div class="resource-bar"><span style="width:${Math.max(0,Math.min(100,c.hp/c.maxHp*100))}%"></span></div><div class="controls"><button data-hp="-5">−5</button><button data-hp="-1">−</button><button data-hp="1" class="plus">+</button><button data-hp="5" class="plus">+5</button></div></div><div class="statcard resource mp-card"><div class="resource-top"><div class="label">Pontos de Mana</div><strong>${c.mp} / ${c.maxMp}</strong></div><div class="resource-bar"><span style="width:${Math.max(0,Math.min(100,c.mp/c.maxMp*100))}%"></span></div><div class="controls"><button data-mp="-5">−5</button><button data-mp="-1">−</button><button data-mp="1" class="plus">+</button><button data-mp="5" class="plus">+5</button></div></div></div><div class="money-card"><div class="money-icon">🪙</div><div class="money-info"><span class="label">Dinheiro</span><strong>T$ ${c.money}</strong><div class="money-controls"><button data-money="-">−</button><input id="moneyAmount" type="number" min="1" step="1" value="10" aria-label="Quantidade de tibares"><button data-money="+">+</button></div><small>Digite a quantidade e use − ou + para gastar ou receber.</small></div></div><div class="section"><div class="sectiontitle"><h3>Defesas e combate</h3></div><div class="grid">${[['Defesa','def'],['Fortitude','fort'],['Reflexos','ref'],['Vontade','will'],['Iniciativa','init'],['Percepção','per']].map(x=>`<div class="mini editable-mini"><span class="label">${x[0]}</span><input class="stat-input" type="number" data-stat="${x[1]}" value="${c[x[1]]}"></div>`).join("")}</div></div>
+ if(tab==="Resumo") return `${c.conditions.length?`<div class="active-effects"><div class="active-effects-title">⚡ Combos e efeitos ativos</div><div class="active-effects-list">${activeDefs(c).map(d=>`<button type="button" class="active-chip effect-chip" data-toggle-effect="${esc(d.type)}" data-effect-name="${esc(d.name)}">✓ ${esc(d.label)}</button>`).join("")}${c.conditions.map(v=>`<span>${esc(v)}</span>`).join("")}${!activeDefs(c).length&&!c.conditions.length?'<span class="no-effects">Nenhum efeito temporário ativo</span>':""}</div>${activeDefs(c).length?`<div class="active-effects-detail">${activeDefs(c).map(d=>`<div><b>${esc(d.label)}</b><span>${esc(d.summary)}</span></div>`).join("")}</div>`:""}${comboSummary(c)}</div>`:""}<div class="bars"><div class="statcard resource hp-card"><div class="resource-top"><div class="label">Pontos de Vida</div><strong>${c.hp} / ${c.maxHp}</strong></div><div class="resource-bar"><span style="width:${Math.max(0,Math.min(100,c.hp/c.maxHp*100))}%"></span></div><div class="controls"><button data-hp="-5">−5</button><button data-hp="-1">−</button><button data-hp="1" class="plus">+</button><button data-hp="5" class="plus">+5</button></div></div><div class="statcard resource mp-card"><div class="resource-top"><div class="label">Pontos de Mana</div><strong>${c.mp} / ${c.maxMp}</strong></div><div class="resource-bar"><span style="width:${Math.max(0,Math.min(100,c.mp/c.maxMp*100))}%"></span></div><div class="controls"><button data-mp="-5">−5</button><button data-mp="-1">−</button><button data-mp="1" class="plus">+</button><button data-mp="5" class="plus">+5</button></div></div></div><div class="money-card"><div class="money-icon">🪙</div><div class="money-info"><span class="label">Dinheiro</span><strong>T$ ${c.money}</strong><div class="money-controls"><button data-money="-">−</button><input id="moneyAmount" type="number" min="1" step="1" value="10" aria-label="Quantidade de tibares"><button data-money="+">+</button></div><small>Digite a quantidade e use − ou + para gastar ou receber.</small></div></div><div class="section"><div class="sectiontitle"><h3>Defesas e combate</h3></div><div class="grid">${[['Defesa','def'],['Fortitude','fort'],['Reflexos','ref'],['Vontade','will'],['Iniciativa','init'],['Percepção','per']].map(x=>`<div class="mini editable-mini"><span class="label">${x[0]}</span><input class="stat-input" type="number" data-stat="${x[1]}" value="${c[x[1]]}">${x[1]==="def"?`<small class="extra-stat">${defenseExtra(c)?`+${defenseExtra(c)} ativo`:""}</small>`:""}${["fort","ref","will"].includes(x[1])?`<small class="extra-stat">${resistanceExtra(c)?`+${resistanceExtra(c)} ativo`:""}</small>`:""}</div>`).join("")}</div></div>
   <div class="section"><div class="sectiontitle"><h3>Atributos</h3></div><div class="grid">${Object.entries(c.attrs).map(x=>`<div class="mini editable-mini"><span class="label">${x[0]}</span><input class="stat-input" type="number" data-attr="${x[0]}" value="${x[1]}"></div>`).join("")}</div></div>
   <div class="section"><div class="sectiontitle"><h3>Movimento</h3></div><div class="row editable-row"><div><b>Deslocamento</b><div class="sub">Carga ${load(c)} / ${capacity(c)} espaços</div></div><label class="speed-edit"><input class="stat-input" type="number" data-stat="speed" value="${c.speed}"><span>m</span></label></div></div>
   <div class="sync">✓ Salvo neste aparelho</div>`;
- if(tab==="Ataques") return `<div class="list">${c.attacks.map((a,i)=>{const w=specialWeaponData[a[0]];return `<details class="weapon-card ${w?"special-weapon":""}"><summary><div><b>⚔️ ${esc(a[0])}</b><div class="sub">${a[1]} • ${a[2]} • ${a[3]} • ${a[4]} • ${a[5]}</div></div><button class="roll" data-attack="${i}" type="button">Rolar</button></summary>${w?`<div class="weapon-details"><div class="weapon-subtitle">${esc(w.subtitle)}</div><p>${esc(w.description)}</p><div class="weapon-specs"><span><b>Tipo</b>${esc(w.type)}</span><span><b>Categoria</b>${esc(w.category)}</span><span><b>Dano</b>${esc(w.damage)}</span><span><b>Propriedades</b>${esc(w.properties)}</span><span><b>Peso</b>${esc(w.weight)}</span><span><b>Origem</b>${esc(w.origin)}</span></div><div class="weapon-abilities">${w.abilities.map(x=>`<div><b>${esc(x[0])}</b><p>${esc(x[1])}</p></div>`).join("")}</div><div class="weapon-quote">${esc(w.quote)}</div><div class="weapon-footer">${esc(w.footer||"")}</div></div>`:""}</details>`}).join("")}</div><div class="sync">Armas especiais com informações das fichas enviadas.</div>`;
- if(tab==="Poderes") return `<div class="list powers">${c.powers.map(p=>`<details class="power"><summary><span class="power-icon">✦</span><b>${esc(p[0])}</b></summary><div class="power-text">${esc(p[1])}</div></details>`).join("")}</div>`;
+ if(tab==="Ataques") return `<div class="list">${c.attacks.map((a,i)=>{const w=specialWeaponData[a[0]],m=attackModifiers(c,a),has=m.attackBonus||m.damageBonus||m.damageDice;return `<details class="weapon-card ${w?"special-weapon":""}"><summary><div><b>⚔️ ${esc(a[0])}</b><div class="sub">${a[1]} • ${a[2]} • ${a[3]} • ${a[4]} • ${a[5]}</div>${has?`<div class="attack-extra">⚡ ${m.attackBonus?`+${m.attackBonus} ataque `:""}${m.damageBonus?`+${m.damageBonus} dano `:""}${m.damageDice?`+${m.damageDice}d6 dano`:""}</div>`:""}</div><button class="roll" data-attack="${i}" type="button">Rolar</button></summary>${w?`<div class="weapon-details"><div class="weapon-subtitle">${esc(w.subtitle)}</div><p>${esc(w.description)}</p><div class="weapon-specs"><span><b>Tipo</b>${esc(w.type)}</span><span><b>Categoria</b>${esc(w.category)}</span><span><b>Dano</b>${esc(w.damage)}</span><span><b>Propriedades</b>${esc(w.properties)}</span><span><b>Peso</b>${esc(w.weight)}</span><span><b>Origem</b>${esc(w.origin)}</span></div><div class="weapon-abilities">${w.abilities.map(x=>`<div><b>${esc(x[0])}</b><p>${esc(x[1])}</p></div>`).join("")}</div><div class="weapon-quote">${esc(w.quote)}</div><div class="weapon-footer">${esc(w.footer||"")}</div></div>`:""}</details>`}).join("")}</div><div class="sync">Armas especiais com informações das fichas enviadas.</div>`;
+ if(tab==="Poderes") return `<div class="list powers">${c.powers.map(p=>{const d=(activeEffectDefs[selected]?.powers||{})[p[0]],on=d&&isActive(c,"powers",p[0]);return `<details class="power ${d&&on?"is-active":""}"><summary><span class="power-icon">✦</span><b>${esc(p[0])}</b>${d?`<button type="button" class="use-effect ${on?"used":""}" data-toggle-effect="powers" data-effect-name="${esc(p[0])}">${on?"USANDO":"USAR"}</button>`:""}</summary><div class="power-text">${esc(p[1])}</div></details>`).join("")}</div>`;
  if(tab==="Magias") return magicView();
  if(tab==="Mochila") return inventory(c);
  return `<div class="skills">${Object.entries(c.skills).map(([n,v])=>`<div class="skill ${c.trained.includes(n)?"trained":""}"><button data-skill="${esc(n)}">${c.trained.includes(n)?'<span class="trained-mark">◆</span>':""}${esc(n)}</button>${v==null?'<b class="skill-unavailable">—</b>':`<label class="skill-edit"><span>+</span><input type="number" class="skill-input" data-skill-value="${esc(n)}" value="${Number(v)}" aria-label="Bônus de ${esc(n)}"></label>`}</div>`).join("")}</div><div class="legend"><span class="trained-mark">◆</span> Perícia treinada • clique no nome para rolar • edite o bônus no campo ao lado.</div><div class="sync">Os bônus de perícia podem ser editados e ficam sincronizados com a mesa.</div>`;
 }
 
-function magicView(){const list=magicData[selected]||[];if(!list.length)return '<div class="empty"><div class="empty-icon">✦</div><b>Sem magias na ficha</b><div class="sub">Não há magias registradas no PDF enviado.</div></div>';return '<div class="list powers">'+list.map(m=>'<details class="power magic"><summary><span class="power-icon">✧</span><b>'+esc(m[0])+'</b></summary><div class="magic-meta">'+esc(m[1])+'</div><div class="power-text">'+esc(m[2])+'</div></details>').join('')+'</div><div class="sync">Magias transcritas das fichas enviadas.</div>';}function inventory(c){
+function magicView(){const list=magicData[selected]||[];if(!list.length)return '<div class="empty"><div class="empty-icon">✦</div><b>Sem magias na ficha</b><div class="sub">Não há magias registradas no PDF enviado.</div></div>';return '<div class="list powers">'+list.map(m=>{const d=(activeEffectDefs[selected]?.magic||{})[m[0]],on=d&&isActive(state[selected],'magic',m[0]);return '<details class="power magic '+(on?'is-active':'')+'"><summary><span class="power-icon">✧</span><b>'+esc(m[0])+'</b>'+(d?'<button type="button" class="use-effect '+(on?'used':'')+'" data-toggle-effect="magic" data-effect-name="'+esc(m[0])+'">'+(on?'USANDO':'USAR')+'</button>':'')+'</summary><div class="magic-meta">'+esc(m[1])+'</div><div class="power-text">'+esc(m[2])+'</div></details>'}).join('')+'</div><div class="sync">Magias ativas entram como extras temporários, sem alterar os valores-base.</div>';}function inventory(c){
  const cap=capacity(c), used=load(c), full=used>cap;
  let slots="";
  for(let i=1;i<=cap;i++) slots+=`<span class="slot ${i<=used?"filled":""}">${i<=used?"◆":""}</span>`;
@@ -524,7 +474,7 @@ function magicView(){const list=magicData[selected]||[];if(!list.length)return '
  <div class="slot-grid">${slots}</div>
  <button type="button" class="catalog-open" id="openItemCatalog">📚 Adicionar item do catálogo</button>
  <div class="inventory-add"><input id="newitem" placeholder="Item especial / personalizado…"><label class="inventory-field"><span>Espaços</span><input id="newsize" type="number" min="0" step="0.5" value="1" aria-label="Espaços que o item ocupa"></label><label class="inventory-field"><span>Quantidade</span><input id="newqty" type="number" min="1" step="1" value="1" aria-label="Quantidade do item"></label><button id="additem">+ Item</button></div>
- <div class="list">${c.items.map((p,i)=>{const cat=catalogMatch(p[0]);return `<div class="row item-row"><div class="item-icon">${itemIcon(p[0])}</div><div class="item-main"><div class="item-title-line"><b>${esc(p[0])}</b>${cat?`<span class="catalog-badge">Livro</span>`:""}</div><div class="item-size-row"><label>Espaços</label><input type="number" min="0" step="0.5" class="item-size-input" data-item-size="${i}" value="${Number(p[1])||0}" aria-label="Espaços de ${esc(p[0])}"><span>•</span><span>Quantidade</span></div><div class="item-qty"><button type="button" class="qtybtn" data-item-qty="${i}" data-delta="-1">−</button><input type="number" min="0" step="1" class="qty-input" data-item-qty-input="${i}" value="${Number.isFinite(Number(p[3]))?Number(p[3]):1}" aria-label="Quantidade de ${esc(p[0])}"><button type="button" class="qtybtn" data-item-qty="${i}" data-delta="1">+</button></div>${cat?`<details class="item-details"><summary>ⓘ Ver descrição e benefício</summary><div class="catalog-data">${esc(cat.data||"")}</div><p>${esc(cat.desc||"")}</p>${cat.effect?`<div class="catalog-effect"><b>Benefício</b> ${esc(cat.effect)}</div>`:""}</details>`:""}<input class="item-note" data-item-note="${i}" value="${esc(p[2]||"")}" placeholder="Anotação do item…"></div><button class="smallbtn" data-remove="${i}" title="Remover item">×</button></div>`}).join("")}</div>
+ <div class="list">${c.items.map((p,i)=>{const cat=catalogMatch(p[0]);return `<div class="row item-row"><div class="item-icon">${itemIcon(p[0])}</div><div class="item-main"><div class="item-title-line"><b>${esc(p[0])}</b>${cat?`<span class="catalog-badge">Livro</span>`:""}${(activeEffectDefs[selected]?.items||{})[p[0]]?`<button type="button" class="use-effect item-use ${isActive(c,"items",p[0])?"used":""}" data-toggle-effect="items" data-effect-name="${esc(p[0])}">${isActive(c,"items",p[0])?"USANDO":"USAR"}</button>`:""}</div><div class="item-size-row"><label>Espaços</label><input type="number" min="0" step="0.5" class="item-size-input" data-item-size="${i}" value="${Number(p[1])||0}" aria-label="Espaços de ${esc(p[0])}"><span>•</span><span>Quantidade</span></div><div class="item-qty"><button type="button" class="qtybtn" data-item-qty="${i}" data-delta="-1">−</button><input type="number" min="0" step="1" class="qty-input" data-item-qty-input="${i}" value="${Number.isFinite(Number(p[3]))?Number(p[3]):1}" aria-label="Quantidade de ${esc(p[0])}"><button type="button" class="qtybtn" data-item-qty="${i}" data-delta="1">+</button></div>${cat?`<details class="item-details"><summary>ⓘ Ver descrição e benefício</summary><div class="catalog-data">${esc(cat.data||"")}</div><p>${esc(cat.desc||"")}</p>${cat.effect?`<div class="catalog-effect"><b>Benefício</b> ${esc(cat.effect)}</div>`:""}</details>`:""}<input class="item-note" data-item-note="${i}" value="${esc(p[2]||"")}" placeholder="Anotação do item…"></div><button class="smallbtn" data-remove="${i}" title="Remover item">×</button></div>`}).join("")}</div>
  <div id="itemCatalog" class="catalog-modal" hidden><div class="catalog-backdrop" id="closeItemCatalog"></div><section class="catalog-panel"><div class="catalog-header"><div><div class="eyebrow">Tormenta20 • catálogo</div><h3>Escolha um item</h3><p>Itens do Livro Básico e de Deuses de Arton.</p></div><button type="button" class="catalog-close" id="closeItemCatalogBtn">×</button></div><input id="catalogSearch" class="catalog-search" placeholder="🔎 Buscar item, categoria ou efeito…"><div class="catalog-list">${catalogCards}</div></section></div>
  <div class="sync">Cada alteração fica salva e sincronizada com a mesa.</div>`;
 }
@@ -538,7 +488,7 @@ function bindBody(){
  document.querySelectorAll("[data-money]").forEach(b=>b.onclick=()=>{const amount=Math.max(1,Math.floor(Number($("#moneyAmount")?.value)||1));const c=state[selected];c.money=Math.max(0,c.money+(b.dataset.money==="+"?amount:-amount));save();render()});
  document.querySelectorAll("[data-stat]").forEach(i=>i.onchange=()=>{const v=Number(i.value);if(Number.isFinite(v)){state[selected][i.dataset.stat]=v;save();render()}});
  document.querySelectorAll("[data-attr]").forEach(i=>i.onchange=()=>{const v=Number(i.value);if(Number.isFinite(v)){state[selected].attrs[i.dataset.attr]=v;state[selected].maxLoad=capacity(state[selected]);save();render()}});
- document.querySelectorAll("[data-attack]").forEach(b=>b.onclick=()=>{const a=state[selected].attacks[Number(b.dataset.attack)],d=1+Math.floor(Math.random()*20),bonus=Number(a[1].replace("+",""));toast(a[0]+": d20 "+d+" + "+a[1]+" = "+(d+bonus))});
+ document.querySelectorAll("[data-attack]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const a=state[selected].attacks[Number(b.dataset.attack)],d=1+Math.floor(Math.random()*20),bonus=Number(a[1].replace("+","")),m=attackModifiers(state[selected],a),total=d+bonus+m.attackBonus;toast(a[0]+": d20 "+d+" + "+a[1]+(m.attackBonus?` + ${m.attackBonus} extra`:"")+" = "+total+(m.damageBonus||m.damageDice?` • dano: ${a[2]}${m.damageBonus?` + ${m.damageBonus}`:""}${m.damageDice?` + ${m.damageDice}d6`:""}`:""))});
  document.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>{const n=b.dataset.skill,v=state[selected].skills[n];if(v==null)return toast(n+": perícia não disponível na ficha.");const d=1+Math.floor(Math.random()*20);toast(n+": d20 "+d+" + "+v+" = "+(d+v))});
  document.querySelectorAll("[data-skill-value]").forEach(i=>i.onchange=()=>{const n=i.dataset.skillValue,v=Number(i.value);if(!Number.isFinite(v))return;state[selected].skills[n]=v;save()});
  document.querySelectorAll("[data-item-note]").forEach(i=>i.onchange=()=>{const idx=Number(i.dataset.itemNote);state[selected].items[idx][2]=i.value;save()});
@@ -549,7 +499,6 @@ function bindBody(){
  const catOpen=$("#openItemCatalog");const catModal=$("#itemCatalog");const closeCat=()=>{if(catModal)catModal.hidden=true};if(catOpen)catOpen.onclick=()=>{if(catModal)catModal.hidden=false;const q=$("#catalogSearch");if(q){q.value="";q.focus()}};document.querySelectorAll("#closeItemCatalog,#closeItemCatalogBtn").forEach(b=>b.onclick=closeCat);document.querySelectorAll("[data-catalog-add]").forEach(b=>b.onclick=()=>{const item=itemCatalog[Number(b.dataset.catalogAdd)],c=state[selected],existing=c.items.find(x=>catalogMatch(x[0])?.name===item.name);if(existing){existing[3]=(Number(existing[3])||1)+1;existing[1]=item.spaces}else{if(load(c)+item.spaces>capacity(c))return toast("A mochila não comporta esse item.");c.items.push([item.name,item.spaces,"",1])}save();render()});const search=$("#catalogSearch");if(search)search.oninput=()=>{const q=search.value.toLowerCase().trim();document.querySelectorAll("[data-catalog-card]").forEach(card=>card.style.display=!q||card.dataset.search.includes(q)?"":"none")};
  const add=$("#additem");
  if(add)add.onclick=()=>{const name=$("#newitem").value.trim(),size=Math.max(0,Math.round((Number($("#newsize").value)||0)*2)/2),qty=Math.max(1,Math.floor(Number($("#newqty").value)||1));if(!name)return; const c=state[selected];if(load(c)+size>capacity(c))return toast("A mochila não comporta esse item.");c.items.push([name,size,"",qty]);save();render()};
- bindActiveEffects();
 }
 
 function uploadPhoto(e){
