@@ -173,7 +173,7 @@ function migrate(){
     if(typeof c.money!=="number" || !Number.isFinite(c.money)) c.money=Number(b.money)||0;
     c.maxLoad=10+(Number(c.attrs?.FOR)||0)*2;
     if(!Array.isArray(c.items)) c.items=clone(b.items);
-    c.items=c.items.map(x=>{if(Array.isArray(x))return [x[0],Number(x[1]??1),typeof x[2]==="string"?x[2]:""];return [x,1,""];});
+    c.items=c.items.map(x=>{if(Array.isArray(x))return [x[0],Number(x[1]??1),typeof x[2]==="string"?x[2]:"",Math.max(0,Math.floor(Number(x[3])||1))];return [x,1,"",1];});
     if(!Array.isArray(c.trained)) c.trained=clone(b.trained);
     if(!c.powers || !Array.isArray(c.powers) || typeof c.powers[0]==="string") c.powers=clone(b.powers);
     if(!c.skills) c.skills=clone(b.skills);
@@ -282,8 +282,8 @@ function magicView(){const list=magicData[selected]||[];if(!list.length)return '
  <div class="inventory-head"><div><div class="label">Mochila</div><strong>${used} / ${cap} espaços</strong></div><span class="inventory-icon">🎒</span></div>
  <div class="capacity-note ${full?"over":""}">Capacidade = 10 + 2 × Força (${c.attrs.FOR}). Cada item ocupa os espaços indicados na ficha.</div>
  <div class="slot-grid">${slots}</div>
- <div class="inventory-add"><input id="newitem" placeholder="Nome do item…"><input id="newsize" type="number" min="0" step="0.5" value="1" aria-label="Espaços"><button id="additem">+ Item</button></div>
- <div class="list">${c.items.map((p,i)=>`<div class="row item-row"><div class="item-icon">◈</div><div class="item-main"><b>${esc(p[0])}</b><div class="sub">${p[1]} espaço${p[1]==1?"":"s"} • Quantidade</div><div class="item-qty"><button type="button" class="qtybtn" data-item-qty="${i}" data-delta="-1">−</button><input type="number" min="0" step="1" class="qty-input" data-item-qty-input="${i}" value="${Number.isFinite(Number(p[3]))?Number(p[3]):1}" aria-label="Quantidade de ${esc(p[0])}"><button type="button" class="qtybtn" data-item-qty="${i}" data-delta="1">+</button></div><input class="item-note" data-item-note="${i}" value="${esc(p[2]||"")}" placeholder="Anotação do item…"></div><button class="smallbtn" data-remove="${i}" title="Remover item">×</button></div>`).join("")}</div>
+ <div class="inventory-add"><input id="newitem" placeholder="Nome do item…"><label class="inventory-field"><span>Espaços</span><input id="newsize" type="number" min="0" step="0.5" value="1" aria-label="Espaços que o item ocupa"></label><label class="inventory-field"><span>Quantidade</span><input id="newqty" type="number" min="1" step="1" value="1" aria-label="Quantidade do item"></label><button id="additem">+ Item</button></div>
+ <div class="list">${c.items.map((p,i)=>`<div class="row item-row"><div class="item-icon">◈</div><div class="item-main"><b>${esc(p[0])}</b><div class="item-size-row"><label>Espaços</label><input type="number" min="0" step="0.5" class="item-size-input" data-item-size="${i}" value="${Number(p[1])||0}" aria-label="Espaços de ${esc(p[0])}"><span>•</span><span>Quantidade</span></div><div class="item-qty"><button type="button" class="qtybtn" data-item-qty="${i}" data-delta="-1">−</button><input type="number" min="0" step="1" class="qty-input" data-item-qty-input="${i}" value="${Number.isFinite(Number(p[3]))?Number(p[3]):1}" aria-label="Quantidade de ${esc(p[0])}"><button type="button" class="qtybtn" data-item-qty="${i}" data-delta="1">+</button></div><input class="item-note" data-item-note="${i}" value="${esc(p[2]||"")}" placeholder="Anotação do item…"></div><button class="smallbtn" data-remove="${i}" title="Remover item">×</button></div>`).join("")}</div>
  <div class="sync">Cada alteração fica salva neste aparelho.</div>`;
 }
 
@@ -300,11 +300,12 @@ function bindBody(){
  document.querySelectorAll("[data-attack]").forEach(b=>b.onclick=()=>{const a=state[selected].attacks[Number(b.dataset.attack)],d=1+Math.floor(Math.random()*20),bonus=Number(a[1].replace("+",""));toast(a[0]+": d20 "+d+" + "+a[1]+" = "+(d+bonus))});
  document.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>{const n=b.dataset.skill,v=state[selected].skills[n];if(v==null)return toast(n+": perícia não disponível na ficha.");const d=1+Math.floor(Math.random()*20);toast(n+": d20 "+d+" + "+v+" = "+(d+v))});
  document.querySelectorAll("[data-item-note]").forEach(i=>i.onchange=()=>{const idx=Number(i.dataset.itemNote);state[selected].items[idx][2]=i.value;save()});
+ document.querySelectorAll("[data-item-size]").forEach(i=>i.onchange=()=>{const idx=Number(i.dataset.itemSize),v=Math.max(0,Math.round((Number(i.value)||0)*2)/2);state[selected].items[idx][1]=v;save();render()});
  document.querySelectorAll("[data-item-qty]").forEach(b=>b.onclick=()=>{const idx=Number(b.dataset.itemQty),delta=Number(b.dataset.delta),item=state[selected].items[idx];item[3]=Math.max(0,(Number(item[3])||1)+delta);save();render()});
  document.querySelectorAll("[data-item-qty-input]").forEach(i=>i.onchange=()=>{const idx=Number(i.dataset.itemQtyInput),v=Math.max(0,Math.floor(Number(i.value)||0));state[selected].items[idx][3]=v;save();render()});
  document.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{state[selected].items.splice(Number(b.dataset.remove),1);save();render()});
  const add=$("#additem");
- if(add)add.onclick=()=>{const name=$("#newitem").value.trim(),size=Number($("#newsize").value);if(!name)return; if(size<0)return; const c=state[selected];if(load(c)+size>capacity(c))return toast("A mochila não comporta esse item.");c.items.push([name,size,"",1]);save();render()};
+ if(add)add.onclick=()=>{const name=$("#newitem").value.trim(),size=Math.max(0,Math.round((Number($("#newsize").value)||0)*2)/2),qty=Math.max(1,Math.floor(Number($("#newqty").value)||1));if(!name)return; const c=state[selected];if(load(c)+size>capacity(c))return toast("A mochila não comporta esse item.");c.items.push([name,size,"",qty]);save();render()};
 }
 
 function uploadPhoto(e){
