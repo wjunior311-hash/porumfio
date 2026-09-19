@@ -141,6 +141,7 @@ const specialWeaponData={
   }
 };
 const itemCatalog=[
+ {name:"Luva de Ferro",cat:"Esotérico",price:"T$ 150",spaces:1,data:"+1 bônus",desc:"Dedais interligados por correntes.",effect:"Aumenta em +1 os bônus concedidos por suas magias arcanas pessoais que dão bônus na Defesa ou em testes de resistência."},
  {name:"Adaga",cat:"Arma simples",price:"T$ 2",spaces:1,data:"1d4 • crítico 19 • curto • perfuração",desc:"Faca afiada, facilmente escondida. Pode usar Destreza no ataque e pode ser arremessada.",effect:"+5 em Ladinagem para ocultá-la."},
  {name:"Espada curta",cat:"Arma simples",price:"T$ 10",spaces:1,data:"1d6 • crítico 19 • perfuração",desc:"Espada comum, usada por guardas e como arma secundária."},
  {name:"Foice",cat:"Arma simples",price:"T$ 4",spaces:1,data:"1d6 • crítico x3 • corte",desc:"Ferramenta agrícola com lâmina curva.",effect:"Arma tradicional de druidas."},
@@ -286,6 +287,102 @@ const fixedCharacterImages={
 };
 
 
+
+const activeEffectDefs={
+  Hippion:{
+    "Estilo de Duas Mãos":{type:"power",label:"Estilo de Duas Mãos",summary:"+5 nas rolagens de dano com arma corpo a corpo de duas mãos.",attackFilter:"twohand",damageBonus:5},
+    "Mestre do Tridente":{type:"power",label:"Mestre do Tridente",summary:"+2 dano com azagaias, lanças e tridentes.",attackFilter:"trident",damageBonus:2},
+    "Ataque Acrobático":{type:"power",label:"Ataque Acrobático",summary:"+2 no ataque e +2 no dano quando a condição do poder for cumprida.",attackBonus:2,damageBonus:2}
+  },
+  Malekir:{
+    "Luva de Ferro":{type:"item",label:"Luva de Ferro",summary:"Aumenta em +1 os bônus de Defesa ou resistência concedidos por suas magias arcanas pessoais.",defenseMagicBonus:1},
+    "Armadura Arcana":{type:"magic",label:"Armadura Arcana",summary:"+5 Defesa durante a cena.",defenseBonus:5},
+    "Imagem Espelhada":{type:"magic",label:"Imagem Espelhada",summary:"Bônus de Defesa enquanto a magia estiver ativa.",defenseBonus:6}
+  },
+  Fani:{
+    "Arma Mágica":{type:"magic",label:"Arma Mágica",summary:"+1 ataque e +1 dano para a arma tocada.",attackBonus:1,damageBonus:1},
+    "Bênção":{type:"magic",label:"Bênção",summary:"+1 ataque e +1 dano para aliados.",attackBonus:1,damageBonus:1}
+  },
+  Neo:{
+    "Ataque Furtivo":{type:"power",label:"Ataque Furtivo",summary:"+2d6 de dano quando o alvo estiver desprevenido, em alcance curto ou flanqueado.",damageDice:2},
+    "Cão de Briga":{type:"power",label:"Cão de Briga",summary:"Permite 1 ataque extra na primeira vez por cena em que fizer Agredir.",extraAttack:1},
+    "Adaga da Súplica":{type:"item",label:"Adaga da Súplica",summary:"Ativa a Súplica das Sombras: invisibilidade até atacar ou até o início do próximo turno.",conditionOnly:true}
+  },
+  Zuri:{
+    "Armadura Arcana":{type:"magic",label:"Armadura Arcana",summary:"+5 Defesa durante a cena.",defenseBonus:5}
+  }
+};
+function effectKey(name,e){return e.type+":"+name}
+function effectIsActive(c,name,e){return Array.isArray(c.activeEffects)&&c.activeEffects.includes(effectKey(name,e))}
+function effectToggle(name,e){
+  const c=state[selected]; if(!Array.isArray(c.activeEffects))c.activeEffects=[];
+  const k=effectKey(name,e);
+  c.activeEffects=c.activeEffects.includes(k)?c.activeEffects.filter(function(x){return x!==k}):c.activeEffects.concat(k);
+  save(); render();
+}
+function currentEffects(c){
+  const defs=activeEffectDefs[selected]||{};
+  return Object.entries(defs).filter(function(pair){return effectIsActive(c,pair[0],pair[1])}).map(function(pair){return {name:pair[0],e:pair[1]}});
+}
+function attackExtra(c,a){
+  let attackBonus=0,damageBonus=0,damageDice=0;
+  currentEffects(c).forEach(function(x){
+    const e=x.e;
+    const ok=!e.attackFilter ||
+      (e.attackFilter==="trident" && /tridente|lança|azagaia/i.test(a[0])) ||
+      (e.attackFilter==="twohand" && /tridente|bordão|montante|marreta|tacape|gadanho|alfange|alabarda|machado de guerra/i.test(a[0]));
+    if(ok){attackBonus+=Number(e.attackBonus)||0;damageBonus+=Number(e.damageBonus)||0;damageDice+=Number(e.damageDice)||0}
+  });
+  return {attackBonus:attackBonus,damageBonus:damageBonus,damageDice:damageDice};
+}
+function defenseExtra(c){
+  let n=0;
+  const effects=currentEffects(c);
+  effects.forEach(function(x){n+=Number(x.e.defenseBonus)||0});
+  if(effects.some(function(x){return x.e.defenseMagicBonus}) && effects.some(function(x){return x.e.defenseBonus})) n+=1;
+  return n;
+}
+function bindActiveEffects(){
+  const c=state[selected],defs=activeEffectDefs[selected]||{};
+  if(!Array.isArray(c.activeEffects))c.activeEffects=[];
+  function makeButton(name,e){
+    const b=document.createElement("button");
+    b.type="button"; b.className="use-effect-btn"+(effectIsActive(c,name,e)?" used":"");
+    b.textContent=effectIsActive(c,name,e)?"USANDO":"USAR";
+    b.onclick=function(ev){ev.preventDefault();ev.stopPropagation();effectToggle(name,e)};
+    return b;
+  }
+  document.querySelectorAll(".power,.item-row").forEach(function(card){
+    const title=card.querySelector("summary b,.item-title-line b");
+    if(!title)return;
+    const name=title.textContent.trim(),e=defs[name];
+    if(e&&!card.querySelector(".use-effect-btn")){
+      const btn=makeButton(name,e);
+      const target=card.querySelector("summary")||card.querySelector(".item-title-line");
+      target.appendChild(btn);
+    }
+  });
+  if(tab==="Resumo"){
+    const content=document.querySelector(".content");
+    if(content&&!content.querySelector(".combo-panel")){
+      const effects=currentEffects(c),panel=document.createElement("div");
+      panel.className="combo-panel";
+      let html='<div class="combo-title">⚡ Combos e efeitos ativos</div>';
+      if(!effects.length) html+='<div class="combo-empty">Nenhum efeito temporário em uso.</div>';
+      effects.forEach(function(x){html+='<div class="combo-effect"><b>✓ '+esc(x.e.label)+'</b><span>'+esc(x.e.summary)+'</span></div>'});
+      c.attacks.forEach(function(a){const x=attackExtra(c,a);if(x.attackBonus||x.damageBonus||x.damageDice){html+='<div class="combo-attack"><b>⚔️ '+esc(a[0])+'</b><span>'+(x.attackBonus?"Ataque +"+x.attackBonus:"")+(x.damageBonus?" • Dano +"+x.damageBonus:"")+(x.damageDice?" • +"+x.damageDice+"d6":"")+'</span></div>'}});
+      panel.innerHTML=html;
+      content.insertBefore(panel,content.firstChild);
+    }
+    const def=document.querySelector('[data-stat="def"]')?.closest(".mini");
+    if(def&&defenseExtra(c)){const x=document.createElement("small");x.className="combo-extra-stat";x.textContent="+"+defenseExtra(c)+" extra ativo";def.appendChild(x)}
+  }
+  document.querySelectorAll("[data-attack]").forEach(function(b){b.onclick=function(ev){
+    ev.preventDefault();ev.stopPropagation();
+    const a=c.attacks[Number(b.dataset.attack)],d=1+Math.floor(Math.random()*20),baseBonus=Number(a[1].replace("+",""))||0,x=attackExtra(c,a),total=d+baseBonus+x.attackBonus;
+    toast(a[0]+": d20 "+d+" + "+baseBonus+(x.attackBonus?" + "+x.attackBonus+" extra":"")+" = "+total+(x.damageBonus||x.damageDice?" • dano "+a[2]+(x.damageBonus?" + "+x.damageBonus:"")+(x.damageDice?" + "+x.damageDice+"d6":""):""));
+  }});
+}
 function migrate(){
   if(state.Neo && state.Neo._sheetVersion!==3){
     state.Neo.attacks=clone(base.Neo.attacks);
@@ -452,6 +549,7 @@ function bindBody(){
  const catOpen=$("#openItemCatalog");const catModal=$("#itemCatalog");const closeCat=()=>{if(catModal)catModal.hidden=true};if(catOpen)catOpen.onclick=()=>{if(catModal)catModal.hidden=false;const q=$("#catalogSearch");if(q){q.value="";q.focus()}};document.querySelectorAll("#closeItemCatalog,#closeItemCatalogBtn").forEach(b=>b.onclick=closeCat);document.querySelectorAll("[data-catalog-add]").forEach(b=>b.onclick=()=>{const item=itemCatalog[Number(b.dataset.catalogAdd)],c=state[selected],existing=c.items.find(x=>catalogMatch(x[0])?.name===item.name);if(existing){existing[3]=(Number(existing[3])||1)+1;existing[1]=item.spaces}else{if(load(c)+item.spaces>capacity(c))return toast("A mochila não comporta esse item.");c.items.push([item.name,item.spaces,"",1])}save();render()});const search=$("#catalogSearch");if(search)search.oninput=()=>{const q=search.value.toLowerCase().trim();document.querySelectorAll("[data-catalog-card]").forEach(card=>card.style.display=!q||card.dataset.search.includes(q)?"":"none")};
  const add=$("#additem");
  if(add)add.onclick=()=>{const name=$("#newitem").value.trim(),size=Math.max(0,Math.round((Number($("#newsize").value)||0)*2)/2),qty=Math.max(1,Math.floor(Number($("#newqty").value)||1));if(!name)return; const c=state[selected];if(load(c)+size>capacity(c))return toast("A mochila não comporta esse item.");c.items.push([name,size,"",qty]);save();render()};
+ bindActiveEffects();
 }
 
 function uploadPhoto(e){
