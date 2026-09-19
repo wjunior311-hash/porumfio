@@ -42,3 +42,34 @@
 .master-screen .master-stepper button{height:29px;font-size:10px}
 .master-screen .condition-chip{font-size:10px;padding:8px 9px}
 @media(max-width:520px){.master-summary>div{padding:9px}.master-summary span{font-size:7px}.master-summary b{font-size:18px}.master-banner{padding:16px}.master-banner strong{font-size:15px}.master-live{min-width:68px}}
+
+.master-shell{max-width:1500px}
+.master-hero{display:none}
+.master-screen{padding:0;background:transparent;border:0}
+.master-grid{display:grid!important;grid-template-columns:repeat(5,minmax(190px,1fr))!important;gap:10px!important}
+.master-screen .master-card{padding:0 0 13px!important;overflow:hidden;border-radius:20px!important;background:linear-gradient(180deg,#21171a 0,#120e10 72%)!important;border:1px solid #53333a!important;box-shadow:0 16px 35px #0008}
+.master-card-top{position:relative;padding:0 13px 12px;min-height:250px;display:flex!important;align-items:flex-end!important;background:linear-gradient(180deg,transparent 38%,#090708 100%)}
+.master-avatar{position:absolute!important;inset:0 0 auto 0!important;width:100%!important;height:250px!important;border-radius:0!important;background:#20151a!important;border:0!important}
+.master-avatar img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center top!important;display:block!important}
+.master-avatar span{font-size:70px!important}
+.master-name{position:relative!important;z-index:2!important;margin-left:0!important;display:flex!important;flex-direction:column!important;text-shadow:0 2px 8px #000}
+.master-name strong{font-size:20px!important;line-height:1.05!important}
+.master-name span{font-size:9px!important;color:#ddd!important;margin-top:4px}
+.master-status-count{position:absolute!important;z-index:3!important;right:10px!important;top:10px!important;background:#120d10cc!important;backdrop-filter:blur(5px)}
+.master-resources{padding:0 11px!important;display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+.master-resource{padding:9px!important;border-radius:13px!important;background:#181113!important}
+.master-resource>div:first-child b{font-size:21px!important}
+.master-bar{height:9px!important}
+.master-stepper{display:grid!important;grid-template-columns:repeat(4,1fr)!important}
+.master-stepper button{height:28px!important;padding:0!important}
+.master-card .condition-title,.master-card .condition-chips,.master-card .master-note{margin-left:11px!important;margin-right:11px!important}
+.master-card .condition-title{margin-top:11px!important}
+.master-card .condition-chips{max-height:74px;overflow:auto}
+.master-card .condition-chip{font-size:8px!important;padding:6px 7px!important}
+.master-card .master-note input{font-size:9px!important}
+.master-banner{margin-bottom:10px!important}
+.master-footer{display:flex;justify-content:center;gap:10px;align-items:center;padding:13px;color:#b9949d;font-size:10px;letter-spacing:.08em}
+.master-footer small{color:#6f5b61;letter-spacing:0}
+@media(max-width:1200px){.master-grid{grid-template-columns:repeat(3,minmax(200px,1fr))!important}}
+@media(max-width:760px){.master-grid{grid-template-columns:repeat(2,minmax(160px,1fr))!important}}
+@media(max-width:520px){.master-grid{grid-template-columns:1fr!important}.master-card-top{min-height:290px}.master-avatar{height:290px!important}}
