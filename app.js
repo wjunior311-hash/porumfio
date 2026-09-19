@@ -1,67 +1,75 @@
 const KEY="porumfio-v1";
+const SUPABASE_URL="https://pziqkepgluxvdikllfwq.supabase.co";
+const SUPABASE_KEY="sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ";
+let sb=null,cloudReady=false,remoteApplying=false,cloudUnsubscribe=null,cloudDirty=false,cloudInitializing=true;
 
-const firebaseConfig={
-  apiKey:"AIzaSyBx3o9HmKLndbsfeKj1EkP0nt_nFL2eEY",
-  authDomain:"por-um-fio.firebaseapp.com",
-  projectId:"por-um-fio",
-  storageBucket:"por-um-fio.firebasestorage.app",
-  messagingSenderId:"874474910219",
-  appId:"1:874474910219:web:88305c7b0179f3fa6dcd0e"
-};
-let db=null,cloudReady=false,remoteApplying=false,cloudUnsubscribe=null,cloudDirty=false;
-
-function initCloud(){
-  if(!window.firebase)return;
+async function initCloud(){
+  if(!window.supabase?.createClient)return;
   try{
-    firebase.initializeApp(firebaseConfig);
-    db=firebase.firestore();
-    firebase.auth().signInAnonymously().then(()=>{
-      cloudReady=true;
-      if(cloudDirty) syncCloud();
-      subscribeCloud();
-    }).catch(err=>{
-      console.error("Firebase Auth:",err);
-      const sync=$(".sync"); if(sync) sync.textContent="⚠️ Firebase não conectado";
-    });
-  }catch(err){console.warn("Firebase:",err);}
+    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    const {data,error}=await sb.from("campaign_characters").select("name,state");
+    if(error)throw error;
+    if(data?.length){
+      remoteApplying=true;
+      data.forEach(row=>{if(row.state)state[row.name]=row.state;});
+      migrate();
+      localStorage.setItem(KEY,JSON.stringify(state));
+      remoteApplying=false;
+    }else{
+      for(const [name,c] of Object.entries(state)){
+        const {error:seedError}=await sb.from("campaign_characters").upsert({name,state:cloudCharacter(c),updated_at:new Date().toISOString()});
+        if(seedError)throw seedError;
+      }
+    }
+    cloudReady=true;
+    cloudInitializing=false;
+    subscribeCloud();
+    render();
+  }catch(err){
+    cloudInitializing=false;
+    console.error("Supabase:",err);
+    const sync=document.querySelector(".sync");if(sync)sync.textContent="⚠️ Supabase não conectado";
+  }
 }
-function cloudSnapshot(){
-  const payload=clone(state);
-  Object.values(payload).forEach(c=>{c.image="";});
-  return payload;
+function cloudCharacter(c){
+  const payload=clone(c);payload.image="";return payload;
 }
-function syncCloud(){
-  if(!cloudReady||!db||remoteApplying)return;
-  const payload={state:cloudSnapshot(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
-  db.collection("campaign").doc("state").set(payload,{merge:false}).then(()=>{
+async function syncCloud(characterName=selected){
+  if(!cloudReady||!sb||remoteApplying||cloudInitializing)return;
+  const c=state[characterName];if(!c)return;
+  try{
+    const {error}=await sb.from("campaign_characters").upsert({name:characterName,state:cloudCharacter(c),updated_at:new Date().toISOString()});
+    if(error)throw error;
     cloudDirty=false;
-    const sync=$(".sync"); if(sync) sync.textContent="✓ Sincronizado em tempo real";
-  }).catch(err=>{
-    console.error("Firebase sync:",err);
-    const sync=$(".sync"); if(sync) sync.textContent="⚠️ Erro ao sincronizar";
+    const sync=document.querySelector(".sync");if(sync)sync.textContent="✓ Sincronizado em tempo real";
+  }catch(err){
+    console.error("Supabase sync:",err);
+    const sync=document.querySelector(".sync");if(sync)sync.textContent="⚠️ Erro ao sincronizar";
     toast("Não foi possível sincronizar com a mesa.");
-  });
+  }
 }
 function subscribeCloud(){
-  if(!db)return;
+  if(!sb)return;
   if(cloudUnsubscribe)cloudUnsubscribe();
-  cloudUnsubscribe=db.collection("campaign").doc("state").onSnapshot(snap=>{
-    if(!snap.exists){syncCloud();return;}
-    const remote=snap.data()?.state;
-    if(!remote)return;
-    remoteApplying=true;
-    const localImages={};
-    Object.entries(state).forEach(([n,c])=>{localImages[n]=c.image||"";});
-    state=remote;
-    migrate();
-    Object.entries(localImages).forEach(([n,img])=>{if(state[n]&&img)state[n].image=img;});
-    localStorage.setItem(KEY,JSON.stringify(state));
-    remoteApplying=false;
-    render();
-    if(cloudDirty) syncCloud();
-  },err=>console.warn("Firebase listener:",err));
+  const channel=sb.channel("por-um-fio-characters")
+    .on("postgres_changes",{event:"*",schema:"public",table:"campaign_characters"},payload=>{
+      const row=payload.new;
+      if(!row?.name||!row?.state)return;
+      if(row.name===selected&&cloudDirty)return;
+      remoteApplying=true;
+      state[row.name]=row.state;
+      migrate();
+      localStorage.setItem(KEY,JSON.stringify(state));
+      remoteApplying=false;
+      render();
+    })
+    .subscribe(status=>{
+      if(status==="SUBSCRIBED"){
+        const sync=document.querySelector(".sync");if(sync)sync.textContent="✓ Mesa conectada em tempo real";
+      }
+    });
+  cloudUnsubscribe=()=>sb.removeChannel(channel);
 }
-
 
 const magicData={Hippion:[["Comando","1º • Encantamento • Padrão • Curto • 1 rodada • 1 PM","Dá uma ordem irresistível: Fuja, Largue, Pare, Senta ou Venha."],["Sono","1º • Encantamento • Padrão • Curto • Cena • 1 PM","Se falhar, fica inconsciente e caído ou, em situação perigosa, exausto por 1 rodada e depois fatigado. Se passar, fica fatigado por 1d4 rodadas."]],Malekir:[["Adaga Mental","1º • Encantamento • Padrão • Curto • Instantânea • 1 PM","2d6 de dano psíquico e atordoado por 1 rodada; na resistência, metade do dano e sem condição."],["Armadura Arcana","1º • Abjuração • Padrão • Pessoal • Cena • 1 PM","+5 Defesa; cumulativo com outras magias, não com armaduras."],["Compreensão","1º • Adivinhação • Padrão • Toque • Cena • 1 PM","Entende textos e idiomas, comunica-se sem idioma comum e pode ouvir pensamentos de criatura tocada."],["Concentração de Combate","1º • Adivinhação • Livre • Pessoal • 1 rodada • 1 PM","Ao fazer ataque, rola dois dados e usa o melhor."],["Conjurar Monstro","1º • Convocação • Completa • Curto • Sustentada • 1 PM","Conjura monstro Pequeno de energia sob seu comando."],["Explosão de Chamas","1º • Evocação • Padrão • Pessoal • Instantânea • 1 PM","Leque de chamas causa 2d6 de fogo."],["Imagem Espelhada","1º • Ilusão • Padrão • Pessoal • Cena • 1 PM","Três cópias; +6 Defesa. Cada erro do inimigo remove uma imagem e reduz o bônus em 2."],["Seta Infalível de Talude","1º • Evocação • Padrão • Médio • Instantânea • 1 PM","Duas setas de energia, 1d4+1 essência cada."],["Toque Chocante","1º • Evocação • Padrão • Toque • Instantânea • 1 PM","2d8+2 eletricidade; armadura de metal impõe -5 no teste de resistência."]],Fani:[["Arma Mágica","1º • Transmutação • Padrão • Toque • Cena • 1 PM","+1 ataque e dano; pode usar atributo-chave de magia no ataque."],["Bênção","1º • Encantamento • Padrão • Curto • Cena • 1 PM","Aliados recebem +1 ataque e dano."],["Comando","1º • Encantamento • Padrão • Curto • 1 rodada • 1 PM","Ordem irresistível: Fuja, Largue, Pare, Senta ou Venha."],["Consagrar","1º • Evocação • Padrão • Longo • 1 dia • 1 PM","Maximiza PV curados por luz e dano de luz contra mortos-vivos na área."],["Controlar Plantas","1º • Transmutação • Padrão • Curto • Cena • 1 PM","Vegetação enreda criaturas e transforma área em terreno difícil."],["Curar Ferimentos","1º • Evocação • Padrão • Toque • Instantânea • 1 PM","Recupera 2d8+2 PV."]],Neo:[],Zuri:[["Armadura Arcana","1º • Abjuração • Padrão • Pessoal • Cena • 1 PM","Cria uma película protetora invisível, mas tangível, fornecendo +5 na Defesa. Esse bônus é cumulativo com outras magias, mas não com bônus fornecido por armaduras."],["Flecha de Luz","1º • Evocação • Padrão • Médio • Instantânea • 1 PM","Lança uma flecha luminosa contra o alvo, que sofre 2d8+2 pontos de dano de luz e fica ofuscado por 1 rodada. Passar no teste de resistência reduz o dano à metade e evita a condição."],["Raio do Enfraquecimento","1º • Necromancia • Padrão • Curto • Cena • 1 PM","Dispara um raio púrpura que drena as forças do alvo. Se falhar na resistência, fica fatigado. Se passar, fica vulnerável. Efeitos de magia não acumulam."],["Vitalidade Fantasma","1º • Necromancia • Padrão • Pessoal • Instantânea • 1 PM","Suga energia vital da terra, recebendo 2d10 pontos de vida temporários. Os PV temporários desaparecem ao final da cena."]]};
 const base={
@@ -177,14 +185,11 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const capacity=c=>10+(Number(c.attrs?.FOR)||0)*2;
 const load=c=>c.items.reduce((sum,i)=>sum+Number(i[1]||0),0);
 
-function save(){
+function save(characterName=selected){
   localStorage.setItem(KEY,JSON.stringify(state));
   localStorage.setItem(KEY+"-selected",selected);
-  if(!remoteApplying){
-    cloudDirty=true;
-    if(cloudReady)syncCloud();
-  }
-  const sync=$(".sync"); if(sync) sync.textContent=cloudReady?"⟳ Enviando para a mesa…":"⟳ Conectando à mesa…";
+  if(!remoteApplying){cloudDirty=true;if(cloudReady)syncCloud(characterName);}
+  const sync=document.querySelector(".sync");if(sync)sync.textContent=cloudReady?"⟳ Enviando para a mesa…":"⟳ Conectando à mesa…";
 }
 function toast(t){
   const e=$("#toast"); e.textContent=t; e.classList.add("show");
@@ -223,7 +228,7 @@ function render(){
    <div class="content">${body(c)}</div>
   </section>
  </div>`;
- document.querySelectorAll("[data-char]").forEach(b=>b.onclick=()=>{selected=b.dataset.char;tab="Resumo";save();render()});
+ document.querySelectorAll("[data-char]").forEach(b=>b.onclick=()=>{selected=b.dataset.char;tab="Resumo";save(b.dataset.masterHp);render()});
  document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});
  const photo=$("#photoInput"); if(photo) photo.onchange=uploadPhoto;
  const open=$("#openMaster"); if(open) open.onclick=()=>{tab="Mestre";render()};
@@ -279,10 +284,10 @@ function magicView(){const list=magicData[selected]||[];if(!list.length)return '
 }
 
 function bindBody(){
- document.querySelectorAll("[data-master-hp]").forEach(b=>b.onclick=()=>{const c=state[b.dataset.masterHp];c.hp=Math.max(0,Math.min(c.maxHp,c.hp+Number(b.dataset.delta)));save();render()});
+ document.querySelectorAll("[data-master-hp]").forEach(b=>b.onclick=()=>{const c=state[b.dataset.masterHp];c.hp=Math.max(0,Math.min(c.maxHp,c.hp+Number(b.dataset.delta)));save(b.dataset.masterMp);render()});
  document.querySelectorAll("[data-master-mp]").forEach(b=>b.onclick=()=>{const c=state[b.dataset.masterMp];c.mp=Math.max(0,Math.min(c.maxMp,c.mp+Number(b.dataset.delta)));save();render()});
- document.querySelectorAll("[data-condition]").forEach(b=>b.onclick=()=>{const c=state[b.dataset.condition],v=b.dataset.value;c.conditions.includes(v)?c.conditions=c.conditions.filter(x=>x!==v):c.conditions.push(v);save();render()});
- document.querySelectorAll("[data-note]").forEach(i=>i.onchange=()=>{state[i.dataset.note].masterNote=i.value;save()});
+ document.querySelectorAll("[data-condition]").forEach(b=>b.onclick=()=>{const c=state[b.dataset.condition],v=b.dataset.value;c.conditions.includes(v)?c.conditions=c.conditions.filter(x=>x!==v):c.conditions.push(v);save(b.dataset.condition);render()});
+ document.querySelectorAll("[data-note]").forEach(i=>i.onchange=()=>{state[i.dataset.note].masterNote=i.value;save(i.dataset.note)});
  document.querySelectorAll("[data-hp]").forEach(b=>b.onclick=()=>{const c=state[selected];c.hp=Math.max(0,Math.min(c.maxHp,c.hp+Number(b.dataset.hp)));save();render()});
  document.querySelectorAll("[data-mp]").forEach(b=>b.onclick=()=>{const c=state[selected];c.mp=Math.max(0,Math.min(c.maxMp,c.mp+Number(b.dataset.mp)));save();render()});
  document.querySelectorAll("[data-money]").forEach(b=>b.onclick=()=>{const amount=Math.max(1,Math.floor(Number($("#moneyAmount")?.value)||1));const c=state[selected];c.money=Math.max(0,c.money+(b.dataset.money==="+"?amount:-amount));save();render()});
