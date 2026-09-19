@@ -49,7 +49,6 @@ function subscribeCloud(){
     localStorage.setItem(KEY,JSON.stringify(state));
     remoteApplying=false;
     render();
-initCloud();
   },err=>console.warn("Firebase listener:",err));
 }
 
@@ -194,7 +193,7 @@ function masterCard(n,c){
 }
 function body(c){
  if(tab==="Mestre") return masterView();
- if(tab==="Resumo") return `${c.conditions.length?`<div class="active-effects"><div class="active-effects-title">⚠️ Efeitos ativos</div><div class="active-effects-list">${c.conditions.map(v=>`<span>${esc(v)}</span>`).join("")}</div></div>`:""}<div class="bars"><div class="statcard resource hp-card"><div class="resource-top"><div class="label">Pontos de Vida</div><strong>${c.hp} / ${c.maxHp}</strong></div><div class="resource-bar"><span style="width:${Math.max(0,Math.min(100,c.hp/c.maxHp*100))}%"></span></div><div class="controls"><button data-hp="-1">−</button><button data-hp="1" class="plus">+</button></div></div><div class="statcard resource mp-card"><div class="resource-top"><div class="label">Pontos de Mana</div><strong>${c.mp} / ${c.maxMp}</strong></div><div class="resource-bar"><span style="width:${Math.max(0,Math.min(100,c.mp/c.maxMp*100))}%"></span></div><div class="controls"><button data-mp="-1">−</button><button data-mp="1" class="plus">+</button></div></div></div><div class="section"><div class="sectiontitle"><h3>Defesas e combate</h3></div><div class="grid">${[['Defesa',c.def],['Fortitude',c.fort],['Reflexos',c.ref],['Vontade',c.will],['Iniciativa',c.init],['Percepção',c.per]].map(x=>`<div class="mini"><span class="label">${x[0]}</span><strong>${x[1]}</strong></div>`).join("")}</div></div>
+ if(tab==="Resumo") return `${c.conditions.length?`<div class="active-effects"><div class="active-effects-title">⚠️ Efeitos ativos</div><div class="active-effects-list">${c.conditions.map(v=>`<span>${esc(v)}</span>`).join("")}</div></div>`:""}<div class="bars"><div class="statcard resource hp-card"><div class="resource-top"><div class="label">Pontos de Vida</div><strong>${c.hp} / ${c.maxHp}</strong></div><div class="resource-bar"><span style="width:${Math.max(0,Math.min(100,c.hp/c.maxHp*100))}%"></span></div><div class="controls"><button data-hp="-5">−5</button><button data-hp="-1">−</button><button data-hp="1" class="plus">+</button><button data-hp="5" class="plus">+5</button></div></div><div class="statcard resource mp-card"><div class="resource-top"><div class="label">Pontos de Mana</div><strong>${c.mp} / ${c.maxMp}</strong></div><div class="resource-bar"><span style="width:${Math.max(0,Math.min(100,c.mp/c.maxMp*100))}%"></span></div><div class="controls"><button data-mp="-5">−5</button><button data-mp="-1">−</button><button data-mp="1" class="plus">+</button><button data-mp="5" class="plus">+5</button></div></div></div><div class="section"><div class="sectiontitle"><h3>Defesas e combate</h3></div><div class="grid">${[['Defesa',c.def],['Fortitude',c.fort],['Reflexos',c.ref],['Vontade',c.will],['Iniciativa',c.init],['Percepção',c.per]].map(x=>`<div class="mini"><span class="label">${x[0]}</span><strong>${x[1]}</strong></div>`).join("")}</div></div>
   <div class="section"><div class="sectiontitle"><h3>Atributos</h3></div><div class="grid">${Object.entries(c.attrs).map(x=>`<div class="mini"><span class="label">${x[0]}</span><strong>${x[1]>=0?"+":""}${x[1]}</strong></div>`).join("")}</div></div>
   <div class="section"><div class="sectiontitle"><h3>Movimento</h3></div><div class="row"><div><b>Deslocamento</b><div class="sub">Carga ${load(c)} / ${capacity(c)} espaços</div></div><span class="pill">${c.speed}m</span></div></div>
   <div class="sync">✓ Salvo neste aparelho</div>`;
@@ -240,3 +239,4 @@ function uploadPhoto(e){
  reader.readAsDataURL(file);
 }
 render();
+initCloud();
