@@ -75,3 +75,5 @@
 @media(max-width:520px){.master-grid{grid-template-columns:1fr!important}.master-card-top{min-height:290px}.master-avatar{height:290px!important}}
 
 .resource .controls{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.resource .controls button{min-width:0;padding:8px 4px;font-size:11px}
+
+.money-card{display:flex;align-items:center;gap:13px;margin-top:10px;padding:14px 16px;background:linear-gradient(145deg,#241a13,#171214);border:1px solid #4a3625;border-radius:18px}.money-icon{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:#38291b;border:1px solid #6b4c2b;font-size:25px}.money-info{min-width:0;flex:1}.money-info strong{display:flex;align-items:center;gap:5px;font-size:22px;margin-top:3px}.money-info input{width:120px;background:transparent;border:0;border-bottom:1px solid #765733;color:#f4dfb5;outline:none;font-size:22px;font-weight:900;padding:2px 0}.money-info small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.money-info input:focus{border-color:#d6a75f}@media(max-width:460px){.money-info input{width:105px}}
