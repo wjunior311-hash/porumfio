@@ -171,7 +171,7 @@ function render(){
 }
 function masterView(){
  const cards=Object.entries(state).map(([n,c])=>masterCard(n,c)).join("");
- return `<div class="master-banner"><div><strong>CONTROLE DA MESA</strong><span>PV, PM, condições e anotações de todos os personagens.</span></div><span class="live-dot">● MESTRE</span></div><div class="master-grid">${cards}</div><div class="sync">● Sincronizado em tempo real com a mesa</div>`;
+ return `<div class="master-banner"><div><div class="master-banner-kicker">⚔️ MESA DE JOGO</div><strong>CONTROLE DA MESA</strong><span>Gerencie recursos, condições e observações de toda a party.</span></div><div class="master-live"><i></i><b>AO VIVO</b><small>sincronizado</small></div></div><div class="master-summary"><div><span>PERSONAGENS</span><b>5</b></div><div><span>EM COMBATE</span><b>${Object.values(state).filter(c=>c.conditions.length).length}</b></div><div><span>EFEITOS ATIVOS</span><b>${Object.values(state).reduce((n,c)=>n+c.conditions.length,0)}</b></div></div><div class="master-grid">${cards}</div><div class="sync">● Sincronizado em tempo real com a mesa</div>`;
 }
 function masterCard(n,c){
  const hpPct=Math.max(0,Math.min(100,c.hp/c.maxHp*100)),mpPct=Math.max(0,Math.min(100,c.mp/c.maxMp*100));
