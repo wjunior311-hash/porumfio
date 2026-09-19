@@ -285,13 +285,13 @@ const fixedCharacterImages={
 };
 
 function migrate(){
-  if(state.Neo){
+  if(state.Neo && state.Neo._sheetVersion!==3){
     state.Neo.attacks=clone(base.Neo.attacks);
     state.Neo.items=clone(base.Neo.items);
     state.Neo._sheetVersion=3;
     cloudDirty=true;
   }
-  if(state.Hippion){
+  if(state.Hippion && state.Hippion._sheetVersion!==3){
     state.Hippion.attacks=clone(base.Hippion.attacks);
     state.Hippion.items=clone(base.Hippion.items);
     state.Hippion._sheetVersion=3;
