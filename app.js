@@ -41,6 +41,7 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 let state=JSON.parse(localStorage.getItem(KEY)||"null")||clone(base);
 let selected=localStorage.getItem(KEY+"-selected")||"Hippion";
 let tab="Resumo";
+const conditionCatalog=[["⛓️","Preso"],["⚔️","Flanqueado"],["☠️","Envenenado"],["🩸","Sangrando"],["🌀","Atordoado"],["💤","Caído"],["😵","Inconsciente"],["👁️","Cego"],["🔇","Surdo"],["🧱","Lento"],["🪶","Ofuscado"],["🔒","Paralisado"],["😨","Apavorado"],["😰","Abalado"],["😵‍💫","Confuso"],["💘","Enfeitiçado"],["🤢","Enjoado"],["🥱","Fatigado"],["🥀","Exausto"],["💢","Debilitado"],["💪","Fraco"],["🌫️","Esmorecido"],["😶‍🌫️","Fascinado"],["😤","Frustrado"],["😳","Pasmo"],["🛡️","Vulnerável"],["🪨","Alquebrado"],["🦶","Desprevenido"]];
 
 function migrate(){
   Object.entries(base).forEach(([name,b])=>{
@@ -53,6 +54,8 @@ function migrate(){
     if(!c.powers || !Array.isArray(c.powers) || typeof c.powers[0]==="string") c.powers=clone(b.powers);
     if(!c.skills) c.skills=clone(b.skills);
     if(!c.image) c.image="";
+    if(!Array.isArray(c.conditions)) c.conditions=[];
+    if(typeof c.masterNote!=="string") c.masterNote="";
   });
 }
 migrate();
@@ -75,7 +78,7 @@ function toast(t){
 function render(){
  const c=state[selected];
  document.title="Por Um Fio — "+selected;
- const tabs=["Resumo","Ataques","Poderes","Magias","Mochila","Perícias"];
+ const tabs=["Resumo","Ataques","Poderes","Magias","Mochila","Perícias","⚔️ Mestre"];
  $("#app").innerHTML=`<div class="shell">
   <header class="top"><div class="brand">POR UM FIO</div><div class="badge">mesa ativa</div></header>
   <section class="hero"><div class="eyebrow">Tormenta20 • campanha</div><h1>Por Um Fio</h1><p>5 personagens • ficha de mesa • salvamento local</p></section>
@@ -98,7 +101,17 @@ function render(){
  bindBody();
 }
 
+function masterView(){
+ const cards=Object.entries(state).map(([n,c])=>masterCard(n,c)).join("");
+ return `<div class="master-banner"><div><strong>CONTROLE DA MESA</strong><span>PV, PM, condições e anotações de todos os personagens.</span></div><span class="live-dot">● MESTRE</span></div><div class="master-grid">${cards}</div><div class="sync">⚠️ Nesta versão, os dados ficam salvos neste aparelho. A sincronização entre celulares depende do banco de dados.</div>`;
+}
+function masterCard(n,c){
+ const hpPct=Math.max(0,Math.min(100,c.hp/c.maxHp*100)),mpPct=Math.max(0,Math.min(100,c.mp/c.maxMp*100));
+ const chips=conditionCatalog.map(([ic,label])=>`<button class="condition-chip ${c.conditions.includes(label)?"on":""}" data-condition="${n}" data-value="${esc(label)}"><span>${ic}</span>${label}</button>`).join("");
+ return `<article class="master-card ${c.hp<=0?"down":""}"><div class="master-card-top"><div class="master-avatar">${c.image?`<img src="${c.image}" alt="">`:`<span>${n[0]}</span>`}</div><div class="master-name"><strong>${esc(n)}</strong><span>${esc(c.className)} • Nv. ${c.level}</span></div><div class="master-status-count">${c.conditions.length}<small>efeitos</small></div></div><div class="master-resources"><div class="master-resource hp"><div><span>PV</span><b>${c.hp}/${c.maxHp}</b></div><div class="master-bar"><i style="width:${hpPct}%"></i></div><div class="master-stepper"><button data-master-hp="${n}" data-delta="-5">−5</button><button data-master-hp="${n}" data-delta="-1">−1</button><button data-master-hp="${n}" data-delta="1">+1</button><button data-master-hp="${n}" data-delta="5">+5</button></div></div><div class="master-resource mp"><div><span>PM</span><b>${c.mp}/${c.maxMp}</b></div><div class="master-bar"><i style="width:${mpPct}%"></i></div><div class="master-stepper"><button data-master-mp="${n}" data-delta="-5">−5</button><button data-master-mp="${n}" data-delta="-1">−1</button><button data-master-mp="${n}" data-delta="1">+1</button><button data-master-mp="${n}" data-delta="5">+5</button></div></div></div><div class="condition-title"><span>Condições e estados</span><small>toque para aplicar/remover</small></div><div class="condition-chips">${chips}</div><div class="master-note"><span>📝 Anotação</span><input data-note="${n}" value="${esc(c.masterNote)}" placeholder="Ex.: preso na teia, marcado pelo vilão..."></div></article>`;
+}
 function body(c){
+ if(tab==="Mestre") return masterView();
  if(tab==="Resumo") return `
   <div class="bars"><div class="statcard resource hp-card"><div class="resource-top"><div class="label">Pontos de Vida</div><strong>${c.hp} / ${c.maxHp}</strong></div><div class="resource-bar"><span style="width:${Math.max(0,Math.min(100,c.hp/c.maxHp*100))}%"></span></div><div class="controls"><button data-hp="-1">−</button><button data-hp="1" class="plus">+</button></div></div><div class="statcard resource mp-card"><div class="resource-top"><div class="label">Pontos de Mana</div><strong>${c.mp} / ${c.maxMp}</strong></div><div class="resource-bar"><span style="width:${Math.max(0,Math.min(100,c.mp/c.maxMp*100))}%"></span></div><div class="controls"><button data-mp="-1">−</button><button data-mp="1" class="plus">+</button></div></div></div><div class="section"><div class="sectiontitle"><h3>Defesas e combate</h3></div><div class="grid">${[['Defesa',c.def],['Fortitude',c.fort],['Reflexos',c.ref],['Vontade',c.will],['Iniciativa',c.init],['Percepção',c.per]].map(x=>`<div class="mini"><span class="label">${x[0]}</span><strong>${x[1]}</strong></div>`).join("")}</div></div>
   <div class="section"><div class="sectiontitle"><h3>Atributos</h3></div><div class="grid">${Object.entries(c.attrs).map(x=>`<div class="mini"><span class="label">${x[0]}</span><strong>${x[1]>=0?"+":""}${x[1]}</strong></div>`).join("")}</div></div>
@@ -124,6 +137,10 @@ function magicView(){const list=magicData[selected]||[];if(!list.length)return '
 }
 
 function bindBody(){
+ document.querySelectorAll("[data-master-hp]").forEach(b=>b.onclick=()=>{const c=state[b.dataset.masterHp];c.hp=Math.max(0,Math.min(c.maxHp,c.hp+Number(b.dataset.delta)));save();render()});
+ document.querySelectorAll("[data-master-mp]").forEach(b=>b.onclick=()=>{const c=state[b.dataset.masterMp];c.mp=Math.max(0,Math.min(c.maxMp,c.mp+Number(b.dataset.delta)));save();render()});
+ document.querySelectorAll("[data-condition]").forEach(b=>b.onclick=()=>{const c=state[b.dataset.condition],v=b.dataset.value;c.conditions.includes(v)?c.conditions=c.conditions.filter(x=>x!==v):c.conditions.push(v);save();render()});
+ document.querySelectorAll("[data-note]").forEach(i=>i.onchange=()=>{state[i.dataset.note].masterNote=i.value;save()});
  document.querySelectorAll("[data-hp]").forEach(b=>b.onclick=()=>{const c=state[selected];c.hp=Math.max(0,Math.min(c.maxHp,c.hp+Number(b.dataset.hp)));save();render()});
  document.querySelectorAll("[data-mp]").forEach(b=>b.onclick=()=>{const c=state[selected];c.mp=Math.max(0,Math.min(c.maxMp,c.mp+Number(b.dataset.mp)));save();render()});
  document.querySelectorAll("[data-attack]").forEach(b=>b.onclick=()=>{const a=state[selected].attacks[Number(b.dataset.attack)],d=1+Math.floor(Math.random()*20),bonus=Number(a[1].replace("+",""));toast(a[0]+": d20 "+d+" + "+a[1]+" = "+(d+bonus))});
