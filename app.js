@@ -109,23 +109,23 @@ const specialWeaponData={
   "Tridente do Nó Perfeito":{
     subtitle:"Item Mágico (Tridente) • Tormenta 20",
     description:"Forjado por um mestre artesão de Vitória, este tridente teve seu nó encantado após um feito de engenhosidade digno de lenda. A corda e o nó brilham com magia marítima e precisão.",
-    type:"Tridente",category:"Item Mágico",damage:"1d8 (Perfuração)",properties:"Empunhada em Duas Mãos",weight:"2 kg",origin:"Vitória",level:"2",
+    type:"Tridente",category:"Item Mágico",damage:"1d8 (Perfuração)",properties:"Empunhada em Duas Mãos",weight:"2 kg",origin:"Vitória",level:"2",system:"Tormenta 20",
     abilities:[
       ["Arremesso Aprimorado","Ao arremessar o tridente, você pode usar FOR ou LUTA no lugar de DES para a jogada de ataque. Continuar gastando apenas 1 ação de movimento para arremessar."],
       ["Precisão Além do Comum","Se o ataque acertar e o resultado exceder o CD da Defesa da criatura em 10 ou mais, ela sofre -2 na Defesa até o início do seu próximo turno."],
       ["Abalado pela Investida","Se você acertar a mesma criatura que já sofreu o efeito acima antes de seu próximo turno, ela fica VULNERÁVEL ao seu próximo ataque. Criatura vulnerável cai no chão ou fica impedida de agir até o início do seu próximo turno (aplicado apenas uma vez por alvo até o fim do seu próximo turno)."]
     ],
-    quote:"Um nó perfeito não é apenas técnica. É intenção, força e propósito alinhados. — Mestre Hadrin, Artesão dos Ventos e das Correntes"
+    quote:"Um nó perfeito não é apenas técnica. É intenção, força e propósito alinhados. — Mestre Hadrin, Artesão dos Ventos e das Correntes",footer:"Sistema: Tormenta 20 • Item mágico • Tridente"
   },
   "Adaga da Súplica":{
     subtitle:"Relíquia Roubada da Guilda de Valkaria",
     description:"Forjada nas sombras da própria Guilda, esta adaga simples aos olhos incautos revela segredos esquecidos quando o olhar certo a encontra.",
-    type:"Adaga",category:"Relíquia",damage:"1d6 (Perfuração)",properties:"Leve, Fina, Arremessável (20 m)",weight:"0,5 kg",origin:"Guilda de Ladrões de Valkaria",
+    type:"Adaga",category:"Relíquia",damage:"1d6 (Perfuração)",properties:"Leve, Fina, Arremessável (20 m)",weight:"0,5 kg",origin:"Guilda de Ladrões de Valkaria",recommended:"5+",
     abilities:[
       ["Passiva: Retorno Certo","A adaga pode ser arremessada normalmente (Alcance 20 m). Enquanto estiver ao alcance (até 20 metros), basta estender a mão e a adaga retorna imediatamente para sua mão, em linha reta. Tudo que estiver no caminho sofre dano normal da adaga (1d6 perfuração) e pode realizar um teste de Reflexos para reduzir o dano à metade."],
       ["Ativa (1/dia): Súplica das Sombras","Você se dissolve nas sombras, tornando-se invisível até atacar ou até o início do seu próximo turno (o que ocorrer primeiro). Ao atacar, faça um teste de VONTADE para manter o efeito. CD BASE: 10. CD COM INFORTÚNIO: 15 (10 + 5). Sucesso: você permanece invisível até o início do seu próximo turno. Falha: a invisibilidade termina imediatamente após o ataque. Pode ser usada 1 vez por dia. Recuperada com um descanso longo."]
     ],
-    quote:"Aqueles que a deixam partir, sempre a vêem retornar. — S."
+    quote:"Aqueles que a deixam partir, sempre a vêem retornar. — S.",footer:"Sistema: Tormenta 20 • Item de aventura • Nível recomendado: 5+"
   }
 };
 const conditionCatalog=[["⛓️","Preso"],["⚔️","Flanqueado"],["☠️","Envenenado"],["🩸","Sangrando"],["🌀","Atordoado"],["💤","Caído"],["😵","Inconsciente"],["👁️","Cego"],["🔇","Surdo"],["🧱","Lento"],["🪶","Ofuscado"],["🔒","Paralisado"],["😨","Apavorado"],["😰","Abalado"],["😵‍💫","Confuso"],["💘","Enfeitiçado"],["🤢","Enjoado"],["🥱","Fatigado"],["🥀","Exausto"],["💢","Debilitado"],["💪","Fraco"],["🌫️","Esmorecido"],["😶‍🌫️","Fascinado"],["😤","Frustrado"],["😳","Pasmo"],["🛡️","Vulnerável"],["🪨","Alquebrado"],["🦶","Desprevenido"]];
@@ -256,7 +256,7 @@ function body(c){
   <div class="section"><div class="sectiontitle"><h3>Atributos</h3></div><div class="grid">${Object.entries(c.attrs).map(x=>`<div class="mini editable-mini"><span class="label">${x[0]}</span><input class="stat-input" type="number" data-attr="${x[0]}" value="${x[1]}"></div>`).join("")}</div></div>
   <div class="section"><div class="sectiontitle"><h3>Movimento</h3></div><div class="row editable-row"><div><b>Deslocamento</b><div class="sub">Carga ${load(c)} / ${capacity(c)} espaços</div></div><label class="speed-edit"><input class="stat-input" type="number" data-stat="speed" value="${c.speed}"><span>m</span></label></div></div>
   <div class="sync">✓ Salvo neste aparelho</div>`;
- if(tab==="Ataques") return `<div class="list">${c.attacks.map((a,i)=>{const w=specialWeaponData[a[0]];return `<details class="weapon-card ${w?"special-weapon":""}"><summary><div><b>⚔️ ${esc(a[0])}</b><div class="sub">${a[1]} • ${a[2]} • ${a[3]} • ${a[4]} • ${a[5]}</div></div><button class="roll" data-attack="${i}" type="button">Rolar</button></summary>${w?`<div class="weapon-details"><div class="weapon-subtitle">${esc(w.subtitle)}</div><p>${esc(w.description)}</p><div class="weapon-specs"><span><b>Tipo</b>${esc(w.type)}</span><span><b>Categoria</b>${esc(w.category)}</span><span><b>Dano</b>${esc(w.damage)}</span><span><b>Propriedades</b>${esc(w.properties)}</span><span><b>Peso</b>${esc(w.weight)}</span><span><b>Origem</b>${esc(w.origin)}</span></div><div class="weapon-abilities">${w.abilities.map(x=>`<div><b>${esc(x[0])}</b><p>${esc(x[1])}</p></div>`).join("")}</div><div class="weapon-quote">${esc(w.quote)}</div></div>`:""}</details>`}).join("")}</div><div class="sync">Armas especiais com informações das fichas enviadas.</div>`;
+ if(tab==="Ataques") return `<div class="list">${c.attacks.map((a,i)=>{const w=specialWeaponData[a[0]];return `<details class="weapon-card ${w?"special-weapon":""}"><summary><div><b>⚔️ ${esc(a[0])}</b><div class="sub">${a[1]} • ${a[2]} • ${a[3]} • ${a[4]} • ${a[5]}</div></div><button class="roll" data-attack="${i}" type="button">Rolar</button></summary>${w?`<div class="weapon-details"><div class="weapon-subtitle">${esc(w.subtitle)}</div><p>${esc(w.description)}</p><div class="weapon-specs"><span><b>Tipo</b>${esc(w.type)}</span><span><b>Categoria</b>${esc(w.category)}</span><span><b>Dano</b>${esc(w.damage)}</span><span><b>Propriedades</b>${esc(w.properties)}</span><span><b>Peso</b>${esc(w.weight)}</span><span><b>Origem</b>${esc(w.origin)}</span></div><div class="weapon-abilities">${w.abilities.map(x=>`<div><b>${esc(x[0])}</b><p>${esc(x[1])}</p></div>`).join("")}</div><div class="weapon-quote">${esc(w.quote)}</div><div class="weapon-footer">${esc(w.footer||"")}</div></div>`:""}</details>`}).join("")}</div><div class="sync">Armas especiais com informações das fichas enviadas.</div>`;
  if(tab==="Poderes") return `<div class="list powers">${c.powers.map(p=>`<details class="power"><summary><span class="power-icon">✦</span><b>${esc(p[0])}</b></summary><div class="power-text">${esc(p[1])}</div></details>`).join("")}</div>`;
  if(tab==="Magias") return magicView();
  if(tab==="Mochila") return inventory(c);
