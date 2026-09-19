@@ -106,6 +106,14 @@ let selected=localStorage.getItem(KEY+"-selected")||"Hippion";
 let tab="Resumo";
 const conditionCatalog=[["⛓️","Preso"],["⚔️","Flanqueado"],["☠️","Envenenado"],["🩸","Sangrando"],["🌀","Atordoado"],["💤","Caído"],["😵","Inconsciente"],["👁️","Cego"],["🔇","Surdo"],["🧱","Lento"],["🪶","Ofuscado"],["🔒","Paralisado"],["😨","Apavorado"],["😰","Abalado"],["😵‍💫","Confuso"],["💘","Enfeitiçado"],["🤢","Enjoado"],["🥱","Fatigado"],["🥀","Exausto"],["💢","Debilitado"],["💪","Fraco"],["🌫️","Esmorecido"],["😶‍🌫️","Fascinado"],["😤","Frustrado"],["😳","Pasmo"],["🛡️","Vulnerável"],["🪨","Alquebrado"],["🦶","Desprevenido"]];
 
+const fixedCharacterImages={
+  Hippion:"assets/characters/hippion.webp",
+  Malekir:"assets/characters/malekir.webp",
+  Neo:"assets/characters/neo.webp",
+  Fani:"assets/characters/fani.webp",
+  Zuri:"assets/characters/zuri.webp"
+};
+
 function migrate(){
   Object.entries(base).forEach(([name,b])=>{
     if(!state[name]) state[name]=clone(b);
@@ -116,7 +124,7 @@ function migrate(){
     if(!Array.isArray(c.trained)) c.trained=clone(b.trained);
     if(!c.powers || !Array.isArray(c.powers) || typeof c.powers[0]==="string") c.powers=clone(b.powers);
     if(!c.skills) c.skills=clone(b.skills);
-    if(!c.image) c.image="";
+    c.image=fixedCharacterImages[name]||c.image||"";
     if(!Array.isArray(c.conditions)) c.conditions=[];
     if(typeof c.masterNote!=="string") c.masterNote="";
   });
