@@ -209,6 +209,7 @@ const itemCatalog=[
  {name:"Maleta de medicamentos",cat:"Ferramenta",price:"T$ 50",spaces:1,data:"Cura",desc:"Caixa com ervas, unguentos, bandagens e materiais médicos.",effect:"Sem ela, –5 em Cura."},
  {name:"Sela",cat:"Ferramenta",price:"T$ 20",spaces:1,data:"Cavalgar",desc:"Peça de couro e pelego com arreios para montaria.",effect:"Sem sela, –5 em Cavalgar; usada no animal, não ocupa espaço do personagem."},
  {name:"Ácido",cat:"Alquímico",price:"T$ 10",spaces:0.5,data:"2d4 ácido",desc:"Frasco de ácido corrosivo.",effect:"Dano conforme a regra do preparado; use o teste de resistência indicado no livro."},
+ {name:"Elixir do Amor",cat:"Alquímico — Preparado",price:"T$ 100",spaces:0.5,data:"Vontade CD Car",desc:"Líquido adocicado que provoca paixão.",effect:"Um humanoide que beber fica apaixonado pela primeira criatura que enxergar (condição enfeitiçado; Vontade CD Car anula). O efeito dura 1d3 dias."},
  {name:"Bálsamo restaurador",cat:"Alquímico",price:"T$ 10",spaces:0.5,data:"2d4 PV",desc:"Pasta verde e fedorenta feita de ervas medicinais.",effect:"Consumir é uma ação completa e recupera 2d4 PV."},
  {name:"Bomba",cat:"Alquímico",price:"T$ 50",spaces:0.5,data:"—",desc:"Explosivo alquímico para uso em combate.",effect:"Preparado alquímico do Livro Básico."},
  {name:"Essência de mana",cat:"Alquímico",price:"T$ 50",spaces:0.5,data:"1d4 PM",desc:"Poção feita de ervas raras e compostos alquímicos.",effect:"Beber é uma ação padrão e recupera 1d4 PM."},
