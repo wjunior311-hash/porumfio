@@ -295,7 +295,8 @@ const activeEffectDefs={
   "Ataque Acrobático":{label:"Ataque Acrobático",summary:"+2 ataque e +2 dano quando a condição do poder foi cumprida",attackBonus:2,damageBonus:2}
  }},
  Malekir:{items:{
-  "Luva de Ferro":{label:"Luva de Ferro",summary:"+1 aos bônus de Defesa/resistência concedidos por magias arcanas pessoais"}
+  "Luva de Ferro":{label:"Luva de Ferro",summary:"+1 aos bônus de Defesa/resistência concedidos por magias arcanas pessoais"},
+  "Varinha arcana":{label:"Varinha Arcana",summary:"+1 na CD para resistir às magias arcanas"}
  },magic:{
   "Armadura Arcana":{label:"Armadura Arcana",summary:"+5 Defesa",defenseBonus:5},
   "Imagem Espelhada":{label:"Imagem Espelhada",summary:"+6 Defesa inicialmente",defenseBonus:6}
