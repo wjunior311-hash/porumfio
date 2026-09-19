@@ -104,3 +104,5 @@
 @media (max-width: 760px){.skills{display:block!important;width:100%!important}.skills .skill{display:flex!important;width:100%!important;min-width:0!important;max-width:none!important;margin-bottom:8px}.skills .skill button{min-width:0!important;overflow:visible!important}.skills .skill-edit{flex:0 0 auto!important}.content{overflow-x:hidden!important}}
 
 .magic .power-text{white-space:pre-line}
+
+.magic-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0}.magic-field{padding:8px 9px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.025)}.magic-field small{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:.55;margin-bottom:3px}.magic-field b{font-size:12px;line-height:1.3}.magic-cost{border-color:rgba(190,70,90,.35)}.magic-circle{margin-left:auto;font-size:10px;opacity:.55}@media(max-width:430px){.magic-fields{grid-template-columns:1fr 1fr}.magic-field{padding:7px}.magic-field b{font-size:11px}}
