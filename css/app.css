@@ -140,7 +140,7 @@ label.flab { font-size: 13px; font-weight: 600; color: var(--muted); display: bl
 .mini-track > i { display: block; height: 100%; }
 
 /* rolagem */
-.rollcard { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + var(--safe-b)); width: min(532px, calc(100% - 28px)); z-index: 40; padding: 12px 14px; border-radius: 18px; background: var(--card2); border: 1px solid #4a3e55; display: flex; align-items: center; gap: 14px; box-shadow: 0 10px 30px #00000080; animation: up .18s ease-out; }
+.rollcard { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + var(--safe-b)); width: min(532px, calc(100% - 28px)); z-index: 70; padding: 12px 14px; border-radius: 18px; background: var(--card2); border: 1px solid #4a3e55; display: flex; align-items: center; gap: 14px; box-shadow: 0 10px 30px #00000080; animation: up .18s ease-out; }
 .rollcard.crit { background: #2a2318; border-color: #6a5a30; }
 .rollcard .n { font-family: 'Bricolage Grotesque', sans-serif; font-size: 40px; font-weight: 700; min-width: 56px; text-align: center; }
 @keyframes up { from { transform: translate(-50%, 12px); opacity: 0; } }

@@ -2,14 +2,15 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { GRUPOS, infoPoder, lerMagia, CONDICOES, PERICIAS, circuloMaximo } from './regras.js';
 import { installMesa } from './mesa.js';
 import { installNotas } from './notas.js';
+import { installBestiario } from './bestiario.js';
 
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
 // ---------- estado ----------
-const S = { session: null, me: null, chars: {}, order: [], spells: {}, members: [], invites: [], settings: {}, gmNote: null, scenes: [], tokens: [], notes: [], ready: false };
-let mesa = null, notas = null;
+const S = { session: null, me: null, chars: {}, order: [], spells: {}, members: [], invites: [], settings: {}, gmNote: null, scenes: [], tokens: [], notes: [], bestiary: [], ready: false };
+let mesa = null, notas = null, bestiario = null;
 const ui = { tab: {}, open: {}, roll: null, novo: { nome: '', espacos: 1 }, modal: null, pendingRender: false, installDismissed: lsGet('pf-install-off') === '1' };
 let deferredInstall = null;
 
@@ -86,6 +87,8 @@ async function loadAll() {
   if (isGM()) {
     const { data } = await sb.from('gm_notes').select('*').order('id').limit(1).maybeSingle();
     S.gmNote = data;
+    const best = await sb.from('bestiary').select('*').order('name');
+    S.bestiary = best.data || [];
   }
   if (isAdmin()) await loadInvites();
 }
@@ -107,6 +110,7 @@ function subscribe() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'scenes' }, (p) => { mesa.onRealtime('scenes', p); softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tokens' }, (p) => { mesa.onRealtime('tokens', p); softRender(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bestiary' }, (p) => { bestiario.onRealtime(p); softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, (p) => { notas.onRealtime(p); if (route().name === 'notas') softRender(); })
     .subscribe();
 }
@@ -494,6 +498,7 @@ function viewGM() {
         <button class="ghost" data-act="initAll">Rolar iniciativa do grupo</button>
       </div>
       <div class="party">${S.order.map((id) => partyCard(id, true)).join('')}</div>
+      ${bestiario.viewSection()}
       <label class="lbl" for="gmnote" style="margin-top:8px">Só para o mestre</label>
       <textarea class="field" id="gmnote" data-save="gmnote" style="min-height:180px" placeholder="Segredos, ganchos, nomes de NPC… ninguém da mesa vê.">${esc(S.gmNote?.body || '')}</textarea>
     </div>`;
@@ -607,6 +612,7 @@ function renderModal() {
   if (m.type === 'cast' || m.type === 'power') body = castBody(m);
   if (!body && mesa) body = mesa.modalBody(m) || '';
   if (!body && notas) body = notas.modalBody(m) || '';
+  if (!body && bestiario) body = bestiario.modalBody(m) || '';
   root.innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">${body}</div></div>`;
   const f = root.querySelector('[autofocus]'); if (f) setTimeout(() => f.focus(), 30);
 }
@@ -709,7 +715,12 @@ const actions = {
     toast('Grupo descansado.');
   },
   initAll() {
-    const r = S.order.map((id) => { const d = S.chars[id].data; const b = skillVal(d, 'Iniciativa') ?? num(d.init); const x = d20(); return { n: S.chars[id].name, t: x + b }; }).sort((a, b) => b.t - a.t);
+    const r = S.order.map((id) => { const d = S.chars[id].data; const b = skillVal(d, 'Iniciativa') ?? num(d.init); const x = d20(); return { n: S.chars[id].name, t: x + b }; });
+    const cena = mesa.activeScene();
+    if (cena) S.tokens.filter((t) => t.scene_id === cena.id && t.kind === 'monster' && !t.dead).forEach((t) => {
+      const b = S.bestiary.find((x) => x.id === t.bestiary_id); r.push({ n: t.label, t: d20() + num(b?.init) });
+    });
+    r.sort((a, b) => b.t - a.t);
     showRoll({ title: 'Iniciativa', n: r[0]?.t ?? '', small: true, detail: r.map((x) => `${x.n} ${x.t}`).join(' · ') });
   },
   async copyInvite(el) {
@@ -840,7 +851,10 @@ window.addEventListener('hashchange', () => { ui.modal = null; render(); window.
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; });
 window.addEventListener('appinstalled', () => { toast('App instalado!'); render(); });
 
-mesa = installMesa({ S, ui, sb, esc, num, toast, render, renderModal, actions, forms, CONDICOES });
+const mesaCtx = { S, ui, sb, esc, num, toast, render, renderModal, actions, forms, CONDICOES };
+mesa = installMesa(mesaCtx);
+bestiario = installBestiario({ S, ui, sb, esc, num, toast, render, renderModal, actions, forms, test, showRoll, rollDice });
+mesaCtx.bestiario = bestiario;
 notas = installNotas({ S, ui, sb, esc, toast, render, renderModal, actions, forms });
 
 // ---------- início ----------

@@ -203,7 +203,12 @@ export function installMesa(ctx) {
       if (error) return toast('Não consegui colocar o grupo.');
       data.forEach((t) => { if (!S.tokens.find((x) => x.id === t.id)) S.tokens.push(t); }); render();
     },
-    addMonster() { ui.modal = { type: 'addMonster', kind: lastPick('kind') || 'goblin', v: 'a', qtd: 1 }; renderModal(); },
+    addMonster(el) {
+      const m = { type: 'addMonster', kind: lastPick('kind') || 'goblin', v: 'a', qtd: 1, bid: null };
+      const bid = el && (el.bid || el.dataset?.bid);
+      if (bid) presetFrom(m, bid);
+      ui.modal = m; renderModal();
+    },
     pickMonster(el) { ui.modal.kind = el.dataset.k; renderModal(); },
     pickVariant(el) { ui.modal.v = el.dataset.v; renderModal(); },
     qtd(el) { ui.modal.qtd = Math.max(1, Math.min(10, ui.modal.qtd + num(el.dataset.d))); renderModal(); },
@@ -227,6 +232,15 @@ export function installMesa(ctx) {
     newScene() { ui.modal = { type: 'newScene' }; renderModal(); },
   });
 
+  function presetFrom(m, bid) {
+    const b = (S.bestiary || []).find((x) => x.id === bid);
+    if (!b) { m.bid = null; m.nome = m.pv = m.def = undefined; return; }
+    m.bid = b.id; m.nome = b.name; m.pv = b.pv; m.def = b.def;
+    if (b.sprite) { const i = b.sprite.lastIndexOf('-'); m.kind = b.sprite.slice(0, i); m.v = b.sprite.slice(i + 1); }
+  }
+  document.addEventListener('change', (ev) => {
+    if (ev.target.dataset.change === 'bestPick' && ui.modal?.type === 'addMonster') { presetFrom(ui.modal, ev.target.value); renderModal(); }
+  });
   function lastPick(k) { try { return localStorage.getItem('pf-m-' + k); } catch { return null; } }
   function savePick(k, v) { try { localStorage.setItem('pf-m-' + k, v); } catch {} }
 
@@ -239,7 +253,7 @@ export function installMesa(ctx) {
       const taken = new Set(tokensOf(s.id).map((t) => t.x + ',' + t.y));
       const rows = Array.from({ length: m.qtd }, (_, i) => ({
         scene_id: s.id, kind: 'monster', sprite: `${m.kind}-${m.v}`, label: m.qtd > 1 ? `${base} ${i + 1}` : base,
-        hp, max_hp: hp, def, hidden: f.oculto.checked, ...freeSpot(s, taken),
+        hp, max_hp: hp, def, hidden: f.oculto.checked, bestiary_id: m.bid || null, ...freeSpot(s, taken),
       }));
       ui.modal = null; renderModal();
       const { data, error } = await sb.from('tokens').insert(rows).select();
@@ -286,8 +300,11 @@ export function installMesa(ctx) {
 
   function modalBody(m) {
     if (m.type === 'addMonster') {
-      const pv = lastPick('pv-' + m.kind) || '', def = lastPick('def-' + m.kind) || '';
+      const pv = m.pv ?? (lastPick('pv-' + m.kind) || ''), def = m.def ?? (lastPick('def-' + m.kind) || '');
+      const best = S.bestiary || [];
       return `<h2>Colocar monstro</h2>
+        ${best.length ? `<div><label class="flab" for="mo-ficha">Usar uma ficha</label><select class="field" id="mo-ficha" data-change="bestPick">
+          <option value="">— sem ficha —</option>${[...best].sort((a, b) => a.name.localeCompare(b.name, 'pt')).map((b) => `<option value="${b.id}" ${m.bid === b.id ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}</select></div>` : ''}
         <div class="mgrid">${MONSTROS.map(([k, n]) => `<button class="mpick${m.kind === k ? ' on' : ''}" data-act="pickMonster" data-k="${k}" aria-pressed="${m.kind === k}">
           <span class="pet" style="width:48px;height:48px;background-image:url('assets/monstros/${k}-${m.v}.png')"></span><span>${n}</span></button>`).join('')}</div>
         <div class="row" style="gap:8px"><span class="small muted" style="flex:1">Versão</span>
@@ -295,7 +312,7 @@ export function installMesa(ctx) {
         <form class="form" data-form="addMonster">
           <div class="row"><span class="small muted" style="flex:1">Quantos</span><button type="button" class="sm" data-act="qtd" data-d="-1" aria-label="Menos">−</button>
             <span class="disp" style="width:28px;text-align:center;font-weight:700">${m.qtd}</span><button type="button" class="sm" data-act="qtd" data-d="1" aria-label="Mais">+</button></div>
-          <div><label class="flab" for="mo-nome">Nome</label><input class="field" id="mo-nome" name="nome" placeholder="${esc(nomeMonstro(m.kind))}" maxlength="40"></div>
+          <div><label class="flab" for="mo-nome">Nome</label><input class="field" id="mo-nome" name="nome" placeholder="${esc(nomeMonstro(m.kind))}" value="${esc(m.nome || '')}" maxlength="40"></div>
           <div class="grid2"><div><label class="flab" for="mo-pv">PV de cada</label><input class="field" id="mo-pv" name="pv" type="number" inputmode="numeric" min="1" value="${esc(pv)}" required></div>
             <div><label class="flab" for="mo-def">Defesa</label><input class="field" id="mo-def" name="def" type="number" inputmode="numeric" min="0" value="${esc(def)}" required></div></div>
           <label class="row small" style="gap:10px"><input type="checkbox" class="chk" name="oculto"> Entrar escondido (só você vê até revelar)</label>
@@ -312,6 +329,7 @@ export function installMesa(ctx) {
       }
       return `<h2>${esc(t.label)}</h2>
         <div class="total"><span>PV<br><span class="small muted">Defesa ${num(t.def)}</span></span><b>${num(t.hp)} / ${num(t.max_hp)}</b></div>
+        ${(() => { const b = t.bestiary_id && (S.bestiary || []).find((x) => x.id === t.bestiary_id); return b && ctx.bestiario ? `<details class="card"><summary style="cursor:pointer;font-weight:700">Ficha: ${esc(b.name)}</summary><div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">${ctx.bestiario.sheetHTML(b, true)}</div></details>` : ''; })()}
         <form class="form" data-form="tkHpSet"><div><label class="flab" for="tk-n">Quantidade</label><input class="field" id="tk-n" name="n" type="number" inputmode="numeric" min="0" required autofocus></div>
           <div class="grid3"><button class="roll" type="submit" name="mode" value="minus" style="height:46px">Dano</button><button class="use" type="submit" name="mode" value="plus" style="height:46px">Cura</button><button class="ghost" type="submit" name="mode" value="set" style="height:46px">Definir</button></div></form>
         <div class="row" style="gap:8px;flex-wrap:wrap"><button class="ghost" data-act="tkDead">${t.dead ? 'Reviver' : 'Marcar como morto'}</button>
