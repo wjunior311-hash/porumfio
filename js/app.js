@@ -1,12 +1,14 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { GRUPOS, infoPoder, lerMagia, CONDICOES, PERICIAS, circuloMaximo } from './regras.js';
+import { installMesa } from './mesa.js';
 
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
 // ---------- estado ----------
-const S = { session: null, me: null, chars: {}, order: [], spells: {}, members: [], invites: [], settings: {}, gmNote: null, ready: false };
+const S = { session: null, me: null, chars: {}, order: [], spells: {}, members: [], invites: [], settings: {}, gmNote: null, scenes: [], tokens: [], ready: false };
+let mesa = null;
 const ui = { tab: {}, open: {}, roll: null, novo: { nome: '', espacos: 1 }, modal: null, pendingRender: false, installDismissed: lsGet('pf-install-off') === '1' };
 let deferredInstall = null;
 
@@ -62,12 +64,16 @@ async function loadAll() {
   const { data: me } = await sb.from('profiles').select('*').eq('user_id', uid).maybeSingle();
   S.me = me;
   if (!me) return;
-  const [chars, spells, members, settings] = await Promise.all([
+  const [chars, spells, members, settings, scenes, tokens] = await Promise.all([
     sb.from('characters').select('*').order('sort'),
     sb.from('character_spells').select('*').order('sort'),
     sb.from('profiles').select('user_id, display_name, role, character_id, created_at').order('created_at'),
     sb.from('app_settings').select('*'),
+    sb.from('scenes').select('*').order('created_at'),
+    sb.from('tokens').select('*').order('created_at'),
   ]);
+  S.scenes = scenes.data || [];
+  S.tokens = tokens.data || [];
   S.chars = {}; S.order = [];
   (chars.data || []).forEach((c) => { S.chars[c.id] = c; S.order.push(c.id); });
   S.spells = {};
@@ -96,6 +102,8 @@ function subscribe() {
       S.chars[row.id] = row;
       softRender();
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'scenes' }, (p) => { mesa.onRealtime('scenes', p); softRender(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tokens' }, (p) => { mesa.onRealtime('tokens', p); softRender(); })
     .subscribe();
 }
 
@@ -135,12 +143,14 @@ function render() {
   const app = $('#app');
   const scrollY = window.scrollY;
   let html = '';
-  app.classList.toggle('wide', ['mestre', 'admin'].includes(r.name));
+  app.classList.toggle('wide', ['mestre', 'admin', 'mesa'].includes(r.name));
+  document.body.classList.toggle('tvmode', r.name === 'mesa' && r.arg === 'tv');
   if (r.name === 'convite') html = viewInvite(r.arg);
   else if (!S.session) html = viewLogin();
   else if (!S.me) html = viewNoProfile();
   else if (r.name === 'ficha' && S.chars[r.arg]) html = viewSheet(r.arg) + nav('ficha', r.arg);
   else if (r.name === 'grupo') html = viewParty() + nav('grupo');
+  else if (r.name === 'mesa') html = r.arg === 'tv' ? mesa.viewMesa(true) : mesa.viewMesa(false) + nav('mesa');
   else if (r.name === 'mestre' && isGM()) html = viewGM() + nav('mestre');
   else if (r.name === 'admin' && isAdmin()) html = viewAdmin() + nav('mais');
   else if (r.name === 'mais') html = viewMore() + nav('mais');
@@ -211,6 +221,7 @@ const ICON = {
   ficha: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>',
   grupo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.8 3 2.6 3.5 5.2"/></svg>',
   mestre: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8.7 5v10L12 22l-8.7-5V7z"/><path d="M12 2v20M3.3 7L12 12l8.7-5"/></svg>',
+  mesa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>',
   mais: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
 };
 function nav(active, arg) {
@@ -218,6 +229,7 @@ function nav(active, arg) {
   const items = [];
   if (mine) items.push(['ficha/' + mine, 'Ficha', 'ficha', active === 'ficha' && arg === mine]);
   items.push(['grupo', 'Grupo', 'grupo', active === 'grupo' || (active === 'ficha' && arg !== mine)]);
+  items.push(['mesa', 'Mesa', 'mesa', active === 'mesa']);
   if (isGM()) items.push(['mestre', 'Mestre', 'mestre', active === 'mestre']);
   items.push(['mais', 'Mais', 'mais', active === 'mais']);
   return `<nav class="nav" aria-label="Seções"><div class="nav-in">${items.map(([href, label, ic, on]) =>
@@ -471,6 +483,7 @@ function viewGM() {
   return `<header class="topbar"><div class="row"><div class="petbox" style="width:48px;height:48px">${petHTML('pato', 44)}</div><div><div class="brand">ÁREA DO MESTRE</div><div class="disp" style="font-size:20px;font-weight:700">${esc(S.settings.campaign?.name || 'Por Um Fio')}</div></div></div></header>
     <div class="page">
       <div class="row" style="flex-wrap:wrap;gap:8px">
+        <a class="use" style="display:inline-flex;align-items:center;text-decoration:none;height:40px" href="#/mesa">Abrir a mesa</a>
         <button class="ghost" data-act="restAll">Descanso: recuperar tudo</button>
         <button class="ghost" data-act="initAll">Rolar iniciativa do grupo</button>
       </div>
@@ -585,6 +598,7 @@ function renderModal() {
       <button class="link" data-act="closeModal">Fechar</button>`;
   }
   if (m.type === 'cast' || m.type === 'power') body = castBody(m);
+  if (!body && mesa) body = mesa.modalBody(m) || '';
   root.innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">${body}</div></div>`;
   const f = root.querySelector('[autofocus]'); if (f) setTimeout(() => f.focus(), 30);
 }
@@ -817,6 +831,8 @@ document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && ui.mod
 window.addEventListener('hashchange', () => { ui.modal = null; render(); window.scrollTo(0, 0); });
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; });
 window.addEventListener('appinstalled', () => { toast('App instalado!'); render(); });
+
+mesa = installMesa({ S, ui, sb, esc, num, toast, render, renderModal, actions, forms, CONDICOES });
 
 // ---------- início ----------
 async function boot() {

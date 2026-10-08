@@ -171,3 +171,34 @@ table.list { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.list td, table.list th { padding: 10px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
 table.list th { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
 .scrollx { overflow-x: auto; }
+
+/* mesa virtual */
+.board-wrap { overflow: auto; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #0d0a10; -webkit-overflow-scrolling: touch; }
+.board { position: relative; min-width: 100%; touch-action: pan-x pan-y; user-select: none; -webkit-user-select: none; }
+.board > img { display: block; width: 100%; height: auto; pointer-events: none; }
+.grid-ov { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(to right, #ffe07088 1px, transparent 1px), linear-gradient(to bottom, #ffe07088 1px, transparent 1px); }
+.tk { position: absolute; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; z-index: 2; touch-action: none; }
+.tk.movable { cursor: grab; }
+.tk.dragging { cursor: grabbing; z-index: 10; filter: drop-shadow(0 6px 8px #000a); }
+.tk.dead { z-index: 1; }
+.tk.hidden-tk { opacity: .45; }
+.tk.mine .tk-sprite { filter: drop-shadow(0 0 3px #e5c06a); }
+.tk-sprite { width: 150%; aspect-ratio: 1; margin-top: -55%; image-rendering: pixelated; background-size: 400% 100%; background-repeat: no-repeat; animation: pet 1.9s infinite steps(1); flex-shrink: 0; }
+.tk-sprite.still { background-size: 100% 100%; animation: none; }
+.tk-name { font-size: clamp(8px, 1vw, 12px); font-weight: 700; color: var(--txt); background: #15111ae6; padding: 1px 5px; border-radius: 5px; margin-top: -8%; white-space: nowrap; pointer-events: none; }
+.tk-bar { width: 80%; height: 4px; border-radius: 2px; background: #2d2433; overflow: hidden; margin-top: 2px; }
+.tk-bar i { display: block; height: 100%; background: var(--red); }
+.tk-cond { position: absolute; top: -40%; left: 50%; transform: translateX(-50%); font-size: clamp(8px, .9vw, 11px); font-weight: 700; padding: 1px 6px; border-radius: 999px; background: #5a2a58; color: #ffd6f6; white-space: nowrap; animation: bob 1.6s ease-in-out infinite; pointer-events: none; }
+@keyframes bob { 50% { transform: translate(-50%, -3px); } }
+.mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.mpick { appearance: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); color: var(--txt); font-size: 12px; font-weight: 600; }
+.mpick.on { border-color: var(--gold); background: #2a2318; }
+body.tvmode .nav { display: none; }
+body.tvmode #app { max-width: none; padding: 0; }
+.tv-wrap { position: fixed; inset: 0; background: #07050a; display: flex; align-items: center; justify-content: center; }
+.board-wrap.tv { border: 0; background: transparent; overflow: hidden; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+.board-wrap.tv .board { width: min(100vw, calc(100vh * var(--ratio, 1.75))); min-width: 0; }
+.board-wrap.tv .tk-name { font-size: clamp(10px, 1.1vw, 16px); }
+.tv-title { position: fixed; left: 20px; top: 16px; padding: 8px 14px; border-radius: 10px; background: #15111ae6; font-size: 20px; font-weight: 700; z-index: 20; }
+.tv-exit { position: fixed; right: 16px; top: 14px; width: 40px; height: 40px; border-radius: 10px; background: #15111acc; color: var(--muted); display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 22px; z-index: 20; opacity: .3; }
+.tv-exit:hover { opacity: 1; }
