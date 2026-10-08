@@ -4,6 +4,7 @@ import { installMesa } from './mesa.js';
 import { installNotas } from './notas.js';
 import { installBestiario } from './bestiario.js';
 import { installBichinho } from './bichinho.js';
+import { installEvoluir } from './evoluir.js';
 
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ';
@@ -11,7 +12,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: tr
 
 // ---------- estado ----------
 const S = { session: null, me: null, chars: {}, order: [], spells: {}, members: [], invites: [], settings: {}, gmNote: null, scenes: [], tokens: [], notes: [], bestiary: [], pets: {}, ready: false };
-let mesa = null, notas = null, bestiario = null, bichinho = null;
+let mesa = null, notas = null, bestiario = null, bichinho = null, evoluir = null;
 const ui = { tab: {}, open: {}, roll: null, novo: { nome: '', espacos: 1 }, modal: null, pendingRender: false, installDismissed: lsGet('pf-install-off') === '1' };
 let deferredInstall = null;
 
@@ -170,6 +171,7 @@ function render() {
   else if (r.name === 'ficha' && S.chars[r.arg]) html = viewSheet(r.arg) + nav('ficha', r.arg);
   else if (r.name === 'grupo') html = viewParty() + nav('grupo');
   else if (r.name === 'notas') html = notas.viewNotas() + nav('notas');
+  else if (r.name === 'evoluir' && S.chars[r.arg] && canEdit(r.arg)) html = evoluir.viewEvoluir(r.arg) + nav('ficha', r.arg);
   else if (r.name === 'bichinho') html = (r.arg ? bichinho.viewPet(r.arg) : bichinho.viewLista()) + nav(r.arg && r.arg === S.me.character_id ? 'ficha' : 'mais', r.arg);
   else if (r.name === 'mesa') html = r.arg === 'tv' ? mesa.viewMesa(true) : mesa.viewMesa(false) + nav('mesa');
   else if (r.name === 'mestre' && isGM()) html = viewGM() + nav('mestre');
@@ -319,6 +321,9 @@ function viewSheet(cid) {
   const plus = (k, l) => edit ? `<button class="btn" data-act="vital" data-c="${cid}" data-k="${k}" data-d="1" aria-label="${l} mais 1">+</button>` : '';
   return `<div class="page">
     ${mine ? installBanner() : ''}
+    ${d.levelUp && edit ? `<a class="install" href="#/evoluir/${cid}" style="text-decoration:none;color:var(--txt);background:#2a2318;border-color:#6a5a30">
+      <div style="flex:1"><b>Você pode subir para o nível ${num(d.level) + 1}!</b><span style="color:#f0d38a">O mestre liberou. Toque para escolher o que melhora.</span></div><span class="use" style="display:inline-flex;align-items:center">Subir</span></a>` : ''}
+    ${!d.levelUp && isGM() ? `<div class="row" style="gap:8px"><button class="ghost" data-act="liberarNivel" data-c="${cid}">Liberar subida de nível</button><a class="link" href="#/evoluir/${cid}">Abrir o assistente</a></div>` : ''}
     ${!edit ? `<div class="card small muted">Você está vendo a ficha de ${esc(c.name)}${owner ? ' (jogador: ' + esc(owner.display_name) + ')' : ''}. Só o dono e o mestre podem mudar.</div>` : ''}
     <section class="head">
       <a class="petbox" href="#/bichinho/${cid}" aria-label="Visitar o bichinho de ${esc(c.name)}" style="width:78px;height:78px">${petHTML(cid, 72, ko)}</a>
@@ -494,7 +499,8 @@ function partyCard(cid, gm = false) {
       <button class="ghost" data-act="vitalSet" data-c="${cid}" data-k="hp">Dano / cura</button>
       <button class="ghost" data-act="vital" data-c="${cid}" data-k="mp" data-d="-1">−1 PM</button>
       <button class="ghost" data-act="vital" data-c="${cid}" data-k="mp" data-d="1">+1 PM</button>
-      <button class="ghost" data-act="condAdd" data-c="${cid}">Condição</button></div>` : ''}
+      <button class="ghost" data-act="condAdd" data-c="${cid}">Condição</button>
+      <button class="${d.levelUp ? 'use' : 'ghost'}" data-act="liberarNivel" data-c="${cid}">${d.levelUp ? 'Nível liberado' : 'Liberar nível'}</button></div>` : ''}
   </div>`;
 }
 function viewParty() {
@@ -754,7 +760,7 @@ const actions = {
   async ensaioOff() {
     if (!confirm('Desligar o ensaio? Tudo o que foi feito nas fichas, mapas, peças e bichinhos desde que ele foi ligado vai ser desfeito.')) return;
     const { error } = await sb.rpc('end_rehearsal');
-    if (error) return toast(error.message);
+    if (error) return alert('Não consegui desligar o ensaio.\n\n' + error.message);
     await loadAll(); render(); toast('Ensaio desligado: tudo voltou ao que era.');
   },
   async copyInvite(el) {
@@ -890,6 +896,7 @@ mesa = installMesa(mesaCtx);
 bestiario = installBestiario({ S, ui, sb, esc, num, toast, render, renderModal, actions, forms, test, showRoll, rollDice });
 mesaCtx.bestiario = bestiario;
 bichinho = installBichinho({ S, ui, sb, esc, num, toast, render, actions });
+evoluir = installEvoluir({ S, ui, sb, esc, num, toast, render, actions, forms, patch });
 notas = installNotas({ S, ui, sb, esc, toast, render, renderModal, actions, forms });
 
 // ---------- início ----------

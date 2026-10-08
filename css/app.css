@@ -267,3 +267,10 @@ body.tvmode #app { max-width: none; padding: 0; }
 /* modo ensaio */
 .ensaio-bar { position: sticky; top: 0; z-index: 30; background: #e5c06a; color: #1d1720; font-size: 13px; text-align: center; padding: 7px 12px; }
 body.tvmode .ensaio-bar { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); border-radius: 10px; z-index: 25; }
+
+/* subir de nível */
+.pick { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
+.pick-on { border-color: var(--gold); background: #2a2318; }
+.pick.off { opacity: .6; }
+.hop { animation: pet 1.9s infinite steps(1), hop .9s ease-in-out infinite; }
+@keyframes hop { 50% { transform: translateY(-6px); } }

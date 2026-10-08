@@ -46,7 +46,7 @@ begin
   delete from public.characters where id not in (select x->>'id' from jsonb_array_elements(snap->'characters') x);
 
   -- mapas e peças voltam ao que eram
-  delete from public.tokens;
+  delete from public.tokens where true;
   delete from public.scenes where id not in (select (x->>'id')::uuid from jsonb_array_elements(snap->'scenes') x);
   insert into public.scenes select * from jsonb_populate_recordset(null::public.scenes, snap->'scenes')
     on conflict (id) do update set name = excluded.name, image = excluded.image, grid = excluded.grid,
