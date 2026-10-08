@@ -113,6 +113,13 @@ function subscribe() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'scenes' }, (p) => { mesa.onRealtime('scenes', p); softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tokens' }, (p) => { mesa.onRealtime('tokens', p); softRender(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, async (p) => {
+      if (!p.new?.key) return;
+      const antes = S.settings.ensaio?.active;
+      S.settings[p.new.key] = p.new.value;
+      if (p.new.key === 'ensaio' && antes && !p.new.value?.active) { await loadAll(); toast('Ensaio desligado: tudo voltou ao que era.'); }
+      softRender();
+    })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'pets' }, (p) => { bichinho.onRealtime(p); if (route().name === 'bichinho') softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bestiary' }, (p) => { bestiario.onRealtime(p); softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, (p) => { notas.onRealtime(p); if (route().name === 'notas') softRender(); })
@@ -172,6 +179,8 @@ function render() {
     const home = S.me.character_id && S.chars[S.me.character_id] ? 'ficha/' + S.me.character_id : isGM() ? 'mestre' : 'grupo';
     location.replace('#/' + home); return;
   }
+  const ens = S.session && S.me && S.settings.ensaio?.active;
+  if (ens) html = `<div class="ensaio-bar" role="status"><b>MODO ENSAIO</b> · nada aqui vale de verdade${S.settings.ensaio.by ? ' · ligado por ' + esc(S.settings.ensaio.by) : ''}</div>` + html;
   app.innerHTML = html;
   if (route().name === (render.last || '')) window.scrollTo(0, scrollY);
   render.last = route().name;
@@ -502,6 +511,13 @@ function viewGM() {
         <button class="ghost" data-act="restAll">Descanso: recuperar tudo</button>
         <button class="ghost" data-act="initAll">Rolar iniciativa do grupo</button>
       </div>
+      <div class="card" style="display:flex;flex-direction:column;gap:8px;${S.settings.ensaio?.active ? 'border-color:#8a6a1e;background:#2a2318' : ''}">
+        <span class="lbl">Modo ensaio</span>
+        <p class="small muted" style="margin:0">${S.settings.ensaio?.active
+          ? 'Ligado. Teste à vontade: ao desligar, as fichas, os mapas, as peças e os bichinhos voltam exatamente ao que eram antes. Fichas de monstro e notas ficam.'
+          : 'Para testar sem medo. Ao ligar, o app guarda como tudo está; ao desligar, volta tudo ao que era. Todo mundo vê um aviso enquanto estiver ligado.'}</p>
+        <button class="${S.settings.ensaio?.active ? 'primary' : 'ghost'}" style="height:46px" data-act="${S.settings.ensaio?.active ? 'ensaioOff' : 'ensaioOn'}">${S.settings.ensaio?.active ? 'Desligar ensaio e voltar tudo' : 'Ligar ensaio'}</button>
+      </div>
       <div class="party">${S.order.map((id) => partyCard(id, true)).join('')}</div>
       ${bestiario.viewSection()}
       <label class="lbl" for="gmnote" style="margin-top:8px">Só para o mestre</label>
@@ -728,6 +744,18 @@ const actions = {
     });
     r.sort((a, b) => b.t - a.t);
     showRoll({ title: 'Iniciativa', n: r[0]?.t ?? '', small: true, detail: r.map((x) => `${x.n} ${x.t}`).join(' · ') });
+  },
+  async ensaioOn() {
+    if (!confirm('Ligar o modo ensaio? O app guarda como tudo está agora, e ao desligar volta tudo a este ponto.')) return;
+    const { error } = await sb.rpc('start_rehearsal');
+    if (error) return toast(/function|does not exist|schema cache/i.test(error.message) ? 'Falta instalar o modo ensaio no banco.' : error.message);
+    S.settings.ensaio = { active: true, by: S.me.display_name }; render(); toast('Ensaio ligado.');
+  },
+  async ensaioOff() {
+    if (!confirm('Desligar o ensaio? Tudo o que foi feito nas fichas, mapas, peças e bichinhos desde que ele foi ligado vai ser desfeito.')) return;
+    const { error } = await sb.rpc('end_rehearsal');
+    if (error) return toast(error.message);
+    await loadAll(); render(); toast('Ensaio desligado: tudo voltou ao que era.');
   },
   async copyInvite(el) {
     const link = inviteLink(el.dataset.t);

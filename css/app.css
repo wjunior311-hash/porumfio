@@ -263,3 +263,7 @@ body.tvmode #app { max-width: none; padding: 0; }
 .hb-cortina { position: absolute; top: 0; bottom: 60px; width: 70px; background: repeating-linear-gradient(90deg, #7a2236 0 12px, #5e1a2a 12px 24px); }
 .hb-holofote { position: absolute; left: 50%; top: 0; width: 220px; height: 280px; margin-left: -110px; background: radial-gradient(ellipse at 50% 100%, #f1e3b03a, transparent 70%); clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%); }
 .hb-pet .pet { display: block; }
+
+/* modo ensaio */
+.ensaio-bar { position: sticky; top: 0; z-index: 30; background: #e5c06a; color: #1d1720; font-size: 13px; text-align: center; padding: 7px 12px; }
+body.tvmode .ensaio-bar { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); border-radius: 10px; z-index: 25; }
