@@ -202,3 +202,16 @@ body.tvmode #app { max-width: none; padding: 0; }
 .tv-title { position: fixed; left: 20px; top: 16px; padding: 8px 14px; border-radius: 10px; background: #15111ae6; font-size: 20px; font-weight: 700; z-index: 20; }
 .tv-exit { position: fixed; right: 16px; top: 14px; width: 40px; height: 40px; border-radius: 10px; background: #15111acc; color: var(--muted); display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 22px; z-index: 20; opacity: .3; }
 .tv-exit:hover { opacity: 1; }
+
+/* notas */
+.chip-btn { appearance: none; border: 1px solid var(--line2); background: var(--card); color: #d9cfdc; font-size: 13px; font-weight: 600; min-height: 36px; padding: 0 12px; border-radius: 999px; white-space: nowrap; }
+.chip-btn.on { background: var(--txt); color: #1d1720; border-color: var(--txt); }
+.chips-scroll { gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -14px; padding: 2px 14px; }
+.note-card { display: flex; flex-direction: column; gap: 8px; cursor: default; }
+.note-card[role=button] { cursor: pointer; }
+.note-card[role=button]:hover { border-color: var(--line2); }
+.note-body { font-size: 15px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.note-sketch { width: 100%; max-height: 320px; object-fit: contain; border-radius: 10px; border: 1px solid var(--line); background: #15111a; }
+.sketch-pad { width: 100%; aspect-ratio: 1; max-height: 52dvh; border-radius: 14px; border: 1px solid var(--line2); touch-action: none; background: #15111a; }
+.swatch { appearance: none; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--line2); }
+.swatch.on { border-color: var(--txt); box-shadow: 0 0 0 2px var(--bg2), 0 0 0 4px var(--txt); }

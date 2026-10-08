@@ -1,14 +1,15 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { GRUPOS, infoPoder, lerMagia, CONDICOES, PERICIAS, circuloMaximo } from './regras.js';
 import { installMesa } from './mesa.js';
+import { installNotas } from './notas.js';
 
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
 // ---------- estado ----------
-const S = { session: null, me: null, chars: {}, order: [], spells: {}, members: [], invites: [], settings: {}, gmNote: null, scenes: [], tokens: [], ready: false };
-let mesa = null;
+const S = { session: null, me: null, chars: {}, order: [], spells: {}, members: [], invites: [], settings: {}, gmNote: null, scenes: [], tokens: [], notes: [], ready: false };
+let mesa = null, notas = null;
 const ui = { tab: {}, open: {}, roll: null, novo: { nome: '', espacos: 1 }, modal: null, pendingRender: false, installDismissed: lsGet('pf-install-off') === '1' };
 let deferredInstall = null;
 
@@ -72,6 +73,8 @@ async function loadAll() {
     sb.from('scenes').select('*').order('created_at'),
     sb.from('tokens').select('*').order('created_at'),
   ]);
+  const nts = await sb.from('notes').select('*').order('created_at', { ascending: false }).limit(500);
+  S.notes = nts.data || [];
   S.scenes = scenes.data || [];
   S.tokens = tokens.data || [];
   S.chars = {}; S.order = [];
@@ -104,6 +107,7 @@ function subscribe() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'scenes' }, (p) => { mesa.onRealtime('scenes', p); softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tokens' }, (p) => { mesa.onRealtime('tokens', p); softRender(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, (p) => { notas.onRealtime(p); if (route().name === 'notas') softRender(); })
     .subscribe();
 }
 
@@ -150,6 +154,7 @@ function render() {
   else if (!S.me) html = viewNoProfile();
   else if (r.name === 'ficha' && S.chars[r.arg]) html = viewSheet(r.arg) + nav('ficha', r.arg);
   else if (r.name === 'grupo') html = viewParty() + nav('grupo');
+  else if (r.name === 'notas') html = notas.viewNotas() + nav('notas');
   else if (r.name === 'mesa') html = r.arg === 'tv' ? mesa.viewMesa(true) : mesa.viewMesa(false) + nav('mesa');
   else if (r.name === 'mestre' && isGM()) html = viewGM() + nav('mestre');
   else if (r.name === 'admin' && isAdmin()) html = viewAdmin() + nav('mais');
@@ -222,14 +227,16 @@ const ICON = {
   grupo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.8 3 2.6 3.5 5.2"/></svg>',
   mestre: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8.7 5v10L12 22l-8.7-5V7z"/><path d="M12 2v20M3.3 7L12 12l8.7-5"/></svg>',
   mesa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>',
+  notas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h4"/></svg>',
   mais: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
 };
 function nav(active, arg) {
   const mine = S.me?.character_id;
   const items = [];
   if (mine) items.push(['ficha/' + mine, 'Ficha', 'ficha', active === 'ficha' && arg === mine]);
-  items.push(['grupo', 'Grupo', 'grupo', active === 'grupo' || (active === 'ficha' && arg !== mine)]);
+  if (!mine) items.push(['grupo', 'Grupo', 'grupo', active === 'grupo' || active === 'ficha']);
   items.push(['mesa', 'Mesa', 'mesa', active === 'mesa']);
+  items.push(['notas', 'Notas', 'notas', active === 'notas']);
   if (isGM()) items.push(['mestre', 'Mestre', 'mestre', active === 'mestre']);
   items.push(['mais', 'Mais', 'mais', active === 'mais']);
   return `<nav class="nav" aria-label="Seções"><div class="nav-in">${items.map(([href, label, ic, on]) =>
@@ -265,7 +272,7 @@ async function doInstall() {
 function sheetTabs(cid) {
   const t = ['Resumo', 'Perícias', 'Habilidades'];
   if ((S.spells[cid] || []).length) t.push('Magias');
-  t.push('Mochila', 'Notas');
+  t.push('Mochila');
   return t;
 }
 function attackInfo(a) {
@@ -322,7 +329,6 @@ function viewSheet(cid) {
     ${tab === 'Habilidades' ? tabPowers(cid) : ''}
     ${tab === 'Magias' ? tabSpells(cid) : ''}
     ${tab === 'Mochila' ? tabBag(cid) : ''}
-    ${tab === 'Notas' ? tabNotes(cid) : ''}
   </div>`;
 }
 
@@ -504,6 +510,7 @@ function viewMore() {
         <div class="small muted">${PAPEL[S.me.role]}${char ? ' · ' + esc(char.name) : ''}</div>
         <div class="small muted" style="font-size:12px">${esc(S.session.user.email)}</div></div>
       </div>
+      <a class="card row" href="#/grupo" style="text-decoration:none;color:var(--txt)"><span style="flex:1;font-weight:600">Fichas do grupo</span><span class="muted">›</span></a>
       ${installBanner(true)}
       <button class="ghost" style="height:48px" data-act="logout">Sair desta conta</button>
       ${isAdmin() ? `<a class="adm-link" href="#/admin"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>administração</a>` : ''}
@@ -599,6 +606,7 @@ function renderModal() {
   }
   if (m.type === 'cast' || m.type === 'power') body = castBody(m);
   if (!body && mesa) body = mesa.modalBody(m) || '';
+  if (!body && notas) body = notas.modalBody(m) || '';
   root.innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">${body}</div></div>`;
   const f = root.querySelector('[autofocus]'); if (f) setTimeout(() => f.focus(), 30);
 }
@@ -795,7 +803,7 @@ document.addEventListener('click', (ev) => {
 });
 document.addEventListener('change', async (ev) => {
   const el = ev.target;
-  if (el.dataset.act === 'optToggle') return actions.optToggle(el);
+  if (el.tagName === 'INPUT' && el.dataset.act && actions[el.dataset.act]) return actions[el.dataset.act](el);
   if (el.dataset.change === 'role' || el.dataset.change === 'char') {
     const field = el.dataset.change === 'role' ? 'role' : 'character_id';
     const value = el.value || null;
@@ -833,6 +841,7 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); defe
 window.addEventListener('appinstalled', () => { toast('App instalado!'); render(); });
 
 mesa = installMesa({ S, ui, sb, esc, num, toast, render, renderModal, actions, forms, CONDICOES });
+notas = installNotas({ S, ui, sb, esc, toast, render, renderModal, actions, forms });
 
 // ---------- início ----------
 async function boot() {
