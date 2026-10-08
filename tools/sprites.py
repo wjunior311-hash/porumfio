@@ -214,16 +214,19 @@ def hippion(c, blink):
     return '#0e2624'
 
 def hippion_fx(c, t):
-    # orelhas-barbatana grandes e barbatanas dos antebraços, abrindo e fechando
+    # orelhas-barbatana coladas na cabeça, que se abrem um pouco
     fin, fin_dk, gold = '#2f62b0', '#1f4480', '#e8c050'
     o = 1 if t in (1, 2) else 0
-    left = [(8, 10), (8, 11), (8, 12), (7, 9), (7, 10), (7, 11), (6, 8 - o), (6, 9), (6, 10), (5, 7 - o), (5, 8 - o), (4, 6 - o)]
-    c.pts(left, fin); c.pts([(4, 6 - o), (5, 7 - o), (6, 8 - o), (7, 9)], gold); c.pts([(7, 11), (6, 10)], fin_dk)
-    right = [(32 - x, y) for x, y in left]
-    c.pts(right, fin); c.pts([(28, 6 - o), (27, 7 - o), (26, 8 - o), (25, 9)], gold); c.pts([(25, 11), (26, 10)], fin_dk)
-    for x, d in ((8, -1), (23, 1)):
-        c.pts([(x, 21), (x + d, 20 - o), (x + d, 21), (x + d, 22), (x + 2 * d, 21 - o), (x + 2 * d, 22)], fin)
-        c.pts([(x + d, 20 - o), (x + 2 * d, 21 - o)], gold)
+    left = [(8, 10), (8, 11), (8, 12), (7, 10 - o), (7, 11), (6, 10 - o), (7, 9 - o)]
+    c.pts(left, fin); c.pts([(6, 10 - o), (7, 9 - o)], gold); c.p(7, 11, fin_dk)
+    c.pts([(32 - x, y) for x, y in left], fin); c.pts([(26, 10 - o), (25, 9 - o)], gold); c.p(25, 11, fin_dk)
+    # tridente em pé, seguro pela mão direita
+    shaft, metal, hi = '#7a5230', '#d4a640', '#f2d880'
+    c.r(26, 6, 26, 30, shaft)
+    c.r(24, 5, 28, 5, metal); c.r(24, 2, 24, 4, metal); c.r(26, 1, 26, 4, metal); c.r(28, 2, 28, 4, metal)
+    c.pts([(24, 1), (26, 0), (28, 1)], hi if t % 4 == 0 else metal)
+    c.r(23, 22, 25, 23, '#3fb8b0'); c.p(25, 23, '#2a948e')               # mão no cabo
+    c.pts([(26, 12), (26, 13)], '#9a7444')                                # amarração
 
 def malekir(c, blink):
     skin, sh, lt = '#2c2833', '#1e1b24', '#45404f'
