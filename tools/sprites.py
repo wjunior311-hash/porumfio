@@ -162,63 +162,80 @@ def fani_fx(c, t):
     c.pts([(21, 18), (21, 19), (22, 19)], '#3f8a35')                     # rabo enrolado
 
 def neo(c, blink):
-    skin, sh = '#5e6b3a', '#47522a'
+    skin, sh, light = '#5e6b3a', '#47522a', '#7a8650'
     cape, cape_sh = '#6e6538', '#544c28'
     body(c, '#4a3524', '#3a2918', skin, skin, '#3a2918', '#251a10')
-    c.r(10, 18, 21, 22, cape); c.r(18, 18, 21, 22, cape_sh)             # capa
-    c.pts([(10, 23), (12, 23), (20, 23), (21, 24)], cape_sh)
-    c.r(11, 25, 20, 25, '#2a1d12'); c.p(13, 26, '#6b5236')               # cinto + bolsa
-    c.pts([(15, 21), (16, 22), (17, 23)], '#2a1d12')
-    # capuz pontudo, com rasgos
-    c.e(14, 11, 7, 7, cape); c.r(7, 11, 9, 19, cape)
-    c.pts([(11, 3), (12, 2), (13, 2), (10, 4)], cape); c.pts([(12, 1)], cape_sh)
-    c.r(7, 12, 8, 19, cape_sh); c.pts([(8, 20), (10, 20)], cape_sh)
-    c.pts([(9, 9), (11, 15), (8, 17)], '#3a3418')                       # rasgos
-    c.e(16, 12, 4, 4, '#2c2a14')                                        # sombra do rosto
-    # cabeça de jacaré saindo do capuz
-    c.r(15, 11, 19, 15, skin); c.r(20, 12, 25, 15, skin); c.r(20, 15, 25, 15, sh)
-    c.r(15, 14, 19, 15, sh); c.p(25, 12, None)
-    c.pts([(24, 14), (22, 15), (20, 15)], '#d9d0a0')                     # dentinhos
-    c.p(25, 13, '#2a2a18')                                              # narina
-    c.pts([(17, 12), (20, 13), (22, 13)], '#47522a')                     # escamas
+    # capa rasgada sobre os ombros
+    c.r(8, 17, 23, 21, cape); c.r(19, 17, 23, 21, cape_sh)
+    c.r(8, 22, 9, 26, cape); c.r(22, 22, 23, 26, cape_sh)
+    c.pts([(10, 22), (12, 22), (13, 23), (19, 22), (21, 23), (8, 27), (23, 27)], cape_sh)
+    c.pts([(9, 19), (12, 20), (21, 19)], '#3a3418')                       # furos
+    # couro: alça diagonal com adagas
+    c.pts([(11, 22), (12, 23), (13, 24), (14, 25), (15, 26)], '#2a1d12')
+    c.pts([(17, 22), (18, 22), (17, 24), (18, 24)], '#b9c0c6')            # cabos das adagas
+    c.r(10, 26, 21, 26, '#2a1d12'); c.r(12, 27, 13, 27, '#6b5236')        # cinto + bolsa
+    c.r(9, 23, 9, 25, '#8a6a3a')                                         # corda enrolada
+    # capuz pontudo
+    c.e(14, 10, 7, 7, cape); c.pts([(11, 3), (12, 2), (12, 1), (13, 2)], cape)
+    c.r(7, 9, 8, 16, cape_sh); c.pts([(9, 7), (10, 14)], '#3a3418')
+    c.e(16, 11, 4, 4, '#2c2a14')                                         # sombra do rosto
+    # cabeça de jacaré
+    c.r(15, 10, 19, 14, skin); c.r(19, 11, 26, 13, skin); c.r(19, 14, 26, 14, sh)
+    c.r(15, 13, 18, 14, sh); c.r(19, 11, 24, 11, light); c.p(26, 11, None)
+    c.pts([(25, 14), (23, 14), (21, 14)], '#e6dcae')                      # dentes
+    c.p(26, 12, '#2a2a18')                                               # narina
+    c.pts([(20, 12), (22, 12), (17, 12)], sh)                            # escamas
     if blink: c.r(17, 11, 18, 11, '#2a2a18')
-    else: c.r(17, 10, 18, 11, '#e8b23a'); c.p(18, 11, '#2a2a18')
+    else: c.r(17, 10, 18, 11, '#f0b830'); c.p(18, 11, '#2a2a18')
     return '#15160c'
 
 def neo_fx(c, t):
-    # adaga na mão direita, brilho que corre na lâmina
-    c.pts([(23, 24), (24, 23), (25, 22), (26, 21), (27, 20)], '#cfd6dc')
-    c.p(22, 24, '#4a3524')
-    c.p([27, 26, 25, 24][t % 4], [20, 21, 22, 23][t % 4], '#ffffff')
+    # mão erguida segurando a faca curva junto ao peito, brilho correndo na lâmina
+    c.r(19, 20, 20, 21, '#5e6b3a')
+    blade = [(18, 21), (17, 21), (16, 21), (15, 22), (14, 22), (13, 23)]
+    c.pts(blade, '#cfd6dc'); c.p(21, 21, '#4a3524')
+    x, y = blade[t % 4 + 1]; c.p(x, y, '#ffffff')
 
 def zuri(c, blink):
     skin, sh = '#6b4330', '#54321f'
+    snake, snake_sh = '#4f7a42', '#3a5a30'
     body(c, '#2a2638', '#1f1c2b', '#2a2638', skin, '#1f1c2b', '#141220')
     c.r(14, 18, 17, 22, '#e8e0d0'); c.r(11, 23, 20, 24, '#6a3a8c')     # blusa + faixa roxa
     c.r(11, 18, 11, 26, '#b8913a'); c.r(20, 18, 20, 26, '#b8913a')
     c.p(16, 24, '#c9a24a')
+    c.r(8, 17, 23, 18, '#2a2638')                                      # capuz caído nos ombros
+    # massa de cobras atrás da cabeça
+    c.e(16, 9, 10, 7, snake)
+    for x, y in [(8, 6), (12, 3), (20, 3), (24, 6), (7, 11), (25, 11), (16, 2), (10, 14), (22, 14)]:
+        c.p(x, y, snake_sh); c.p(x + 1, y, '#6f9a5a')                      # escamas/brilho
     head(c, skin, sh)
-    # capuz escuro
-    c.r(9, 3, 23, 6, '#2a2638'); c.r(8, 6, 9, 16, '#2a2638'); c.r(23, 6, 24, 16, '#1f1c2b')
-    c.r(10, 7, 22, 7, '#b8913a')
-    eyes(c, '#d99a2a', '#fff0c0', blink=blink)
-    c.p(16, 8, '#e0b84a')                                              # lua na testa
-    c.r(15, 15, 17, 15, '#3a2018')
+    # cobras caindo na testa
+    c.row(6, [(10, 13), (15, 17), (19, 22)], snake); c.row(7, [(10, 11), (14, 14), (18, 18), (22, 22)], snake_sh)
+    c.pts([(12, 6), (16, 6), (20, 6)], '#6f9a5a')
+    # olhos de serpente: dourados com fenda
+    if blink:
+        c.r(12, 12, 13, 12, '#1b1420'); c.r(19, 12, 20, 12, '#1b1420')
+    else:
+        c.r(12, 11, 13, 12, '#f0b030'); c.r(19, 11, 20, 12, '#f0b030')
+        c.p(13, 11, '#1b1420'); c.p(13, 12, '#1b1420'); c.p(20, 11, '#1b1420'); c.p(20, 12, '#1b1420')
+    c.p(16, 9, '#e0b84a')                                              # lua na testa
+    c.r(15, 15, 17, 15, '#3a2018'); c.p(17, 14, '#3a2018')              # sorriso de canto
     return '#0e0c16'
 
 def zuri_fx(c, t):
-    # cobras do cabelo se mexendo + flauta + notas
-    snakes = [(8, 9), (24, 9), (7, 13), (25, 13), (12, 3), (20, 3)]
-    for i, (x, y) in enumerate(snakes):
-        d = -1 if x < 16 else 1
-        off = 1 if (t + i) % 2 else 0
-        c.pts([(x, y), (x + d, y - off), (x + d, y - 1 - off)], '#4f7a42')
-        c.p(x + 2 * d, y - 1 - off, '#6f9a5a')                          # cabecinha
-        c.p(x + 2 * d, y - 2 - off, '#1b1420')                          # olhinho
-        if (t + i) % 4 == 0: c.p(x + 3 * d, y - 1 - off, '#d04a4a')     # língua
-    c.r(5, 15, 15, 15, '#c8ced6'); c.p(5, 15, '#8f97a1'); c.pts([(8, 15), (11, 15)], '#8f97a1')
-    c.r(10, 16, 11, 16, '#6b4330'); c.r(14, 16, 15, 16, '#6b4330')
-    for i, (x, y) in enumerate([(3, 12), (2, 9), (4, 6)]):
+    # cabeças de cobra que espiam e mostram a língua
+    heads = [(6, 7, -1), (26, 7, 1), (9, 2, -1), (23, 2, 1), (5, 13, -1), (27, 13, 1), (16, 0, 0)]
+    for i, (x, y, d) in enumerate(heads):
+        off = (t + i) % 2
+        hx, hy = x + d * off, y - off * (1 if d == 0 else 0)
+        c.p(x - d, y + 1, '#3a5a30')
+        c.r(hx, hy, hx + (1 if d >= 0 else 0), hy, '#6f9a5a') if d != 0 else c.p(hx, hy, '#6f9a5a')
+        c.p(hx, hy, '#4f7a42'); c.p(hx + (d if d else 0), hy, '#6f9a5a')
+        if (t + i) % 4 == 0: c.p(hx + 2 * d if d else hx, hy - (1 if d == 0 else 0), '#d04a4a')
+    # flauta na mão, abaixada, e notas mágicas
+    c.pts([(22, 24), (23, 23), (24, 22), (25, 21), (26, 20), (27, 19)], '#c8ced6')
+    c.pts([(24, 22), (26, 20)], '#8f97a1')
+    for i, (x, y) in enumerate([(28, 15), (26, 12), (29, 10)]):
         if (t + i) % 3 != 2:
             c.pts([(x, y), (x, y + 1), (x + 1, y - 1)], '#b48cff'); c.p(x - 1, y + 1, '#b48cff')
 
@@ -244,11 +261,10 @@ def pato(c, blink):
     return '#141312'
 
 def pato_fx(c, t):
-    # d20 dourado nas mãos, girando
-    faces = ['#e8c04a', '#d4a640', '#f2d27a', '#d4a640']
-    c.r(14, 22, 17, 24, faces[t % 4]); c.p(14, 22, None); c.p(17, 24, None)
-    c.p(15 + t % 2, 23, '#7a5a1a')
-    c.r(12, 23, 13, 24, '#6b6560'); c.r(18, 23, 19, 24, '#6b6560')     # mãos escamosas
+    # d20 claro na mão direita, ao lado do corpo, quicando de leve
+    dy = -1 if t in (1, 2) else 0
+    c.r(23, 23 + dy, 25, 25 + dy, '#e6e1d8'); c.p(23, 23 + dy, None); c.p(25, 25 + dy, None)
+    c.p(24, 24 + dy, '#6b6866'); c.p(25, 23 + dy, '#bdb7ac')
 
 CHARS = [
     ('hippion', hippion, None), ('malekir', malekir, malekir_fx), ('fani', fani, fani_fx),
