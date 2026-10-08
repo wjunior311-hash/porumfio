@@ -3,14 +3,15 @@ import { GRUPOS, infoPoder, lerMagia, CONDICOES, PERICIAS, circuloMaximo } from 
 import { installMesa } from './mesa.js';
 import { installNotas } from './notas.js';
 import { installBestiario } from './bestiario.js';
+import { installBichinho } from './bichinho.js';
 
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
 // ---------- estado ----------
-const S = { session: null, me: null, chars: {}, order: [], spells: {}, members: [], invites: [], settings: {}, gmNote: null, scenes: [], tokens: [], notes: [], bestiary: [], ready: false };
-let mesa = null, notas = null, bestiario = null;
+const S = { session: null, me: null, chars: {}, order: [], spells: {}, members: [], invites: [], settings: {}, gmNote: null, scenes: [], tokens: [], notes: [], bestiary: [], pets: {}, ready: false };
+let mesa = null, notas = null, bestiario = null, bichinho = null;
 const ui = { tab: {}, open: {}, roll: null, novo: { nome: '', espacos: 1 }, modal: null, pendingRender: false, installDismissed: lsGet('pf-install-off') === '1' };
 let deferredInstall = null;
 
@@ -76,6 +77,8 @@ async function loadAll() {
   ]);
   const nts = await sb.from('notes').select('*').order('created_at', { ascending: false }).limit(500);
   S.notes = nts.data || [];
+  const pts = await sb.from('pets').select('*');
+  S.pets = Object.fromEntries((pts.data || []).map((x) => [x.character_id, x]));
   S.scenes = scenes.data || [];
   S.tokens = tokens.data || [];
   S.chars = {}; S.order = [];
@@ -110,6 +113,7 @@ function subscribe() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'scenes' }, (p) => { mesa.onRealtime('scenes', p); softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tokens' }, (p) => { mesa.onRealtime('tokens', p); softRender(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'pets' }, (p) => { bichinho.onRealtime(p); if (route().name === 'bichinho') softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bestiary' }, (p) => { bestiario.onRealtime(p); softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, (p) => { notas.onRealtime(p); if (route().name === 'notas') softRender(); })
     .subscribe();
@@ -159,6 +163,7 @@ function render() {
   else if (r.name === 'ficha' && S.chars[r.arg]) html = viewSheet(r.arg) + nav('ficha', r.arg);
   else if (r.name === 'grupo') html = viewParty() + nav('grupo');
   else if (r.name === 'notas') html = notas.viewNotas() + nav('notas');
+  else if (r.name === 'bichinho') html = (r.arg ? bichinho.viewPet(r.arg) : bichinho.viewLista()) + nav(r.arg && r.arg === S.me.character_id ? 'ficha' : 'mais', r.arg);
   else if (r.name === 'mesa') html = r.arg === 'tv' ? mesa.viewMesa(true) : mesa.viewMesa(false) + nav('mesa');
   else if (r.name === 'mestre' && isGM()) html = viewGM() + nav('mestre');
   else if (r.name === 'admin' && isAdmin()) html = viewAdmin() + nav('mais');
@@ -307,7 +312,7 @@ function viewSheet(cid) {
     ${mine ? installBanner() : ''}
     ${!edit ? `<div class="card small muted">Você está vendo a ficha de ${esc(c.name)}${owner ? ' (jogador: ' + esc(owner.display_name) + ')' : ''}. Só o dono e o mestre podem mudar.</div>` : ''}
     <section class="head">
-      <div class="petbox" style="width:78px;height:78px">${petHTML(cid, 72, ko)}</div>
+      <a class="petbox" href="#/bichinho/${cid}" aria-label="Visitar o bichinho de ${esc(c.name)}" style="width:78px;height:78px">${petHTML(cid, 72, ko)}</a>
       <div style="flex:1;min-width:0">
         <h1>${esc(c.name)}</h1>
         <div class="small muted">${esc(d.race)} · ${esc(d.className)} ${esc(d.level)} · ${esc(d.origin)}</div>
@@ -516,6 +521,7 @@ function viewMore() {
         <div class="small muted" style="font-size:12px">${esc(S.session.user.email)}</div></div>
       </div>
       <a class="card row" href="#/grupo" style="text-decoration:none;color:var(--txt)"><span style="flex:1;font-weight:600">Fichas do grupo</span><span class="muted">›</span></a>
+      <a class="card row" href="#/bichinho" style="text-decoration:none;color:var(--txt)"><span style="flex:1;font-weight:600">Bichinhos da mesa</span><span class="muted">›</span></a>
       ${installBanner(true)}
       <button class="ghost" style="height:48px" data-act="logout">Sair desta conta</button>
       ${isAdmin() ? `<a class="adm-link" href="#/admin"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>administração</a>` : ''}
@@ -855,6 +861,7 @@ const mesaCtx = { S, ui, sb, esc, num, toast, render, renderModal, actions, form
 mesa = installMesa(mesaCtx);
 bestiario = installBestiario({ S, ui, sb, esc, num, toast, render, renderModal, actions, forms, test, showRoll, rollDice });
 mesaCtx.bestiario = bestiario;
+bichinho = installBichinho({ S, ui, sb, esc, num, toast, render, actions });
 notas = installNotas({ S, ui, sb, esc, toast, render, renderModal, actions, forms });
 
 // ---------- início ----------

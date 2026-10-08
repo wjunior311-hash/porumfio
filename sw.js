@@ -1,6 +1,6 @@
 // Service worker: deixa o app abrir rápido e instalável. Dados da mesa sempre vêm da internet.
-const VERSAO = 'porumfio-v5';
-const BASE = ['./', 'index.html', 'css/app.css?v=5', 'js/app.js?v=5', 'js/regras.js', 'js/mesa.js', 'js/notas.js', 'js/bestiario.js', 'manifest.webmanifest',
+const VERSAO = 'porumfio-v6';
+const BASE = ['./', 'index.html', 'css/app.css?v=6', 'js/app.js?v=6', 'js/regras.js', 'js/mesa.js', 'js/notas.js', 'js/bestiario.js', 'js/bichinho.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

@@ -215,3 +215,51 @@ body.tvmode #app { max-width: none; padding: 0; }
 .sketch-pad { width: 100%; aspect-ratio: 1; max-height: 52dvh; border-radius: 14px; border: 1px solid var(--line2); touch-action: none; background: #15111a; }
 .swatch { appearance: none; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--line2); }
 .swatch.on { border-color: var(--txt); box-shadow: 0 0 0 2px var(--bg2), 0 0 0 4px var(--txt); }
+
+/* bichinho */
+.meter { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; margin-top: 6px; }
+.meter i { display: block; height: 10px; border-radius: 2px; background: #2d2433; }
+.act { appearance: none; border: 1px solid var(--line2); background: var(--card); color: var(--txt); font-weight: 600; font-size: 14px; border-radius: 16px; min-height: 64px; }
+.act:hover { background: #2a2232; }
+.pet.zz { animation: none; background-position: 100% 0; }
+.hb-wrap { position: relative; height: 340px; border-radius: 24px; overflow: hidden; border: 1px solid var(--line2); }
+.hb { position: absolute; inset: 0; }
+.hb-chao { position: absolute; left: 0; right: 0; bottom: 0; height: 70px; box-shadow: inset 0 8px 0 #0000002a; }
+.hb-pet { appearance: none; border: 0; background: none; padding: 0; position: absolute; left: 50%; bottom: 34px; width: 192px; height: 192px; margin-left: -96px; cursor: pointer; }
+.hb-pet.pulo { animation: pulo .6s ease-out 2; }
+@keyframes pulo { 30% { transform: translateY(-34px); } 60% { transform: translateY(0); } 75% { transform: translateY(-8px); } }
+.hb-fala { position: absolute; top: 14px; right: 14px; max-width: 64%; padding: 10px 14px; border-radius: 14px 14px 4px 14px; background: var(--txt); color: #1d1720; font-size: 14px; font-weight: 600; line-height: 1.3; }
+.fx { position: absolute; left: 50%; bottom: 200px; pointer-events: none; }
+.fx-amor i { position: absolute; width: 16px; height: 16px; background: #e5584b; transform: rotate(45deg); animation: sobe 1.2s ease-out forwards; }
+.fx-amor i::before, .fx-amor i::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #e5584b; }
+.fx-amor i::before { left: -8px; } .fx-amor i::after { top: -8px; }
+.fx-amor i:nth-child(1) { left: -40px; } .fx-amor i:nth-child(2) { left: 0; animation-delay: .15s; } .fx-amor i:nth-child(3) { left: 36px; animation-delay: .3s; }
+@keyframes sobe { from { opacity: 1; transform: translateY(0) rotate(45deg); } to { opacity: 0; transform: translateY(-70px) rotate(45deg); } }
+.fx-comida i { position: absolute; left: -12px; width: 24px; height: 18px; border-radius: 50% 50% 40% 40%; background: #c9864a; box-shadow: inset -4px -3px 0 #8a5a2e; animation: cai .9s ease-in forwards; }
+@keyframes cai { from { transform: translateY(-80px); opacity: 1; } 80% { opacity: 1; } to { transform: translateY(40px); opacity: 0; } }
+.fx-zz { position: absolute; left: 58%; bottom: 210px; font: 700 18px 'Bricolage Grotesque', sans-serif; color: #c7d0f5; animation: flutua 2.4s ease-in-out infinite; }
+.fx-zz span { font-size: 22px; margin-left: 4px; } .fx-zz b { font-size: 28px; margin-left: 4px; }
+@keyframes flutua { 50% { transform: translateY(-10px); opacity: .6; } }
+/* cenários */
+.hb-sol { position: absolute; left: 24px; top: 28px; width: 22px; height: 22px; background: #f1e3b0; box-shadow: 0 0 0 7px #2c4a66; }
+.hb-agua { position: absolute; left: 0; right: 0; top: 200px; bottom: 60px; }
+.hb-onda { position: absolute; left: -20px; right: -20px; top: 186px; height: 22px; background: repeating-linear-gradient(90deg, #3e7ea3 0 16px, #4b93b8 16px 32px); animation: onda 3s ease-in-out infinite; }
+@keyframes onda { 50% { transform: translateX(-12px); } }
+.hb-concha { position: absolute; left: 34px; bottom: 26px; width: 16px; height: 10px; background: #e9c9b0; border-radius: 8px 8px 2px 2px; z-index: 1; }
+.hb-estante { position: absolute; left: 18px; top: 40px; width: 70px; height: 130px; background: repeating-linear-gradient(180deg, #4e3624 0 6px, #2a1d30 6px 40px); border: 4px solid #4e3624; }
+.hb-vela { position: absolute; top: 120px; width: 8px; height: 26px; background: #e6dccb; }
+.hb-vela::after { content: ''; position: absolute; left: -6px; top: -16px; width: 20px; height: 20px; border-radius: 50%; background: #c070ff; box-shadow: 0 0 22px 10px #b46cff66; animation: chama 1.2s ease-in-out infinite; }
+@keyframes chama { 50% { transform: scale(.8); opacity: .8; } }
+.hb-runa { position: absolute; left: 50%; bottom: 20px; width: 240px; height: 40px; margin-left: -120px; border: 2px solid #c39bff; border-radius: 50%; box-shadow: 0 0 14px #b46cff; z-index: 1; opacity: .8; }
+.hb-arvore { position: absolute; bottom: 60px; width: 70px; height: 190px; }
+.hb-arvore::before { content: ''; position: absolute; left: 28px; bottom: 0; width: 14px; height: 80px; background: #5a3d22; }
+.hb-arvore::after { content: ''; position: absolute; left: 0; bottom: 70px; width: 70px; height: 110px; border-radius: 40% 40% 30% 30%; background: #3f7a35; box-shadow: inset -10px -10px 0 #2f5e28; }
+.hb-flor { position: absolute; bottom: 40px; width: 8px; height: 8px; border-radius: 50%; background: #f0d38a; box-shadow: 0 0 0 3px #e5584b; z-index: 1; }
+.hb-cano { position: absolute; left: 0; top: 70px; width: 120px; height: 34px; background: #4a4a44; border-right: 10px solid #3a3a34; }
+.hb-gota { position: absolute; left: 96px; top: 110px; width: 6px; height: 9px; border-radius: 50% 50% 50% 50%; background: #7fb8a0; animation: pinga 1.8s ease-in infinite; }
+@keyframes pinga { from { transform: translateY(0); opacity: 1; } to { transform: translateY(150px); opacity: 0; } }
+.hb-olhos { position: absolute; right: 30px; top: 120px; width: 6px; height: 4px; background: #f0c020; box-shadow: 14px 0 0 #f0c020; animation: pisca 4s steps(1) infinite; }
+@keyframes pisca { 90% { opacity: 1; } 95% { opacity: 0; } }
+.hb-cortina { position: absolute; top: 0; bottom: 60px; width: 70px; background: repeating-linear-gradient(90deg, #7a2236 0 12px, #5e1a2a 12px 24px); }
+.hb-holofote { position: absolute; left: 50%; top: 0; width: 220px; height: 280px; margin-left: -110px; background: radial-gradient(ellipse at 50% 100%, #f1e3b03a, transparent 70%); clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%); }
+.hb-pet .pet { display: block; }
