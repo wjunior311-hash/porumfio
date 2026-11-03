@@ -186,3 +186,8 @@ ol.marcos li { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 
 .opt:disabled { opacity: .45; cursor: not-allowed; }
 .badge { display: inline-block; margin-top: 4px; font-family: var(--label); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--brasa2); }
 .opt .hab b { font-family: var(--body); font-size: 15px; font-weight: 700; color: var(--claro); }
+
+.opt.of .pic.or { background: var(--raise2); }
+.opt.of .pic.or img { object-fit: contain; object-position: center top; }
+.or-wrap { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: start; }
+.or-fig { width: 96px; }
