@@ -4,6 +4,10 @@
 //   accept  { token, name, email, password }       → cria a conta e liga ao personagem (público)
 //   reset   { user_id, password }                  → troca a senha de alguém (só admin)
 //   remove  { user_id }                            → remove a conta de alguém (só admin)
+// Mesa do Breu (tabelas breu_*; mesmas contas):
+//   breu_peek    { token }                         → mostra o convite (público)
+//   breu_accept  { token, name, email, password }  → cria a conta, ou confere a senha de quem já tem conta, e entra na mesa
+//   breu_accept  { token, name } + login           → entra na mesa com a conta já logada
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {
@@ -39,6 +43,65 @@ async function callerIsAdmin(req: Request) {
   return p?.role === "admin" ? u.user : null;
 }
 
+async function loadBreuInvite(token: string) {
+  if (!token || typeof token !== "string" || token.length > 64) return null;
+  const { data } = await admin.from("breu_invites").select("token, label, role, used_at, revoked").eq("token", token).maybeSingle();
+  if (!data || data.revoked || data.used_at) return null;
+  return data;
+}
+
+async function callerUser(req: Request) {
+  const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!jwt) return null;
+  const { data: u } = await admin.auth.getUser(jwt);
+  return u?.user ?? null;
+}
+
+async function breuAccept(req: Request, body: Record<string, unknown>) {
+  const inv = await loadBreuInvite(String(body.token || ""));
+  if (!inv) return json({ error: "Este convite não existe, já foi usado ou foi cancelado." }, 404);
+  const name = String(body.name || "").trim().slice(0, 60);
+  if (!name) return json({ error: "Diga como quer ser chamado." }, 400);
+
+  let userId: string | null = null;
+  const logged = body.email ? null : await callerUser(req);
+  if (logged) {
+    userId = logged.id;
+  } else {
+    const email = String(body.email || "").trim().toLowerCase();
+    const password = String(body.password || "");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "Esse e-mail não parece válido." }, 400);
+    if (password.length < 6) return json({ error: "A senha precisa ter pelo menos 6 caracteres." }, 400);
+    const { data: created, error: cErr } = await admin.auth.admin.createUser({
+      email, password, email_confirm: true, user_metadata: { display_name: name },
+    });
+    if (created?.user) userId = created.user.id;
+    else if (/already|registered|exists/i.test(cErr?.message || "")) {
+      // já tem conta (por exemplo, no Por Um Fio): confere a senha
+      const pub = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { auth: { persistSession: false } });
+      const { data: s, error: sErr } = await pub.auth.signInWithPassword({ email, password });
+      if (sErr || !s?.user) return json({ error: "Esse e-mail já tem conta. Use a mesma senha de lá." }, 400);
+      userId = s.user.id;
+    } else return json({ error: "Não consegui criar a conta agora. Tente de novo." }, 400);
+  }
+
+  const { data: ja } = await admin.from("breu_members").select("user_id").eq("user_id", userId).maybeSingle();
+  if (ja) return json({ ok: true, already: true });
+
+  const { data: claimed } = await admin.from("breu_invites")
+    .update({ used_at: new Date().toISOString(), used_by: userId })
+    .eq("token", inv.token).is("used_at", null).eq("revoked", false)
+    .select("token").maybeSingle();
+  if (!claimed) return json({ error: "Este convite acabou de ser usado." }, 409);
+
+  const { error: mErr } = await admin.from("breu_members").insert({ user_id: userId, display_name: name, role: inv.role });
+  if (mErr) {
+    await admin.from("breu_invites").update({ used_at: null, used_by: null }).eq("token", inv.token);
+    return json({ error: "Não consegui te colocar na mesa. Tente de novo." }, 400);
+  }
+  return json({ ok: true });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Método não permitido" }, 405);
@@ -46,6 +109,13 @@ Deno.serve(async (req) => {
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json({ error: "Pedido inválido" }, 400); }
   const action = String(body.action || "");
+
+  if (action === "breu_peek") {
+    const inv = await loadBreuInvite(String(body.token || ""));
+    if (!inv) return json({ error: "Este convite não existe, já foi usado ou foi cancelado." }, 404);
+    return json({ label: inv.label, role: inv.role });
+  }
+  if (action === "breu_accept") return await breuAccept(req, body);
 
   if (action === "peek") {
     const inv = await loadInvite(String(body.token || ""));

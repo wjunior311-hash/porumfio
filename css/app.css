@@ -274,3 +274,22 @@ body.tvmode .ensaio-bar { position: fixed; left: 50%; top: 14px; transform: tran
 .pick.off { opacity: .6; }
 .hop { animation: pet 1.9s infinite steps(1), hop .9s ease-in-out infinite; }
 @keyframes hop { 50% { transform: translateY(-6px); } }
+
+/* tela de escolha de mesa */
+.portal { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 28px 16px calc(28px + var(--safe-b)); }
+.portal-kicker { text-align: center; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; font-size: 13px; color: var(--muted); margin: 0 0 4px; }
+.portal-card { display: flex; flex-direction: column; gap: 4px; padding: 22px 20px; border-radius: 16px; text-decoration: none; border: 1px solid var(--line2); position: relative; overflow: hidden; min-height: 150px; justify-content: flex-end; }
+.portal-card:hover, .portal-card:focus-visible { transform: translateY(-1px); }
+.portal-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.portal-lbl { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 600; }
+.portal-name { font-size: 30px; letter-spacing: 4px; font-weight: 700; line-height: 1.1; }
+.portal-desc { font-size: 15px; }
+.portal-card.pf { background: linear-gradient(160deg, #2a1d2e, var(--card)); color: var(--txt); }
+.portal-card.pf .portal-name { font-family: 'Bricolage Grotesque', sans-serif; color: var(--red); }
+.portal-card.pf .portal-lbl, .portal-card.pf .portal-desc { color: var(--muted); }
+.portal-card.breu { background: #0B0F14; border-color: #2A313B; color: #D7D3C8; font-family: Georgia, serif; }
+.portal-card.breu img { position: absolute; right: 10px; top: 12px; width: 92px; opacity: .6; }
+.portal-card.breu .portal-lbl, .portal-card.breu .portal-name { max-width: 68%; }
+.portal-card.breu .portal-name { color: #ECE8DE; letter-spacing: 6px; }
+.portal-card.breu .portal-lbl { color: #C2552F; font-family: 'Figtree', sans-serif; }
+.portal-card.breu .portal-desc { color: #A9A69E; max-width: 70%; }

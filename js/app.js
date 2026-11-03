@@ -165,6 +165,7 @@ function render() {
   let html = '';
   app.classList.toggle('wide', ['mestre', 'admin', 'mesa'].includes(r.name));
   document.body.classList.toggle('tvmode', r.name === 'mesa' && r.arg === 'tv');
+  if (r.name === '' && !standalone()) { app.innerHTML = viewPortal(); return; }
   if (r.name === 'convite') html = viewInvite(r.arg);
   else if (!S.session) html = viewLogin();
   else if (!S.me) html = viewNoProfile();
@@ -188,6 +189,28 @@ function render() {
   render.last = route().name;
   renderModal();
   renderRoll();
+}
+
+// ---------- tela de escolha: Por Um Fio ou Breu ----------
+// O link principal abre esta escolha. O app instalado (tela de início) vai direto para o Por Um Fio.
+function standalone() {
+  return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function viewPortal() {
+  return `<section class="portal">
+    <p class="portal-kicker">Escolha a mesa</p>
+    <a class="portal-card pf" href="#/inicio">
+      <span class="portal-lbl">Tormenta20</span>
+      <span class="portal-name">POR UM FIO</span>
+      <span class="portal-desc">Fichas, mestre e mesa da campanha.</span>
+    </a>
+    <a class="portal-card breu" href="breu/">
+      <img src="breu/img/logo-principal.webp" alt="">
+      <span class="portal-lbl">Um RPG de horror e sobrevivência</span>
+      <span class="portal-name">BREU</span>
+      <span class="portal-desc">Crie o seu personagem para a nova mesa.</span>
+    </a>
+  </section>`;
 }
 
 // ---------- telas: entrar e convite ----------
@@ -805,8 +828,8 @@ const forms = {
       btn.disabled = false; btn.textContent = 'Criar conta e entrar'; return;
     }
     const { error: e2 } = await sb.auth.signInWithPassword({ email: body.email.trim().toLowerCase(), password: body.password });
-    if (e2) { err.textContent = 'Conta criada! Agora entre com seu e-mail e senha.'; location.hash = '#/'; return; }
-    location.hash = '#/';
+    if (e2) { err.textContent = 'Conta criada! Agora entre com seu e-mail e senha.'; location.hash = '#/inicio'; return; }
+    location.hash = '#/inicio';
   },
   vital(f, sub) {
     const c = S.chars[f.dataset.c], k = f.dataset.k, n = Math.abs(num(f.n.value)), mode = sub?.value || 'minus';

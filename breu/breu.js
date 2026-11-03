@@ -1,0 +1,600 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import * as R from './regras.js';
+
+// Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
+const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ';
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+
+const S = { session: null, me: null, chars: [], members: [], invites: [], notes: {}, ready: false };
+const ui = { invite: null, inviteErr: '', loginErr: '', busy: false, saved: '' };
+
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (v) => (v >= 0 ? '+' + v : String(v));
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600);
+}
+const role = () => S.me?.role;
+const isGM = () => role() === 'gm' || role() === 'admin';
+const isAdmin = () => role() === 'admin';
+const PAPEL = { player: 'Jogador', gm: 'Mestre', admin: 'Administrador' };
+const STATUS = { rascunho: 'Rascunho', pronto: 'Enviado ao mestre', aprovado: 'Aprovado' };
+const memberName = (uid) => S.members.find((m) => m.user_id === uid)?.display_name || 'Alguém';
+const charById = (id) => S.chars.find((c) => c.id === id);
+const canEdit = (c) => c && (c.owner === S.session?.user.id || isGM());
+
+// ---------- rotas ----------
+function route() {
+  const h = location.hash.replace(/^#\/?/, '');
+  const [name, arg, arg2] = h.split('/');
+  return { name: name || '', arg: arg ? decodeURIComponent(arg) : '', arg2: arg2 || '' };
+}
+const go = (p) => { location.hash = '#/' + p; };
+
+// ---------- dados ----------
+async function loadAll() {
+  const uid = S.session.user.id;
+  const { data: me } = await sb.from('breu_members').select('*').eq('user_id', uid).maybeSingle();
+  S.me = me;
+  if (!me) return;
+  const [chars, members] = await Promise.all([
+    sb.from('breu_characters').select('*').order('created_at'),
+    sb.from('breu_members').select('user_id, display_name, role, created_at').order('created_at'),
+  ]);
+  S.chars = chars.data || [];
+  S.members = members.data || [];
+  if (isGM()) {
+    const { data } = await sb.from('breu_gm_notes').select('*');
+    S.notes = Object.fromEntries((data || []).map((n) => [n.character_id, n.note]));
+  }
+  if (isAdmin()) await loadInvites();
+}
+async function loadInvites() {
+  const { data } = await sb.from('breu_invites').select('*').order('created_at', { ascending: false });
+  S.invites = data || [];
+}
+
+let channel = null;
+function subscribe() {
+  if (channel) sb.removeChannel(channel);
+  channel = sb.channel('breu')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_characters' }, (p) => {
+      if (p.eventType === 'DELETE') S.chars = S.chars.filter((c) => c.id !== p.old.id);
+      else {
+        const i = S.chars.findIndex((c) => c.id === p.new.id);
+        if (i < 0) S.chars.push(p.new);
+        else if (route().name !== 'criar' || route().arg !== p.new.id) S.chars[i] = p.new;
+      }
+      if (route().name !== 'criar') render();
+    })
+    .subscribe();
+}
+
+// ---------- salvar personagem (com espera curta) ----------
+const pending = {};
+function saveSoon(c) {
+  ui.saved = 'Salvando…'; paintSaved();
+  clearTimeout(pending[c.id]);
+  pending[c.id] = setTimeout(() => saveNow(c), 700);
+}
+async function saveNow(c) {
+  clearTimeout(pending[c.id]);
+  const { error } = await sb.from('breu_characters').update({ data: c.data, name: c.data.nome || null, updated_at: new Date().toISOString() }).eq('id', c.id);
+  ui.saved = error ? 'Não consegui salvar. Confira sua internet.' : 'Salvo';
+  paintSaved();
+  return !error;
+}
+function paintSaved() { const el = $('.saved'); if (el) el.textContent = ui.saved; }
+
+// ---------- render ----------
+function render() {
+  const r = route();
+  const app = $('#app');
+  let html = '';
+  app.classList.toggle('wide', r.name === 'admin');
+  if (r.name === 'convite') html = viewInvite(r.arg);
+  else if (!S.session) html = viewLogin();
+  else if (!S.me) html = viewNoMember();
+  else if (r.name === 'criar' && charById(r.arg) && canEdit(charById(r.arg))) html = viewWizard(charById(r.arg), +r.arg2 || 0);
+  else if (r.name === 'ficha' && charById(r.arg)) html = viewSheet(charById(r.arg));
+  else if (r.name === 'admin' && isAdmin()) html = viewAdmin();
+  else if (r.name === '') html = viewMesa();
+  else { location.replace('#/'); return; }
+  app.innerHTML = html;
+  window.scrollTo(0, 0);
+}
+
+function top(extra = '') {
+  return `<header class="top"><a href="#/" aria-label="Início"><img src="img/logo-horizontal.webp" alt="Breu"></a>
+    <div class="acts">${extra}${isAdmin() ? '<a class="btn sm ghost" href="#/admin">Convites</a>' : ''}<button class="btn sm ghost" data-act="logout">Sair</button></div></header>`;
+}
+
+// ---------- entrar ----------
+function viewLogin() {
+  return `<section class="auth">
+    <img class="logo" src="img/logo-principal.webp" alt="Breu">
+    <p class="tag">Um RPG de horror e sobrevivência</p>
+    <form class="card form" data-form="login">
+      <div><label class="flab" for="lg-email">E-mail</label><input class="field" id="lg-email" name="email" type="email" autocomplete="email" required></div>
+      <div><label class="flab" for="lg-pass">Senha</label><input class="field" id="lg-pass" name="password" type="password" autocomplete="current-password" required></div>
+      ${ui.loginErr ? `<p class="err" role="alert">${esc(ui.loginErr)}</p>` : ''}
+      <button class="btn primary block" ${ui.busy ? 'disabled' : ''}>Entrar</button>
+      <p class="small dim" style="margin:0;text-align:center">Ainda não tem conta? Peça o link de convite ao mestre.</p>
+    </form>
+    <a class="back" href="../">← Escolher outra mesa</a>
+  </section>`;
+}
+function viewNoMember() {
+  return `<section class="auth">
+    <img class="logo" src="img/logo-principal.webp" alt="Breu">
+    <div class="card"><h3>Você ainda não está nesta mesa</h3>
+    <p class="muted" style="margin-top:8px">Sua conta existe, mas ainda não foi convidada para Breu. Peça o link de convite ao mestre e abra com esta mesma conta.</p>
+    <button class="btn block" data-act="logout">Sair</button></div>
+    <a class="back" href="../">← Escolher outra mesa</a>
+  </section>`;
+}
+
+// ---------- convite ----------
+function viewInvite(token) {
+  if (!ui.invite || ui.invite.token !== token) {
+    ui.invite = { token, loading: true };
+    fn({ action: 'breu_peek', token }).then((r) => { ui.invite = { token, ...r }; render(); });
+  }
+  const inv = ui.invite;
+  if (inv.loading) return `<div class="splash"><img src="img/logo-principal.webp" alt="Carregando"></div>`;
+  if (inv.error) return `<section class="auth"><img class="logo" src="img/logo-principal.webp" alt="Breu"><div class="card"><h3>Convite indisponível</h3><p class="muted" style="margin-top:8px">${esc(inv.error)}</p><a class="btn block" href="#/">Ir para a entrada</a></div></section>`;
+  const papel = inv.role === 'gm' ? ' como mestre' : '';
+  if (S.session && S.me) {
+    return `<section class="auth"><img class="logo" src="img/logo-principal.webp" alt="Breu"><div class="card"><h3>Você já está na mesa</h3><p class="muted" style="margin-top:8px">Esta conta já faz parte de Breu. Este convite pode ficar para outra pessoa.</p><a class="btn primary block" href="#/">Ir para a mesa</a></div></section>`;
+  }
+  if (S.session) {
+    return `<section class="auth"><img class="logo" src="img/logo-principal.webp" alt="Breu"><p class="tag">Convite para a mesa${papel}</p>
+      <div class="card form"><p style="margin:0">Você está entrando com <b>${esc(S.session.user.email)}</b>.</p>
+      <div><label class="flab" for="iv-nome">Como quer ser chamado na mesa?</label><input class="field" id="iv-nome" value="${esc(S.session.user.user_metadata?.display_name || '')}"></div>
+      ${ui.inviteErr ? `<p class="err" role="alert">${esc(ui.inviteErr)}</p>` : ''}
+      <button class="btn primary block" data-act="joinLogged" ${ui.busy ? 'disabled' : ''}>Entrar na mesa com esta conta</button>
+      <button class="btn ghost block" data-act="logout">Usar outra conta</button></div></section>`;
+  }
+  return `<section class="auth">
+    <img class="logo" src="img/logo-principal.webp" alt="Breu">
+    <p class="tag">Convite para a mesa${papel}</p>
+    <form class="card form" data-form="accept">
+      <p class="muted" style="margin:0">Crie sua conta para montar o seu personagem. Se você já joga no Por Um Fio, use o mesmo e-mail e a mesma senha.</p>
+      <div><label class="flab" for="ac-nome">Seu nome</label><input class="field" id="ac-nome" name="name" autocomplete="name" required maxlength="60"></div>
+      <div><label class="flab" for="ac-email">E-mail</label><input class="field" id="ac-email" name="email" type="email" autocomplete="email" required></div>
+      <div><label class="flab" for="ac-pass">Senha</label><input class="field" id="ac-pass" name="password" type="password" autocomplete="new-password" minlength="6" required><p class="fhelp" style="margin:6px 0 0">Pelo menos 6 caracteres.</p></div>
+      ${ui.inviteErr ? `<p class="err" role="alert">${esc(ui.inviteErr)}</p>` : ''}
+      <button class="btn primary block" ${ui.busy ? 'disabled' : ''}>Entrar na mesa</button>
+    </form>
+  </section>`;
+}
+
+async function fn(body) {
+  const { data: { session } } = await sb.auth.getSession();
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/convite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + (session?.access_token || SUPABASE_KEY) },
+      body: JSON.stringify(body),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: j.error || 'Algo deu errado. Tente de novo.' };
+    return j;
+  } catch { return { error: 'Sem conexão. Confira sua internet.' }; }
+}
+
+// ---------- mesa ----------
+function charCard(c) {
+  const p = c.data || {}, of = R.oficioDe(p), or = R.origemDe(p);
+  const sub = [of?.n, or?.n].filter(Boolean).join(' · ') || 'Começando a criação';
+  const st = c.status || 'rascunho';
+  const href = c.status === 'rascunho' && canEdit(c) ? `#/criar/${c.id}/0` : `#/ficha/${c.id}`;
+  return `<a class="ccard" href="${href}">
+    <div class="pic${of ? '' : ' vazio'}">${of ? `<img src="img/of-${of.k}.webp" alt="">` : '?'}</div>
+    <div><b>${esc(p.nome || 'Sem nome')}</b><span class="sub">${esc(sub)}</span><div class="small dim">${esc(memberName(c.owner))}</div></div>
+    <span class="chip ${st}">${STATUS[st]}</span></a>`;
+}
+function viewMesa() {
+  const uid = S.session.user.id;
+  const meus = S.chars.filter((c) => c.owner === uid);
+  const outros = S.chars.filter((c) => c.owner !== uid);
+  const podeCriar = isGM() || meus.length === 0;
+  return `${top()}
+    <section class="hero"><p class="lbl">Olá, ${esc(S.me.display_name)}</p><h1>A mesa</h1></section>
+    <h2>${isGM() && meus.length > 1 ? 'Seus personagens' : 'Seu personagem'}</h2>
+    ${meus.length ? `<div class="chars">${meus.map(charCard).join('')}</div>` : `<div class="empty"><p>Você ainda não tem personagem.</p><p class="small">A criação leva uns 20 minutos e salva sozinha: dá para parar e voltar depois.</p></div>`}
+    ${podeCriar ? `<button class="btn primary block" style="margin-top:12px" data-act="novo">${meus.length ? 'Criar outro personagem' : 'Criar meu personagem'}</button>` : ''}
+    <h2>O grupo</h2>
+    ${outros.length ? `<div class="chars">${outros.map(charCard).join('')}</div>` : `<p class="muted">Ninguém mais criou personagem ainda.</p>`}
+    <h2>Antes de começar</h2>
+    <div class="box">Pense em quem você é antes de pensar em números: de onde veio, o que faz, qual noite te mudou e quem você quer proteger. As regras se encaixam depois.</div>`;
+}
+
+// ---------- assistente de criação ----------
+const PASSOS = [
+  ['conceito', 'Quem é você'],
+  ['origem', 'Origem'],
+  ['oficio', 'Ofício'],
+  ['dom', 'O Dom'],
+  ['atributos', 'Atributos'],
+  ['historia', 'História'],
+  ['revisao', 'Revisão'],
+];
+
+function viewWizard(c, step) {
+  const p = c.data;
+  step = Math.max(0, Math.min(PASSOS.length - 1, step));
+  const [key, nome] = PASSOS[step];
+  const bars = PASSOS.map((_, i) => `<i class="${i === step ? 'on' : i < step ? 'done' : ''}"></i>`).join('');
+  const body = { conceito: stepConceito, origem: stepOrigem, oficio: stepOficio, dom: stepDom, atributos: stepAtributos, historia: stepHistoria, revisao: stepRevisao }[key](p, c);
+  const last = step === PASSOS.length - 1;
+  return `${top()}
+    <div class="steps" aria-hidden="true">${bars}</div>
+    <div class="stepname"><span class="lbl">Passo ${step + 1} de ${PASSOS.length}</span><a class="lbl" href="#/" style="text-decoration:none">Sair e continuar depois</a></div>
+    <h1 style="margin-bottom:14px">${nome}</h1>
+    <div class="wiz" data-char="${c.id}">${body}</div>
+    <p class="saved" aria-live="polite">${esc(ui.saved)}</p>
+    <div class="wfoot">
+      ${step > 0 ? `<a class="btn" href="#/criar/${c.id}/${step - 1}">Voltar</a>` : `<a class="btn" href="#/">Mesa</a>`}
+      ${last ? `<button class="btn primary" data-act="enviar" data-id="${c.id}" ${R.pendencias(p).length ? 'disabled' : ''}>${c.status === 'rascunho' ? 'Enviar ao mestre' : 'Salvar'}</button>`
+             : `<a class="btn primary" href="#/criar/${c.id}/${step + 1}">Próximo</a>`}
+    </div>`;
+}
+
+const inp = (k, v, ph = '', max = 80) => `<input class="field" data-k="${k}" value="${esc(v)}" placeholder="${esc(ph)}" maxlength="${max}">`;
+const area = (k, v, ph = '') => `<textarea class="field" data-k="${k}" placeholder="${esc(ph)}" maxlength="1200">${esc(v)}</textarea>`;
+
+function stepConceito(p) {
+  return `<p class="intro">Breu é sobre gente comum que resolveu não ficar só esperando o sol. Ninguém aqui é herói escolhido.</p>
+    <div><label class="flab">Nome</label>${inp('nome', p.nome, 'Como te chamam')}</div>
+    <div><label class="flab">Em uma frase, quem é você?</label><p class="fhelp">Ex.: a filha do Riscador que nunca quis riscar; o barqueiro que perdeu o irmão na maré.</p>${inp('conceito', p.conceito, '', 160)}</div>
+    <div><label class="flab">Como você é por fora</label><p class="fhelp">Idade, jeito, roupa, cicatriz, o que chama atenção.</p>${area('aparencia', p.aparencia)}</div>`;
+}
+
+function stepOrigem(p) {
+  const o = R.origemDe(p);
+  const opts = R.ORIGENS.map((x) => `<button class="opt${p.origem === x.k ? ' sel' : ''}" data-set="origem" data-v="${x.k}" aria-pressed="${p.origem === x.k}">
+      <span class="meta">Perícia: ${x.pericia} · Sotaque: ${x.sotaque || 'um à escolha'}</span><b>${x.n}</b><p>${x.d}</p></button>`).join('');
+  let extra = '';
+  if (o?.k === 'estrada') {
+    extra += `<div><label class="flab">Que sotaque de traços você aprendeu pelo caminho?</label><div class="sub-opts">${Object.keys(R.SOTAQUES).map((s) => `<button class="pill${p.sotaqueEstrada === s ? ' sel' : ''}" data-set="sotaqueEstrada" data-v="${esc(s)}">${esc(s)}</button>`).join('')}</div></div>`;
+  }
+  extra += extraPicker(p);
+  const sot = R.sotaque(p);
+  return `<p class="intro">De que tipo de lugar você vem? A origem dá uma perícia treinada e o seu jeito de riscar traços, o sotaque.</p>
+    <div class="opts">${opts}</div>${extra}
+    ${sot ? `<div class="box"><b>Sotaque ${esc(sot)}:</b> ${esc(R.SOTAQUES[sot])}</div>` : ''}`;
+}
+
+function extraPicker(p) {
+  if (!R.periciaOrigemRepete(p)) return '';
+  const o = R.origemDe(p), ja = R.oficioDe(p).pericias;
+  return `<div class="box">A perícia da sua origem (<b>${o.pericia}</b>) já vem do seu ofício. Escolha outra qualquer:</div>
+    <div class="sub-opts">${R.PERICIAS.map(([n]) => n).filter((n) => !ja.includes(n)).map((n) => `<button class="pill${p.periciaExtra === n ? ' sel' : ''}" data-set="periciaExtra" data-v="${esc(n)}">${esc(n)}</button>`).join('')}</div>`;
+}
+
+function stepOficio(p) {
+  const opts = R.OFICIOS.map((x) => `<button class="opt of${p.oficio === x.k ? ' sel' : ''}" data-set="oficio" data-v="${x.k}" aria-pressed="${p.oficio === x.k}">
+      <span class="pic"><img src="img/of-${x.k}.webp" alt=""></span>
+      <span class="meta">${x.pericias.join(' · ')}</span><b>${x.n}</b><p>${x.d}</p>
+      ${p.oficio === x.k ? `<span class="hab"><b>${x.hab[0]}.</b> ${x.hab[1]}<br><span class="dim">Leva: ${x.equip}</span></span>` : ''}</button>`).join('');
+  return `<p class="intro">O que você faz por causa da noite. O ofício dá duas perícias treinadas, uma habilidade e o seu equipamento. Mais tarde, você escolhe um caminho dentro dele.</p>
+    <div class="opts">${opts}</div>${extraPicker(p)}`;
+}
+
+function stepDom(p) {
+  const n = R.essenciasPermitidas(p);
+  let html = `<p class="intro">Algumas pessoas nascem com uma chama por dentro que faz os traços valerem mais. Quase sempre ela dorme.</p>
+    <div class="opts">
+      <button class="opt${p.dom === 'adormecido' ? ' sel' : ''}" data-set="dom" data-v="adormecido"><span class="meta">6 pontos de atributo · Brasa 0</span><b>Adormecido</b><p>O Dom ainda dorme. Você risca traços, mas apagados, sem a força da Brasa. Ele pode despertar jogando.</p></button>
+      <button class="opt${p.dom === 'faisca' ? ' sel' : ''}" data-set="dom" data-v="faisca"><span class="meta">5 pontos de atributo · Brasa 2</span><b>Faísca</b><p>O Dom já acordou. Você acende traços básicos. Custa 1 ponto de atributo, e você pode começar com uma Marca tatuada.</p></button>
+    </div>`;
+  if (p.dom === 'faisca') {
+    html += `<h2>Uma Marca?</h2><p class="intro">Opcional. Se escolher, ela foi a noite que acordou o seu Dom.</p>
+      <div class="opts"><button class="opt${!p.marca ? ' sel' : ''}" data-set="marca" data-v=""><b>Nenhuma por enquanto</b></button>
+      ${R.MARCAS.map((m) => `<button class="opt${p.marca === m.k ? ' sel' : ''}" data-set="marca" data-v="${m.k}"><span class="meta">${m.onde} · ${m.custo} Brasa</span><b>${m.n}</b><p>${m.d}</p></button>`).join('')}</div>`;
+    if (p.marca) {
+      html += `<div><label class="flab">Com que tinta?</label><div class="opts">
+        <button class="opt${!p.marcaSangue ? ' sel' : ''}" data-set="marcaSangue" data-v="0"><b>Tinta comum</b><p>Carregar a noite no corpo pesa: −1 no Prumo máximo.</p></button>
+        <button class="opt${p.marcaSangue ? ' sel' : ''}" data-set="marcaSangue" data-v="1"><b>Sangue de Assombro</b><p>Mais forte: não reduz o Prumo e custa 1 Brasa a menos. Mas soma 1 de <b>Sombra</b>, que nunca vai embora.</p></button></div></div>`;
+    }
+  }
+  if (n) {
+    html += `<h2>Essência</h2><p class="intro">Quem sabe Traços conhece ${n === 2 ? 'duas essências' : 'uma essência'}: o tipo de Assombro contra o qual seus traços valem mais.</p>
+      <div class="sub-opts">${Object.entries(R.ESSENCIAS).map(([e, d]) => `<button class="pill${p.essencias.includes(e) ? ' sel' : ''}" data-ess="${e}" aria-pressed="${p.essencias.includes(e)}">${e} <span class="dim small">${d}</span></button>`).join('')}</div>`;
+  }
+  return html;
+}
+
+function stepAtributos(p) {
+  const total = R.pontosTotais(p), sobra = total - R.pontosUsados(p), b = R.barras(p);
+  const of = R.oficioDe(p);
+  return `<p class="intro">Todos começam em 1. Distribua ${total} pontos. Nenhum passa de 4 agora.${of ? ` Para ${of.n.toLowerCase()}, costumam pesar <b>${of.fortes}</b>.` : ''}</p>
+    <div class="pool${sobra === 0 ? ' zero' : ''}"><span class="lbl">Pontos sobrando</span><strong>${sobra}</strong></div>
+    <div class="attrs">${R.ATRIBUTOS.map((a) => `<div class="attr"><b>${a.n}</b>
+      <div class="stepper"><button data-attr="${a.k}" data-d="-1" aria-label="Menos ${a.n}" ${p.atrib[a.k] <= 1 ? 'disabled' : ''}>−</button><span class="v">${p.atrib[a.k]}</span><button data-attr="${a.k}" data-d="1" aria-label="Mais ${a.n}" ${p.atrib[a.k] >= 4 || sobra <= 0 ? 'disabled' : ''}>+</button></div>
+      <p>${a.d}</p></div>`).join('')}</div>
+    <h2>Suas barras</h2>
+    <div class="bars">
+      <div class="bar"><span>Sangue</span><strong>${b.sangue}</strong></div>
+      <div class="bar"><span>Prumo</span><strong>${b.prumo}</strong></div>
+      <div class="bar"><span>Brasa</span><strong>${b.brasa}</strong></div>
+      <div class="bar"><span>Defesa</span><strong>${b.defesa}</strong></div>
+    </div>
+    <p class="small dim">Sangue é a vida. Prumo é o quanto você aguenta de medo antes de entrar em pânico. Brasa alimenta os traços e as Marcas.</p>`;
+}
+
+function stepHistoria(p) {
+  const o = R.origemDe(p);
+  return `<p class="intro">Respostas curtas bastam. O mestre vai usar tudo isso na história.</p>
+    <div><label class="flab">A noite que te mudou</label><p class="fhelp">A cicatriz, a perda ou o susto que fez você sair depois do Crepúsculo. Uma ou duas frases.</p>${area('marcaNoite', p.marcaNoite)}</div>
+    <div><label class="flab">Seu laço</label><p class="fhelp">Alguém do grupo ou da sua comunidade que importa para você, e por quê.</p>${area('laco', p.laco)}</div>
+    ${o ? `<div><label class="flab">${esc(o.pergunta)}</label>${area('respostaOrigem', p.respostaOrigem)}</div>` : ''}
+    <div><label class="flab">Quem você quer proteger? E quem você não conseguiu?</label>${area('protege', p.protege)}</div>
+    <div><label class="flab">Do que você tem mais medo?</label><p class="fhelp">Do escuro, de ficar sozinho, de virar o que caça… ou outra coisa.</p>${area('medo', p.medo)}</div>`;
+}
+
+function stepRevisao(p) {
+  const pend = R.pendencias(p);
+  const idx = Object.fromEntries(PASSOS.map(([k], i) => [k, i]));
+  const charId = route().arg;
+  return `${pend.length ? `<div class="box"><b>Falta pouco:</b><ul style="margin:6px 0 0;padding-left:18px">${pend.map(([k, t]) => `<li><a href="#/criar/${charId}/${idx[k] ?? 0}">${esc(t)}</a></li>`).join('')}</ul></div>`
+    : `<div class="box"><b>Tudo pronto.</b> Confira a ficha e envie ao mestre. Ainda dá para mudar depois, até ele aprovar.</div>`}
+    ${sheetBody(p)}`;
+}
+
+// ---------- ficha ----------
+function sheetBody(p) {
+  const of = R.oficioDe(p), or = R.origemDe(p), b = R.barras(p), per = R.pericias(p);
+  const marca = R.MARCAS.find((m) => m.k === p.marca);
+  const armas = of ? of.armas : [];
+  const essList = p.essencias.length ? p.essencias.map((e) => `${e} (${R.ESSENCIAS[e]})`).join(', ') : 'Nenhuma';
+  return `
+    <div class="sheet-head">
+      <div class="pic">${of ? `<img src="img/of-${of.k}.webp" alt="">` : ''}</div>
+      <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}</div>
+    </div>
+    <h2>Atributos</h2>
+    <div class="stat-row">${R.ATRIBUTOS.map((a) => `<div class="stat"><strong>${p.atrib[a.k]}</strong><span>${a.n}</span></div>`).join('')}</div>
+    <h2>Barras</h2>
+    <div class="bars">
+      <div class="bar"><span>Sangue</span><strong>${b.sangue}</strong></div>
+      <div class="bar"><span>Prumo</span><strong>${b.prumo}</strong></div>
+      <div class="bar"><span>Brasa</span><strong>${b.brasa}</strong></div>
+      <div class="bar"><span>Defesa</span><strong>${b.defesa}</strong></div>
+    </div>
+    ${b.sombra ? `<p class="small" style="margin-top:8px">Sombra: <b style="color:var(--brasa2)">${b.sombra}</b> de 7.</p>` : ''}
+    <h2>Perícias</h2>
+    <p class="small dim">Na rolagem, some +3 nas treinadas.</p>
+    <div class="skills">${R.PERICIAS.map(([n]) => `<div class="${per.includes(n) ? 't' : ''}"><span>${n}</span>${per.includes(n) ? '<em>+3</em>' : '<span>—</span>'}</div>`).join('')}</div>
+    ${of ? `<h2>Ofício</h2><dl class="kv"><div><dt>Habilidade</dt><dd><b>${of.hab[0]}.</b> ${of.hab[1]}</dd></div></dl>` : ''}
+    <h2>Traços e Dom</h2>
+    <dl class="kv">
+      <div><dt>Dom</dt><dd>${p.dom === 'faisca' ? 'Faísca (Brasa 2). Acende traços básicos.' : 'Adormecido (Brasa 0). Seus traços saem apagados.'}</dd></div>
+      <div><dt>Sotaque</dt><dd>${esc(R.sotaque(p) || '—')}</dd></div>
+      <div><dt>Raízes</dt><dd>${R.tracosConhecidos(p).join(', ')}</dd></div>
+      <div><dt>Modos</dt><dd>No chão, no ar, em volta, num objeto, na pele</dd></div>
+      <div><dt>Essências</dt><dd>${esc(essList)}</dd></div>
+      ${marca ? `<div><dt>Marca</dt><dd><img class="marca-ic" src="img/m-${marca.k}.webp" alt=""><b>${marca.n}</b> (${marca.onde.toLowerCase()}${p.marcaSangue ? ', com sangue de Assombro' : ''}). ${marca.d} Custa ${Math.max(1, marca.custo - (p.marcaSangue ? 1 : 0))} Brasa.</dd></div>` : ''}
+    </dl>
+    <h2>Equipamento</h2>
+    ${armas.length ? `<table class="weap"><thead><tr><th>Arma</th><th>Dano</th><th>Alcance</th></tr></thead><tbody>${armas.map((a) => `<tr><td>${esc(a)}<div class="small dim">${esc(R.ARMAS[a]?.[2] || '')}</div></td><td>${R.ARMAS[a]?.[0] || ''}</td><td>${R.ARMAS[a]?.[1] || ''}</td></tr>`).join('')}</tbody></table>` : ''}
+    <dl class="kv" style="margin-top:12px">
+      ${of ? `<div><dt>Do ofício</dt><dd>${esc(of.equip)}</dd></div>` : ''}
+      <div><dt>Kit comum</dt><dd>${esc(R.KIT)}</dd></div>
+      <div><dt>Dinheiro</dt><dd>2 noites e 5 vigias</dd></div>
+    </dl>
+    <p class="small dim" style="margin-top:8px">Armas comuns não matam Assombros: só empurram. Para ferir, a arma precisa estar marcada.</p>
+    <h2>História</h2>
+    <dl class="kv">
+      ${p.aparencia ? `<div><dt>Aparência</dt><dd>${esc(p.aparencia)}</dd></div>` : ''}
+      ${p.marcaNoite ? `<div><dt>A noite que me mudou</dt><dd class="quote">${esc(p.marcaNoite)}</dd></div>` : ''}
+      ${p.laco ? `<div><dt>Laço</dt><dd>${esc(p.laco)}</dd></div>` : ''}
+      ${or && p.respostaOrigem ? `<div><dt>${esc(or.pergunta)}</dt><dd>${esc(p.respostaOrigem)}</dd></div>` : ''}
+      ${p.protege ? `<div><dt>Quem protejo</dt><dd>${esc(p.protege)}</dd></div>` : ''}
+      ${p.medo ? `<div><dt>Meu maior medo</dt><dd>${esc(p.medo)}</dd></div>` : ''}
+    </dl>`;
+}
+
+function viewSheet(c) {
+  const st = c.status || 'rascunho';
+  const mine = c.owner === S.session.user.id;
+  const acts = [];
+  if (canEdit(c) && (st !== 'aprovado' || isGM())) acts.push(`<a class="btn" href="#/criar/${c.id}/0">Editar</a>`);
+  if (isGM() && st === 'pronto') acts.push(`<button class="btn primary" data-act="status" data-id="${c.id}" data-v="aprovado">Aprovar</button>`, `<button class="btn" data-act="status" data-id="${c.id}" data-v="rascunho">Devolver para ajustes</button>`);
+  if (isGM() && st === 'aprovado') acts.push(`<button class="btn" data-act="status" data-id="${c.id}" data-v="rascunho">Reabrir para edição</button>`);
+  if ((mine && st === 'rascunho') || isAdmin()) acts.push(`<button class="btn ghost" data-act="apagar" data-id="${c.id}">Apagar</button>`);
+  return `${top()}
+    <p class="lbl" style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px"><span>${mine ? 'Seu personagem' : 'De ' + esc(memberName(c.owner))}</span><span class="chip ${st}">${STATUS[st]}</span></p>
+    ${sheetBody(c.data)}
+    ${isGM() ? `<h2>Anotações do mestre</h2><textarea class="field" data-gmnote="${c.id}" placeholder="Só o mestre vê isto.">${esc(S.notes[c.id] || '')}</textarea>` : ''}
+    <div class="actions">${acts.join('')}<a class="btn ghost" href="#/">Voltar à mesa</a></div>`;
+}
+
+// ---------- administração ----------
+function inviteLink(token) { return new URL('#/convite/' + token, location.href.split('#')[0]).href; }
+function viewAdmin() {
+  const abertos = S.invites.filter((i) => !i.used_at && !i.revoked);
+  const usados = S.invites.filter((i) => i.used_at);
+  return `${top()}
+    <h1>Convites e pessoas</h1>
+    <h2>Novo convite</h2>
+    <form class="card form" data-form="invite">
+      <div><label class="flab" for="nv-label">Para quem</label><input class="field" id="nv-label" name="label" placeholder="Ex.: Ana" maxlength="60" required></div>
+      <div><label class="flab" for="nv-role">Papel</label><select class="field" id="nv-role" name="role"><option value="player">Jogador</option><option value="gm">Mestre</option></select></div>
+      <button class="btn primary">Criar link</button>
+      <p class="small dim" style="margin:0">Cada link serve para uma pessoa. Quem já tem conta no Por Um Fio entra com o mesmo e-mail e senha.</p>
+    </form>
+    <h2>Links abertos</h2>
+    ${abertos.length ? `<div class="list">${abertos.map((i) => `<div class="row"><div class="who"><b>${esc(i.label)}</b> <span class="dim small">${PAPEL[i.role]}</span><div class="linkbox">${esc(inviteLink(i.token))}</div></div>
+      <div style="display:flex;gap:6px"><button class="btn sm primary" data-act="copiar" data-token="${i.token}">Copiar</button><button class="btn sm ghost" data-act="revogar" data-token="${i.token}">Cancelar</button></div></div>`).join('')}</div>` : '<p class="muted">Nenhum link aberto.</p>'}
+    <h2>Na mesa</h2>
+    <div class="list">${S.members.map((m) => `<div class="row"><div class="who"><b>${esc(m.display_name)}</b></div>
+      ${m.user_id === S.session.user.id ? `<span class="chip">${PAPEL[m.role]}</span>` : `<select class="field" data-role="${m.user_id}" aria-label="Papel de ${esc(m.display_name)}">${Object.entries(PAPEL).map(([k, v]) => `<option value="${k}" ${m.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select>`}</div>`).join('')}</div>
+    ${usados.length ? `<p class="small dim" style="margin-top:12px">${usados.length} convite${usados.length > 1 ? 's' : ''} já usado${usados.length > 1 ? 's' : ''}.</p>` : ''}`;
+}
+
+// ---------- eventos ----------
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-act],[data-set],[data-attr],[data-ess]');
+  if (!t) return;
+  const wiz = t.closest('.wiz');
+  const c = wiz ? charById(wiz.dataset.char) : null;
+
+  if (t.dataset.set && c) {
+    e.preventDefault();
+    const k = t.dataset.set; let v = t.dataset.v;
+    if (k === 'marcaSangue') v = v === '1';
+    c.data[k] = v;
+    if (k === 'origem') { c.data.periciaExtra = ''; if (v !== 'estrada') c.data.sotaqueEstrada = ''; }
+    if (k === 'oficio') { c.data.periciaExtra = ''; c.data.essencias = c.data.essencias.slice(0, R.essenciasPermitidas(c.data)); }
+    if (k === 'dom' && v === 'adormecido') { c.data.marca = ''; c.data.marcaSangue = false; }
+    if (k === 'dom') fitAttrs(c.data);
+    if (k === 'marca' && !v) c.data.marcaSangue = false;
+    saveSoon(c); rerender(); return;
+  }
+  if (t.dataset.ess && c) {
+    const e2 = t.dataset.ess, max = R.essenciasPermitidas(c.data), arr = c.data.essencias;
+    if (arr.includes(e2)) c.data.essencias = arr.filter((x) => x !== e2);
+    else { arr.push(e2); if (arr.length > max) arr.shift(); }
+    saveSoon(c); rerender(); return;
+  }
+  if (t.dataset.attr && c) {
+    const k = t.dataset.attr, d = +t.dataset.d, p = c.data;
+    const nv = p.atrib[k] + d;
+    if (nv < 1 || nv > 4) return;
+    if (d > 0 && R.pontosUsados(p) >= R.pontosTotais(p)) return;
+    p.atrib[k] = nv; saveSoon(c); rerender(); return;
+  }
+
+  const act = t.dataset.act;
+  if (act === 'logout') { await sb.auth.signOut(); S.me = null; location.hash = '#/'; return; }
+  if (act === 'novo') {
+    t.disabled = true;
+    const { data, error } = await sb.from('breu_characters').insert({ owner: S.session.user.id, data: R.novoPersonagem(), status: 'rascunho' }).select().single();
+    if (error) { toast('Não consegui começar. Tente de novo.'); t.disabled = false; return; }
+    S.chars.push(data); go(`criar/${data.id}/0`); return;
+  }
+  if (act === 'enviar') {
+    const ch = charById(t.dataset.id);
+    if (ch.status === 'rascunho') ch.status = 'pronto';
+    const ok = await saveNow(ch);
+    if (ok) await sb.from('breu_characters').update({ status: ch.status }).eq('id', ch.id);
+    toast(ok ? (ch.status === 'pronto' ? 'Enviado ao mestre!' : 'Salvo.') : 'Não consegui salvar.');
+    go('ficha/' + ch.id); return;
+  }
+  if (act === 'status') {
+    const ch = charById(t.dataset.id);
+    const { error } = await sb.from('breu_characters').update({ status: t.dataset.v }).eq('id', ch.id);
+    if (error) return toast('Não consegui mudar.');
+    ch.status = t.dataset.v; toast(STATUS[ch.status]); render(); return;
+  }
+  if (act === 'apagar') {
+    if (!confirm('Apagar este personagem? Não dá para desfazer.')) return;
+    const { error } = await sb.from('breu_characters').delete().eq('id', t.dataset.id);
+    if (error) return toast('Não consegui apagar.');
+    S.chars = S.chars.filter((x) => x.id !== t.dataset.id); go(''); return;
+  }
+  if (act === 'joinLogged') {
+    ui.busy = true; ui.inviteErr = ''; render();
+    const r = await fn({ action: 'breu_accept', token: ui.invite.token, name: $('#iv-nome').value });
+    ui.busy = false;
+    if (r.error) { ui.inviteErr = r.error; render(); return; }
+    await loadAll(); subscribe(); go(''); return;
+  }
+  if (act === 'copiar') {
+    const link = inviteLink(t.dataset.token);
+    try { await navigator.clipboard.writeText(link); toast('Link copiado. Mande no WhatsApp.'); } catch { prompt('Copie o link:', link); }
+    return;
+  }
+  if (act === 'revogar') {
+    await sb.from('breu_invites').update({ revoked: true }).eq('token', t.dataset.token);
+    await loadInvites(); render(); return;
+  }
+});
+
+function fitAttrs(p) {
+  // ao trocar o Dom, se os pontos passarem do total, tira do maior atributo
+  while (R.pontosUsados(p) > R.pontosTotais(p)) {
+    const k = R.ATRIBUTOS.map((a) => a.k).sort((a, b) => p.atrib[b] - p.atrib[a])[0];
+    p.atrib[k]--;
+  }
+}
+
+function rerender() { const y = window.scrollY; render(); window.scrollTo(0, y); }
+
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.dataset.k) {
+    const c = charById(t.closest('.wiz')?.dataset.char);
+    if (!c) return;
+    c.data[t.dataset.k] = t.value; saveSoon(c); return;
+  }
+  if (t.dataset.gmnote) {
+    const id = t.dataset.gmnote; S.notes[id] = t.value;
+    clearTimeout(pending['gm' + id]);
+    pending['gm' + id] = setTimeout(() => sb.from('breu_gm_notes').upsert({ character_id: id, note: S.notes[id], updated_at: new Date().toISOString() }), 800);
+  }
+});
+
+document.addEventListener('change', async (e) => {
+  const t = e.target;
+  if (t.dataset.role) {
+    const { error } = await sb.from('breu_members').update({ role: t.value }).eq('user_id', t.dataset.role);
+    if (error) { toast('Não consegui mudar o papel.'); return; }
+    const m = S.members.find((x) => x.user_id === t.dataset.role); if (m) m.role = t.value;
+    toast('Papel atualizado.');
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  const f = e.target, kind = f.dataset.form;
+  if (!kind) return;
+  e.preventDefault();
+  if (kind === 'login') {
+    ui.busy = true; ui.loginErr = ''; render();
+    const { error } = await sb.auth.signInWithPassword({ email: f.email.value.trim(), password: f.password.value });
+    ui.busy = false;
+    if (error) { ui.loginErr = 'E-mail ou senha não conferem.'; render(); }
+    return;
+  }
+  if (kind === 'accept') {
+    const body = { action: 'breu_accept', token: ui.invite.token, name: f.name.value, email: f.email.value, password: f.password.value };
+    ui.busy = true; ui.inviteErr = ''; render();
+    const r = await fn(body);
+    if (r.error) { ui.busy = false; ui.inviteErr = r.error; render(); return; }
+    const { error } = await sb.auth.signInWithPassword({ email: body.email.trim().toLowerCase(), password: body.password });
+    ui.busy = false;
+    if (error) { ui.inviteErr = 'Conta pronta, mas não consegui entrar. Tente pela tela de entrada.'; render(); return; }
+    location.hash = '#/';
+    return;
+  }
+  if (kind === 'invite') {
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join('');
+    const { error } = await sb.from('breu_invites').insert({ token, label: f.label.value.trim(), role: f.role.value, created_by: S.session.user.id });
+    if (error) { toast('Não consegui criar o link.'); return; }
+    await loadInvites(); render();
+    try { await navigator.clipboard.writeText(inviteLink(token)); toast('Link criado e copiado.'); } catch { toast('Link criado.'); }
+  }
+});
+
+window.addEventListener('hashchange', () => { ui.saved = ''; render(); });
+
+// ---------- início ----------
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  S.session = session;
+  if (session) { await loadAll(); if (S.me) subscribe(); }
+  S.ready = true;
+  render();
+  sb.auth.onAuthStateChange(async (event, sess) => {
+    if (event === 'SIGNED_IN' && (!S.session || S.session.user.id !== sess?.user.id)) {
+      S.session = sess; await loadAll(); if (S.me) subscribe(); render();
+    } else if (event === 'SIGNED_OUT') {
+      S.session = null; S.me = null; S.chars = []; render();
+    } else if (sess) S.session = sess;
+  });
+}
+boot();

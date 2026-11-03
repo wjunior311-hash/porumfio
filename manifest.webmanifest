@@ -3,7 +3,7 @@
   "short_name": "Por Um Fio",
   "description": "Fichas, mestre e mesa da campanha de Tormenta20.",
   "lang": "pt-BR",
-  "start_url": "./",
+  "start_url": "./#/inicio",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

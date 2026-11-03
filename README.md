@@ -8,6 +8,12 @@ App de mesa da campanha de Tormenta20: fichas no celular, área do mestre e admi
 - **Tempo real.** Mudanças em PV, PM, condições e mochila aparecem na hora para todo mundo.
 - **Instalável.** Botão *Instalar na tela de início* (Android) ou instruções para o iPhone.
 
+## Breu
+O link principal abre uma tela de escolha: **Por Um Fio** (Tormenta20) ou **Breu**. O app instalado na tela de início vai direto para o Por Um Fio.
+- `breu/` — a mesa de Breu: convite, criação de personagem em 7 passos (salva sozinha), ficha e convites. Mesmas contas do Por Um Fio.
+- `breu/regras.js` — regras de criação do Livro Básico (origens, ofícios, Dom, Marcas, barras).
+- Banco: `breu_members`, `breu_characters`, `breu_gm_notes`, `breu_invites`. Só quem está na mesa vê as fichas; só o dono ou o mestre altera; só o mestre aprova.
+
 ## Estrutura
 - `index.html`, `css/app.css`, `js/app.js` — o app (sem etapa de build; publicado pelo GitHub Pages).
 - `js/regras.js` — regras de Tormenta20 usadas na ficha: grupos de poderes, custos, círculos, aprimoramentos.
