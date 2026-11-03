@@ -104,6 +104,7 @@ function render() {
   else if (r.name === 'evoluir' && charById(r.arg) && canEdit(charById(r.arg))) html = viewEvoluir(charById(r.arg));
   else if (r.name === 'ficha' && charById(r.arg)) html = viewSheet(charById(r.arg));
   else if (r.name === 'admin' && isAdmin()) html = viewAdmin();
+  else if (r.name === 'prontos') html = viewProntos();
   else if (r.name === '') html = viewMesa();
   else { location.replace('#/'); return; }
   app.innerHTML = html;
@@ -195,7 +196,7 @@ function charCard(c) {
   const st = c.status || 'rascunho';
   const href = c.status === 'rascunho' && canEdit(c) ? `#/criar/${c.id}/0` : `#/ficha/${c.id}`;
   return `<a class="ccard" href="${href}">
-    <div class="pic${of ? '' : ' vazio'}">${of ? `<img src="img/of-${of.k}.webp" alt="">` : '?'}</div>
+    <div class="pic${of ? '' : ' vazio'}">${of ? `<img src="${picOf(p)}" alt="">` : '?'}</div>
     <div><b>${esc(p.nome || 'Sem nome')}</b><span class="sub">${esc(sub)}</span><div class="small dim">${esc(memberName(c.owner))}${R.marcosGanhos(p) ? ` · ${R.marcosGanhos(p)} marco${R.marcosGanhos(p) > 1 ? 's' : ''}` : ''}</div>
     ${c.owner === S.session.user.id && (R.melhoriasPendentes(p) || R.precisaCaminho(p)) ? '<span class="badge">Pronto para evoluir</span>' : ''}</div>
     <span class="chip ${st}">${STATUS[st]}</span></a>`;
@@ -209,11 +210,25 @@ function viewMesa() {
     <section class="hero"><p class="lbl">Olá, ${esc(S.me.display_name)}</p><h1>A mesa</h1></section>
     <h2>${isGM() && meus.length > 1 ? 'Seus personagens' : 'Seu personagem'}</h2>
     ${meus.length ? `<div class="chars">${meus.map(charCard).join('')}</div>` : `<div class="empty"><p>Você ainda não tem personagem.</p><p class="small">A criação leva uns 20 minutos e salva sozinha: dá para parar e voltar depois.</p></div>`}
-    ${podeCriar ? `<button class="btn primary block" style="margin-top:12px" data-act="novo">${meus.length ? 'Criar outro personagem' : 'Criar meu personagem'}</button>` : ''}
+    ${podeCriar ? `<button class="btn primary block" style="margin-top:12px" data-act="novo">${meus.length ? 'Criar outro personagem' : 'Criar meu personagem'}</button>
+      <a class="btn block" style="margin-top:8px" href="#/prontos">Ou escolher um personagem pronto</a>` : ''}
     <h2>O grupo</h2>
     ${outros.length ? `<div class="chars">${outros.map(charCard).join('')}</div>` : `<p class="muted">Ninguém mais criou personagem ainda.</p>`}
     <h2>Antes de começar</h2>
     <div class="box">Pense em quem você é antes de pensar em números: de onde veio, o que faz, qual noite te mudou e quem você quer proteger. As regras se encaixam depois.</div>`;
+}
+
+// ---------- personagens prontos ----------
+function viewProntos() {
+  const usados = new Set(S.chars.map((c) => c.data?.pronto).filter(Boolean));
+  return `${top()}<h1>Personagens prontos</h1>
+    <p class="muted" style="margin-top:8px">Seis pessoas que já se conhecem, feitas para a primeira aventura. Escolha um e ajuste o que quiser antes de enviar ao mestre: nome, história, atributos.</p>
+    <div class="opts">${R.PRONTOS.map((p) => { const of = R.oficioDe(p), or = R.origemDe(p), b = R.barras(p), em = usados.has(p.id);
+      return `<button class="opt of pr" data-pronto="${p.id}" ${em ? 'disabled' : ''}>
+        <span class="pic"><img src="img/pr-${p.id}.webp" alt=""></span>
+        <span class="meta">${em ? 'Já escolhido' : `${of.n} · ${or.n}`}</span><b>${esc(p.nome)}</b><p>${esc(p.conceito)}</p>
+        <span class="hab dim">Sangue ${b.sangue} · Prumo ${b.prumo} · Defesa ${b.defesa}${b.brasa ? ` · Brasa ${b.brasa}` : ''}</span></button>`; }).join('')}</div>
+    <div class="actions"><a class="btn ghost" href="#/">Voltar</a></div>`;
 }
 
 // ---------- assistente de criação ----------
@@ -254,6 +269,8 @@ function resumo(p) {
   if (!it.length) return '';
   return `<div class="resumo"><span>${it.map(esc).join(' · ')}</span>${of ? `<span class="dim">Sangue ${b.sangue} · Prumo ${b.prumo} · Defesa ${b.defesa}</span>` : ''}</div>`;
 }
+
+const picOf = (p) => (p.pronto ? `img/pr-${p.pronto}.webp` : R.oficioDe(p) ? `img/of-${R.oficioDe(p).k}.webp` : '');
 
 const inp = (k, v, ph = '', max = 80) => `<input class="field" data-k="${k}" value="${esc(v)}" placeholder="${esc(ph)}" maxlength="${max}">`;
 const area = (k, v, ph = '') => `<textarea class="field" data-k="${k}" placeholder="${esc(ph)}" maxlength="1200">${esc(v)}</textarea>`;
@@ -368,7 +385,7 @@ function sheetBody(p, c = null) {
   const armas = of ? of.armas : [];
   return `
     <div class="sheet-head">
-      <div class="pic">${of ? `<img src="img/of-${of.k}.webp" alt="">` : ''}</div>
+      <div class="pic${p.pronto ? ' retrato' : ''}">${of ? `<img src="${picOf(p)}" alt="">` : ''}</div>
       <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, cam?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}</div>
     </div>
     ${c ? evoBanner(c) : ''}
@@ -530,7 +547,7 @@ function viewAdmin() {
 
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
+  const t = e.target.closest('[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
   const c = wiz ? charById(wiz.dataset.char) : null;
@@ -561,6 +578,14 @@ document.addEventListener('click', async (e) => {
     p.atrib[k] = nv; saveSoon(c); rerender(); return;
   }
 
+  if (t.dataset.pronto) {
+    const base = R.PRONTOS.find((x) => x.id === t.dataset.pronto); if (!base) return;
+    t.disabled = true;
+    const d = JSON.parse(JSON.stringify(base)); d.pronto = d.id; delete d.id;
+    const { data, error } = await sb.from('breu_characters').insert({ owner: S.session.user.id, data: d, name: d.nome, status: 'rascunho' }).select().single();
+    if (error) { toast('Não consegui pegar este personagem. Tente de novo.'); t.disabled = false; return; }
+    data.data = R.norm(data.data); S.chars.push(data); go(`criar/${data.id}/6`); return;
+  }
   if (t.dataset.evoTipo) { ui.evo = { tipo: t.dataset.evoTipo }; rerender(); $('#evo-alvos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   if (t.dataset.evoAlvo) { ui.evo.alvo = t.dataset.evoAlvo; rerender(); if (ui.evo.tipo !== 'marca') $('.wfoot')?.scrollIntoView({ behavior: 'smooth', block: 'end' }); return; }
   if (t.dataset.evoSangue) { ui.evo.sangue = t.dataset.evoSangue === '1'; rerender(); return; }

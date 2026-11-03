@@ -191,3 +191,7 @@ ol.marcos li { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 
 .opt.of .pic.or img { object-fit: contain; object-position: center top; }
 .or-wrap { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: start; }
 .or-fig { width: 96px; }
+
+.opt.pr .pic { height: 96px; background: var(--raise2); }
+.opt.pr .pic img { object-fit: cover; object-position: center top; }
+.sheet-head .pic.retrato img { object-fit: cover; object-position: center top; }
