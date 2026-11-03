@@ -24,6 +24,8 @@ const STATUS = { rascunho: 'Rascunho', pronto: 'Enviado ao mestre', aprovado: 'A
 const memberName = (uid) => S.members.find((m) => m.user_id === uid)?.display_name || 'Alguém';
 const charById = (id) => S.chars.find((c) => c.id === id);
 const canEdit = (c) => c && (c.owner === S.session?.user.id || isGM());
+// a criação fica aberta até o mestre aprovar; depois, a ficha muda só pelos marcos
+const canEditCreation = (c) => c && (isGM() || (c.owner === S.session?.user.id && c.status !== 'aprovado'));
 
 // ---------- rotas ----------
 function route() {
@@ -43,7 +45,7 @@ async function loadAll() {
     sb.from('breu_characters').select('*').order('created_at'),
     sb.from('breu_members').select('user_id, display_name, role, created_at').order('created_at'),
   ]);
-  S.chars = chars.data || [];
+  S.chars = (chars.data || []).map((c) => ({ ...c, data: R.norm(c.data || {}) }));
   S.members = members.data || [];
   if (isGM()) {
     const { data } = await sb.from('breu_gm_notes').select('*');
@@ -63,11 +65,12 @@ function subscribe() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_characters' }, (p) => {
       if (p.eventType === 'DELETE') S.chars = S.chars.filter((c) => c.id !== p.old.id);
       else {
+        p.new.data = R.norm(p.new.data || {});
         const i = S.chars.findIndex((c) => c.id === p.new.id);
         if (i < 0) S.chars.push(p.new);
         else if (route().name !== 'criar' || route().arg !== p.new.id) S.chars[i] = p.new;
       }
-      if (route().name !== 'criar') render();
+      if (!['criar', 'evoluir'].includes(route().name) || (route().name === 'evoluir' && !ui.evo?.tipo)) rerender();
     })
     .subscribe();
 }
@@ -81,7 +84,7 @@ function saveSoon(c) {
 }
 async function saveNow(c) {
   clearTimeout(pending[c.id]);
-  const { error } = await sb.from('breu_characters').update({ data: c.data, name: c.data.nome || null, updated_at: new Date().toISOString() }).eq('id', c.id);
+  const { error } = await sb.rpc('breu_patch', { cid: c.id, patch: c.data });
   ui.saved = error ? 'Não consegui salvar. Confira sua internet.' : 'Salvo';
   paintSaved();
   return !error;
@@ -97,13 +100,13 @@ function render() {
   if (r.name === 'convite') html = viewInvite(r.arg);
   else if (!S.session) html = viewLogin();
   else if (!S.me) html = viewNoMember();
-  else if (r.name === 'criar' && charById(r.arg) && canEdit(charById(r.arg))) html = viewWizard(charById(r.arg), +r.arg2 || 0);
+  else if (r.name === 'criar' && charById(r.arg) && canEditCreation(charById(r.arg))) html = viewWizard(charById(r.arg), +r.arg2 || 0);
+  else if (r.name === 'evoluir' && charById(r.arg) && canEdit(charById(r.arg))) html = viewEvoluir(charById(r.arg));
   else if (r.name === 'ficha' && charById(r.arg)) html = viewSheet(charById(r.arg));
   else if (r.name === 'admin' && isAdmin()) html = viewAdmin();
   else if (r.name === '') html = viewMesa();
   else { location.replace('#/'); return; }
   app.innerHTML = html;
-  window.scrollTo(0, 0);
 }
 
 function top(extra = '') {
@@ -193,7 +196,8 @@ function charCard(c) {
   const href = c.status === 'rascunho' && canEdit(c) ? `#/criar/${c.id}/0` : `#/ficha/${c.id}`;
   return `<a class="ccard" href="${href}">
     <div class="pic${of ? '' : ' vazio'}">${of ? `<img src="img/of-${of.k}.webp" alt="">` : '?'}</div>
-    <div><b>${esc(p.nome || 'Sem nome')}</b><span class="sub">${esc(sub)}</span><div class="small dim">${esc(memberName(c.owner))}</div></div>
+    <div><b>${esc(p.nome || 'Sem nome')}</b><span class="sub">${esc(sub)}</span><div class="small dim">${esc(memberName(c.owner))}${R.marcosGanhos(p) ? ` · ${R.marcosGanhos(p)} marco${R.marcosGanhos(p) > 1 ? 's' : ''}` : ''}</div>
+    ${c.owner === S.session.user.id && (R.melhoriasPendentes(p) || R.precisaCaminho(p)) ? '<span class="badge">Pronto para evoluir</span>' : ''}</div>
     <span class="chip ${st}">${STATUS[st]}</span></a>`;
 }
 function viewMesa() {
@@ -233,7 +237,8 @@ function viewWizard(c, step) {
   return `${top()}
     <div class="steps" aria-hidden="true">${bars}</div>
     <div class="stepname"><span class="lbl">Passo ${step + 1} de ${PASSOS.length}</span><a class="lbl" href="#/" style="text-decoration:none">Sair e continuar depois</a></div>
-    <h1 style="margin-bottom:14px">${nome}</h1>
+    <h1 style="margin-bottom:10px">${nome}</h1>
+    ${resumo(p)}
     <div class="wiz" data-char="${c.id}">${body}</div>
     <p class="saved" aria-live="polite">${esc(ui.saved)}</p>
     <div class="wfoot">
@@ -241,6 +246,13 @@ function viewWizard(c, step) {
       ${last ? `<button class="btn primary" data-act="enviar" data-id="${c.id}" ${R.pendencias(p).length ? 'disabled' : ''}>${c.status === 'rascunho' ? 'Enviar ao mestre' : 'Salvar'}</button>`
              : `<a class="btn primary" href="#/criar/${c.id}/${step + 1}">Próximo</a>`}
     </div>`;
+}
+
+function resumo(p) {
+  const of = R.oficioDe(p), or = R.origemDe(p), b = R.barras(p);
+  const it = [p.nome, or?.n, of?.n, p.oficio ? R.domDe(p).n : ''].filter(Boolean);
+  if (!it.length) return '';
+  return `<div class="resumo"><span>${it.map(esc).join(' · ')}</span>${of ? `<span class="dim">Sangue ${b.sangue} · Prumo ${b.prumo} · Defesa ${b.defesa}</span>` : ''}</div>`;
 }
 
 const inp = (k, v, ph = '', max = 80) => `<input class="field" data-k="${k}" value="${esc(v)}" placeholder="${esc(ph)}" maxlength="${max}">`;
@@ -313,6 +325,7 @@ function stepAtributos(p) {
   const of = R.oficioDe(p);
   return `<p class="intro">Todos começam em 1. Distribua ${total} pontos. Nenhum passa de 4 agora.${of ? ` Para ${of.n.toLowerCase()}, costumam pesar <b>${of.fortes}</b>.` : ''}</p>
     <div class="pool${sobra === 0 ? ' zero' : ''}"><span class="lbl">Pontos sobrando</span><strong>${sobra}</strong></div>
+    ${of ? `<button class="btn sm" data-act="sugerir" style="justify-self:start">Distribuir pelo ofício</button>` : ''}
     <div class="attrs">${R.ATRIBUTOS.map((a) => `<div class="attr"><b>${a.n}</b>
       <div class="stepper"><button data-attr="${a.k}" data-d="-1" aria-label="Menos ${a.n}" ${p.atrib[a.k] <= 1 ? 'disabled' : ''}>−</button><span class="v">${p.atrib[a.k]}</span><button data-attr="${a.k}" data-d="1" aria-label="Mais ${a.n}" ${p.atrib[a.k] >= 4 || sobra <= 0 ? 'disabled' : ''}>+</button></div>
       <p>${a.d}</p></div>`).join('')}</div>
@@ -346,18 +359,19 @@ function stepRevisao(p) {
 }
 
 // ---------- ficha ----------
-function sheetBody(p) {
-  const of = R.oficioDe(p), or = R.origemDe(p), b = R.barras(p), per = R.pericias(p);
-  const marca = R.MARCAS.find((m) => m.k === p.marca);
+function sheetBody(p, c = null) {
+  const of = R.oficioDe(p), or = R.origemDe(p), b = R.barras(p), at = R.atrib(p), dom = R.domDe(p), cam = R.caminhoDe(p);
+  const ms = R.marcas(p), ess = R.essencias(p);
   const armas = of ? of.armas : [];
-  const essList = p.essencias.length ? p.essencias.map((e) => `${e} (${R.ESSENCIAS[e]})`).join(', ') : 'Nenhuma';
   return `
     <div class="sheet-head">
       <div class="pic">${of ? `<img src="img/of-${of.k}.webp" alt="">` : ''}</div>
-      <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}</div>
+      <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, cam?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}</div>
     </div>
+    ${c ? evoBanner(c) : ''}
     <h2>Atributos</h2>
-    <div class="stat-row">${R.ATRIBUTOS.map((a) => `<div class="stat"><strong>${p.atrib[a.k]}</strong><span>${a.n}</span></div>`).join('')}</div>
+    <div class="stat-row">${R.ATRIBUTOS.map((a) => `<div class="stat"><strong>${at[a.k]}</strong><span>${a.n}</span></div>`).join('')}</div>
+    <p class="small dim" style="margin-top:6px">Na rolagem, pegue tantos d20 quanto o atributo e fique com o maior.</p>
     <h2>Barras</h2>
     <div class="bars">
       <div class="bar"><span>Sangue</span><strong>${b.sangue}</strong></div>
@@ -367,24 +381,24 @@ function sheetBody(p) {
     </div>
     ${b.sombra ? `<p class="small" style="margin-top:8px">Sombra: <b style="color:var(--brasa2)">${b.sombra}</b> de 7.</p>` : ''}
     <h2>Perícias</h2>
-    <p class="small dim">Na rolagem, some +3 nas treinadas.</p>
-    <div class="skills">${R.PERICIAS.map(([n]) => `<div class="${per.includes(n) ? 't' : ''}"><span>${n}</span>${per.includes(n) ? '<em>+3</em>' : '<span>—</span>'}</div>`).join('')}</div>
-    ${of ? `<h2>Ofício</h2><dl class="kv"><div><dt>Habilidade</dt><dd><b>${of.hab[0]}.</b> ${of.hab[1]}</dd></div></dl>` : ''}
+    <div class="skills">${R.PERICIAS.map(([n]) => { const g = R.grauPericia(p, n); return `<div class="${g ? 't' : ''}"><span>${n}${g > 1 ? ` <span class="dim small">${R.GRAUS[g]}</span>` : ''}</span>${g ? `<em>+${R.bonusPericia(g)}</em>` : '<span>—</span>'}</div>`; }).join('')}</div>
+    ${of ? `<h2>Ofício</h2><dl class="kv"><div><dt>Habilidade inicial</dt><dd><b>${of.hab[0]}.</b> ${of.hab[1]}</dd></div>
+      ${cam ? cam.habs.map(([n, custo, d]) => `<div><dt>Caminho ${esc(cam.n)}</dt><dd><b>${n}.</b>${custo ? ` <span class="dim">(${custo})</span>` : ''} ${d}</dd></div>`).join('') : `<div><dt>Caminho</dt><dd class="dim">Escolhido no terceiro marco: ${of.caminhos.map((x) => x.n).join(' ou ')}.</dd></div>`}</dl>` : ''}
     <h2>Traços e Dom</h2>
     <dl class="kv">
-      <div><dt>Dom</dt><dd>${p.dom === 'faisca' ? 'Faísca (Brasa 2). Acende traços básicos.' : 'Adormecido (Brasa 0). Seus traços saem apagados.'}</dd></div>
-      <div><dt>Sotaque</dt><dd>${esc(R.sotaque(p) || '—')}</dd></div>
+      <div><dt>Dom</dt><dd><b>${dom.n}</b> (Brasa ${dom.brasa}). ${dom.d}</dd></div>
+      <div><dt>Sotaque${R.sotaques(p).length > 1 ? 's' : ''}</dt><dd>${esc(R.sotaques(p).join(', ') || '—')}</dd></div>
       <div><dt>Raízes</dt><dd>${R.tracosConhecidos(p).join(', ')}</dd></div>
       <div><dt>Modos</dt><dd>No chão, no ar, em volta, num objeto, na pele</dd></div>
-      <div><dt>Essências</dt><dd>${esc(essList)}</dd></div>
-      ${marca ? `<div><dt>Marca</dt><dd><img class="marca-ic" src="img/m-${marca.k}.webp" alt=""><b>${marca.n}</b> (${marca.onde.toLowerCase()}${p.marcaSangue ? ', com sangue de Assombro' : ''}). ${marca.d} Custa ${Math.max(1, marca.custo - (p.marcaSangue ? 1 : 0))} Brasa.</dd></div>` : ''}
+      <div><dt>Essências</dt><dd>${ess.length ? ess.map((e) => `${e} (${R.ESSENCIAS[e]})`).join(', ') : 'Nenhuma'}</dd></div>
+      ${ms.map((m) => `<div><dt>Marca</dt><dd><img class="marca-ic" src="img/m-${m.k}.webp" alt=""><b>${m.n}</b> (${m.onde.toLowerCase()}${m.sangue ? ', com sangue de Assombro' : ''}). ${m.d} Custa ${Math.max(1, m.custo - (m.sangue ? 1 : 0))} Brasa.</dd></div>`).join('')}
     </dl>
     <h2>Equipamento</h2>
     ${armas.length ? `<table class="weap"><thead><tr><th>Arma</th><th>Dano</th><th>Alcance</th></tr></thead><tbody>${armas.map((a) => `<tr><td>${esc(a)}<div class="small dim">${esc(R.ARMAS[a]?.[2] || '')}</div></td><td>${R.ARMAS[a]?.[0] || ''}</td><td>${R.ARMAS[a]?.[1] || ''}</td></tr>`).join('')}</tbody></table>` : ''}
     <dl class="kv" style="margin-top:12px">
       ${of ? `<div><dt>Do ofício</dt><dd>${esc(of.equip)}</dd></div>` : ''}
       <div><dt>Kit comum</dt><dd>${esc(R.KIT)}</dd></div>
-      <div><dt>Dinheiro</dt><dd>2 noites e 5 vigias</dd></div>
+      <div><dt>Dinheiro inicial</dt><dd>2 noites e 5 vigias</dd></div>
     </dl>
     <p class="small dim" style="margin-top:8px">Armas comuns não matam Assombros: só empurram. Para ferir, a arma precisa estar marcada.</p>
     <h2>História</h2>
@@ -395,22 +409,96 @@ function sheetBody(p) {
       ${or && p.respostaOrigem ? `<div><dt>${esc(or.pergunta)}</dt><dd>${esc(p.respostaOrigem)}</dd></div>` : ''}
       ${p.protege ? `<div><dt>Quem protejo</dt><dd>${esc(p.protege)}</dd></div>` : ''}
       ${p.medo ? `<div><dt>Meu maior medo</dt><dd>${esc(p.medo)}</dd></div>` : ''}
-    </dl>`;
+    </dl>
+    ${c ? evoHistorico(p) : ''}`;
+}
+
+// faixa de evolução no topo da ficha
+function evoBanner(c) {
+  const p = c.data, mine = canEdit(c), pend = R.melhoriasPendentes(p), n = R.marcosGanhos(p);
+  if (c.status !== 'aprovado' && !n) return '';
+  const partes = [];
+  if (pend && mine) partes.push(`<b>${pend} marco${pend > 1 ? 's' : ''} para gastar.</b> ${R.precisaCaminho(p) ? 'Hora de escolher o caminho do ofício.' : 'Escolha uma melhoria.'}`);
+  else partes.push(`<b>${n} marco${n === 1 ? '' : 's'}.</b> ${n < 3 ? `O caminho do ofício chega no terceiro.` : ''}`);
+  if (R.domPodeSubir(p)) partes.push(`O Dom pode subir para <b>${R.DOM[R.domIndex(p) + 1].n}</b>, se a mesa concordar.`);
+  return `<div class="evo">
+    <div><span class="lbl">Evolução</span><p style="margin:4px 0 0">${partes.join(' ')}</p></div>
+    ${pend && mine ? `<a class="btn primary" href="#/evoluir/${c.id}">Evoluir</a>` : ''}
+  </div>`;
+}
+
+function evoHistorico(p) {
+  if (!p.marcos.length && !p.melhorias.length && !p.caminho) return '';
+  const cam = R.caminhoDe(p);
+  const linhas = p.marcos.map((m, i) => {
+    const mel = p.melhorias[i];
+    return `<li><span class="lbl">Marco ${i + 1}</span> ${esc(m.motivo || '')}${mel ? `<br><span class="small">→ ${esc(R.descreveMelhoria(mel))}</span>` : '<br><span class="small dim">→ melhoria por escolher</span>'}${i === 2 && cam ? `<br><span class="small">→ Caminho: ${esc(cam.n)}</span>` : ''}</li>`;
+  }).join('');
+  return `<h2>Marcos</h2><ol class="marcos">${linhas}</ol>${p.domSubidas ? `<p class="small">O Dom subiu ${p.domSubidas} grau${p.domSubidas > 1 ? 's' : ''} com a mesa.</p>` : ''}`;
 }
 
 function viewSheet(c) {
   const st = c.status || 'rascunho';
   const mine = c.owner === S.session.user.id;
+  const p = c.data;
   const acts = [];
-  if (canEdit(c) && (st !== 'aprovado' || isGM())) acts.push(`<a class="btn" href="#/criar/${c.id}/0">Editar</a>`);
+  if (canEditCreation(c)) acts.push(`<a class="btn" href="#/criar/${c.id}/0">${st === 'aprovado' ? 'Corrigir a criação' : 'Editar'}</a>`);
   if (isGM() && st === 'pronto') acts.push(`<button class="btn primary" data-act="status" data-id="${c.id}" data-v="aprovado">Aprovar</button>`, `<button class="btn" data-act="status" data-id="${c.id}" data-v="rascunho">Devolver para ajustes</button>`);
-  if (isGM() && st === 'aprovado') acts.push(`<button class="btn" data-act="status" data-id="${c.id}" data-v="rascunho">Reabrir para edição</button>`);
+  if (isGM() && st === 'aprovado') acts.push(`<button class="btn ghost" data-act="status" data-id="${c.id}" data-v="rascunho">Reabrir a criação</button>`);
   if ((mine && st === 'rascunho') || isAdmin()) acts.push(`<button class="btn ghost" data-act="apagar" data-id="${c.id}">Apagar</button>`);
+  const gm = isGM() && st === 'aprovado' ? `<h2>Mestre</h2>
+    <div class="card form">
+      <div><label class="flab" for="mc-mot">Dar um marco</label><p class="fhelp">Em geral, um por sessão e mais um ao fim de cada aventura.</p>
+        <select class="field" id="mc-mot">${R.MARCOS_EXEMPLOS.map((m) => `<option>${esc(m)}</option>`).join('')}<option value="">Outro motivo…</option></select>
+        <input class="field" id="mc-out" placeholder="Escreva o motivo" maxlength="120" style="margin-top:8px;display:none"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="darMarco" data-id="${c.id}">Dar marco</button>
+      ${R.marcosGanhos(p) > R.melhoriasFeitas(p) ? `<button class="btn ghost" data-act="tirarMarco" data-id="${c.id}">Tirar o último</button>` : ''}
+      ${R.domPodeSubir(p) ? `<button class="btn" data-act="subirDom" data-id="${c.id}">Subir o Dom para ${R.DOM[R.domIndex(p) + 1].n}</button>` : ''}</div>
+    </div>` : '';
   return `${top()}
     <p class="lbl" style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px"><span>${mine ? 'Seu personagem' : 'De ' + esc(memberName(c.owner))}</span><span class="chip ${st}">${STATUS[st]}</span></p>
-    ${sheetBody(c.data)}
+    ${sheetBody(p, c)}
+    ${gm}
     ${isGM() ? `<h2>Anotações do mestre</h2><textarea class="field" data-gmnote="${c.id}" placeholder="Só o mestre vê isto.">${esc(S.notes[c.id] || '')}</textarea>` : ''}
     <div class="actions">${acts.join('')}<a class="btn ghost" href="#/">Voltar à mesa</a></div>`;
+}
+
+// ---------- evoluir ----------
+function viewEvoluir(c) {
+  const p = c.data, pend = R.melhoriasPendentes(p);
+  ui.evo ||= {};
+  const cabeca = `${top()}<p class="lbl" style="margin:0 0 6px"><a href="#/ficha/${c.id}" style="color:inherit;text-decoration:none">← ${esc(p.nome)}</a></p>`;
+  if (R.precisaCaminho(p)) {
+    const of = R.oficioDe(p);
+    return `${cabeca}<h1>Escolha o caminho</h1>
+      <p class="muted" style="margin-top:8px">No terceiro marco, ${esc(p.nome)} se aprofunda no ofício de ${of.n.toLowerCase()}. Você ganha as duas habilidades do caminho escolhido. Não dá para trocar depois.</p>
+      <div class="opts">${of.caminhos.map((x) => `<button class="opt${ui.evo.caminho === x.k ? ' sel' : ''}" data-evo-caminho="${x.k}"><span class="meta">${esc(x.d)}</span><b>${esc(x.n)}</b>
+        ${x.habs.map(([n, custo, d]) => `<p><b style="font-family:var(--body);font-size:15px">${n}.</b>${custo ? ` <span class="dim">(${custo})</span>` : ''} ${d}</p>`).join('')}</button>`).join('')}</div>
+      <div class="wfoot"><a class="btn" href="#/ficha/${c.id}">Depois</a><button class="btn primary" data-act="confirmarCaminho" data-id="${c.id}" ${ui.evo.caminho ? '' : 'disabled'}>Seguir este caminho</button></div>`;
+  }
+  if (!pend) {
+    return `${cabeca}<h1>Tudo em dia</h1><p class="muted" style="margin-top:8px">Não há marcos para gastar. O mestre dá marcos quando ${esc(p.nome)} vive algo que o muda.</p>
+      ${p.melhorias.length ? `<button class="btn ghost" data-act="desfazer" data-id="${c.id}">Desfazer a última melhoria</button>` : ''}
+      <div class="actions"><a class="btn primary" href="#/ficha/${c.id}">Ver a ficha</a></div>`;
+  }
+  const ops = R.opcoesMelhoria(p);
+  const op = ops.find((o) => o.tipo === ui.evo.tipo);
+  const alvoSel = op?.alvos.find((a) => a.v === ui.evo.alvo);
+  let passo2 = '';
+  if (op) {
+    passo2 = `<h2 id="evo-alvos">${esc(op.n)}</h2><p class="intro">${esc(op.d)}</p>
+      <div class="opts">${op.alvos.map((a) => `<button class="opt${ui.evo.alvo === a.v ? ' sel' : ''}" data-evo-alvo="${esc(a.v)}" ${a.bloq ? 'disabled' : ''}>${a.bloq ? `<span class="meta">${esc(a.bloq)}</span>` : ''}<b>${esc(a.n)}</b><p>${esc(a.d || '')}</p></button>`).join('')}</div>`;
+    if (op.tipo === 'marca' && alvoSel) {
+      passo2 += `<div><label class="flab">Com que tinta?</label><div class="opts">
+        <button class="opt${!ui.evo.sangue ? ' sel' : ''}" data-evo-sangue="0"><b>Tinta comum</b><p>−1 no Prumo máximo.</p></button>
+        <button class="opt${ui.evo.sangue ? ' sel' : ''}" data-evo-sangue="1"><b>Sangue de Assombro</b><p>Não reduz o Prumo e custa 1 Brasa a menos. Soma 1 de Sombra, para sempre. Sombra atual: ${R.barras(p).sombra} de 7.</p></button></div></div>`;
+    }
+  }
+  return `${cabeca}<h1>Evoluir</h1>
+    <p class="muted" style="margin-top:8px">Marco ${R.melhoriasFeitas(p) + 1}: <i>${esc(p.marcos[R.melhoriasFeitas(p)]?.motivo || '')}</i>. ${pend > 1 ? `Depois deste, ainda sobra${pend > 2 ? 'm' : ''} ${pend - 1}.` : ''}</p>
+    <div class="opts">${ops.map((o) => `<button class="opt${ui.evo.tipo === o.tipo ? ' sel' : ''}" data-evo-tipo="${o.tipo}" ${o.bloq ? 'disabled' : ''}>${o.bloq ? `<span class="meta">${esc(o.bloq)}</span>` : ''}<b>${esc(o.n)}</b><p>${esc(o.d)}</p></button>`).join('')}</div>
+    ${passo2}
+    <div class="wfoot"><a class="btn" href="#/ficha/${c.id}">Depois</a><button class="btn primary" data-act="confirmarMelhoria" data-id="${c.id}" ${alvoSel && !alvoSel.bloq ? '' : 'disabled'}>Confirmar</button></div>`;
 }
 
 // ---------- administração ----------
@@ -438,7 +526,7 @@ function viewAdmin() {
 
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-act],[data-set],[data-attr],[data-ess]');
+  const t = e.target.closest('[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
   const c = wiz ? charById(wiz.dataset.char) : null;
@@ -469,13 +557,59 @@ document.addEventListener('click', async (e) => {
     p.atrib[k] = nv; saveSoon(c); rerender(); return;
   }
 
+  if (t.dataset.evoTipo) { ui.evo = { tipo: t.dataset.evoTipo }; rerender(); $('#evo-alvos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  if (t.dataset.evoAlvo) { ui.evo.alvo = t.dataset.evoAlvo; rerender(); if (ui.evo.tipo !== 'marca') $('.wfoot')?.scrollIntoView({ behavior: 'smooth', block: 'end' }); return; }
+  if (t.dataset.evoSangue) { ui.evo.sangue = t.dataset.evoSangue === '1'; rerender(); return; }
+  if (t.dataset.evoCaminho) { ui.evo = { caminho: t.dataset.evoCaminho }; rerender(); return; }
+
   const act = t.dataset.act;
+  if (act === 'sugerir') {
+    const ch = charById($('.wiz').dataset.char), a = R.sugerirAtributos(ch.data);
+    if (a) { ch.data.atrib = a; saveSoon(ch); rerender(); toast('Distribuí pelos atributos fortes do ofício. Ajuste à vontade.'); }
+    return;
+  }
+  if (act === 'confirmarCaminho') {
+    const ch = charById(t.dataset.id); ch.data.caminho = ui.evo.caminho;
+    const ok = await saveNow(ch); toast(ok ? 'Caminho escolhido.' : 'Não consegui salvar.'); ui.evo = null; rerender(); return;
+  }
+  if (act === 'confirmarMelhoria') {
+    const ch = charById(t.dataset.id);
+    const m = { tipo: ui.evo.tipo, alvo: ui.evo.alvo }; if (m.tipo === 'marca') m.sangue = !!ui.evo.sangue;
+    ch.data.melhorias.push(m);
+    const ok = await saveNow(ch);
+    if (!ok) { ch.data.melhorias.pop(); toast('Não consegui salvar.'); return; }
+    toast(R.descreveMelhoria(m) + '.'); ui.evo = null;
+    if (R.melhoriasPendentes(ch.data) || R.precisaCaminho(ch.data)) { rerender(); window.scrollTo(0, 0); } else go('ficha/' + ch.id);
+    return;
+  }
+  if (act === 'desfazer') {
+    const ch = charById(t.dataset.id); const m = ch.data.melhorias.pop();
+    if (!(await saveNow(ch))) { ch.data.melhorias.push(m); toast('Não consegui desfazer.'); return; }
+    toast('Desfeito: ' + R.descreveMelhoria(m) + '.'); rerender(); return;
+  }
+  if (act === 'darMarco') {
+    const sel = $('#mc-mot'), motivo = sel.value || $('#mc-out').value.trim();
+    if (!motivo) { toast('Escreva o motivo do marco.'); return; }
+    const { error } = await sb.rpc('breu_dar_marco', { cid: t.dataset.id, motivo });
+    if (error) return toast('Não consegui dar o marco.');
+    const ch = charById(t.dataset.id); ch.data.marcos.push({ motivo }); toast('Marco dado.'); rerender(); return;
+  }
+  if (act === 'tirarMarco') {
+    const { error } = await sb.rpc('breu_tirar_marco', { cid: t.dataset.id });
+    if (error) return toast('Não consegui tirar.');
+    charById(t.dataset.id).data.marcos.pop(); toast('Último marco retirado.'); rerender(); return;
+  }
+  if (act === 'subirDom') {
+    const { error } = await sb.rpc('breu_subir_dom', { cid: t.dataset.id, delta: 1 });
+    if (error) return toast('Não consegui subir o Dom.');
+    const ch = charById(t.dataset.id); ch.data.domSubidas = (ch.data.domSubidas || 0) + 1; toast('O Dom subiu: ' + R.domDe(ch.data).n + '.'); rerender(); return;
+  }
   if (act === 'logout') { await sb.auth.signOut(); S.me = null; location.hash = '#/'; return; }
   if (act === 'novo') {
     t.disabled = true;
     const { data, error } = await sb.from('breu_characters').insert({ owner: S.session.user.id, data: R.novoPersonagem(), status: 'rascunho' }).select().single();
     if (error) { toast('Não consegui começar. Tente de novo.'); t.disabled = false; return; }
-    S.chars.push(data); go(`criar/${data.id}/0`); return;
+    data.data = R.norm(data.data); S.chars.push(data); go(`criar/${data.id}/0`); return;
   }
   if (act === 'enviar') {
     const ch = charById(t.dataset.id);
@@ -489,7 +623,7 @@ document.addEventListener('click', async (e) => {
     const ch = charById(t.dataset.id);
     const { error } = await sb.from('breu_characters').update({ status: t.dataset.v }).eq('id', ch.id);
     if (error) return toast('Não consegui mudar.');
-    ch.status = t.dataset.v; toast(STATUS[ch.status]); render(); return;
+    ch.status = t.dataset.v; toast(STATUS[ch.status]); rerender(); return;
   }
   if (act === 'apagar') {
     if (!confirm('Apagar este personagem? Não dá para desfazer.')) return;
@@ -541,6 +675,7 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('change', async (e) => {
   const t = e.target;
+  if (t.id === 'mc-mot') { $('#mc-out').style.display = t.value ? 'none' : 'block'; return; }
   if (t.dataset.role) {
     const { error } = await sb.from('breu_members').update({ role: t.value }).eq('user_id', t.dataset.role);
     if (error) { toast('Não consegui mudar o papel.'); return; }
@@ -580,7 +715,7 @@ document.addEventListener('submit', async (e) => {
   }
 });
 
-window.addEventListener('hashchange', () => { ui.saved = ''; render(); });
+window.addEventListener('hashchange', () => { ui.saved = ''; ui.evo = null; render(); window.scrollTo(0, 0); });
 
 // ---------- início ----------
 async function boot() {

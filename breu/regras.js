@@ -45,31 +45,43 @@ export const OFICIOS = [
     pericias: ['Atletismo', 'Sobrevivência'], fortes: 'Agilidade, Vigor',
     hab: ['Pé na estrada', 'Você viaja uma vez e meia a distância normal num dia e ganha +1 dado em Sobrevivência na estrada.'],
     equip: 'Bolsa de couro, faca, funda, lanterna de fresta, cantil, mapa riscado à mão.', protecao: 0,
+    caminhos: [{ k: 'batedor', n: 'Batedor', d: 'Estradas e rapidez', habs: [['Antes do sol', '2 Sangue', 'Uma vez por viagem, encontra um abrigo seguro antes do Crepúsculo.'], ['Passo sem som', '', 'Andando devagar, nunca é percebido por Assombros que ouvem.']] },
+      { k: 'embaixador', n: 'Embaixador', d: 'Acordos entre povos', habs: [['Palavra empenhada', '2 Prumo', '+2 dados em Lábia para convencer uma comunidade a abrigar ou ajudar o grupo.'], ['Muitos sotaques', '', 'Não perde dado com traços de sotaques que já viu de perto.']] }],
     armas: ['Faca', 'Funda'] },
   { k: 'riscador', n: 'Riscador', d: 'Quem traça, lê e conserta as proteções. Em muitas vilas, é a pessoa mais importante depois do sol, e a primeira a ser culpada quando um círculo rompe.',
     pericias: ['Traços', 'Ofícios'], fortes: 'Juízo, Firmeza',
     hab: ['Mão firme', 'Uma vez por noite, você refaz uma rolagem de Traços e fica com o melhor resultado.'],
     equip: 'Carvão, giz de osso, vara de medir, cordão com nós, faca, saco de sal.', protecao: 0, essenciaExtra: true,
+    caminhos: [{ k: 'mestrecirculos', n: 'Mestre de Círculos', d: 'Grandes defesas', habs: [['Círculo largo', '', 'Seus círculos levam metade do tempo, e você traça círculos grandes sem perder dado.'], ['Costura firme', '', 'Seus círculos começam com +3 de força.']] },
+      { k: 'marcador', n: 'Marcador', d: 'Tatua Marcas nos outros', habs: [['Agulha certa', '', 'Tatua Marcas em outras pessoas; quem recebe gasta 1 Brasa a menos para usá-las.'], ['Tinta escura', '', 'A primeira Marca de sangue de Assombro que você faz em cada pessoa não soma Sombra.']] }],
     armas: ['Faca'] },
   { k: 'rezadeira', n: 'Rezadeira / Ervateira', d: 'Cuida do corpo e do medo. Conhece as plantas, os chás, as rezas e o jeito de segurar a mão de quem está tremendo.',
     pericias: ['Ervas e Cura', 'Saberes'], fortes: 'Juízo, Presença',
     hab: ['Mão que cura', 'Com ervas, você devolve 1d6 + Juízo de Sangue a um ferido, uma vez por pessoa por dia.'],
     equip: 'Bolsa de ervas, pilão pequeno, faca, panos limpos, cabaça de unguento.', protecao: 0,
+    caminhos: [{ k: 'curandeira', n: 'Curandeira', d: 'O corpo', habs: [['Fecha a ferida', '2 Prumo', 'Tira o estado de ferido de alguém no meio da noite.'], ['Chá de vigília', '', 'Preparado de dia; quem toma ganha +1 dado nos testes de Pavor daquela noite.']] },
+      { k: 'benzedeira', n: 'Benzedeira', d: 'O medo', habs: [['Reza que acalma', '2 Prumo', 'Remove todo o Pavor de uma pessoa.'], ['Benzer o lugar', '', 'Assombros que sentem medo não encontram quem está num cômodo benzido.']] }],
     armas: ['Faca'] },
   { k: 'cantador', n: 'Cantador', d: 'Guarda a memória das comunidades e leva as notícias no verso. No cerco, é quem mantém todo mundo de pé quando a noite pesa.',
     pericias: ['Canto', 'Lábia'], fortes: 'Presença, Firmeza',
     hab: ['Verso de coragem', '1 Prumo. Uma vez por fase da noite, devolve 1 dado a todos que ouvem você, na próxima rolagem deles.'],
     equip: 'Viola, pandeiro ou rabeca, caderno de versos, faca, cobertor.', protecao: 0,
+    caminhos: [{ k: 'repentista', n: 'Repentista', d: 'Ânimo no cerco', habs: [['Desafio', '', 'Cantando para alguém em pânico, você encerra o pânico na hora.'], ['Toada do cerco', '', 'Enquanto você canta, Assombros que ouvem perdem 1 dado.']] },
+      { k: 'memoria', n: 'Guardião da Memória', d: 'Saber e nomes', habs: [['Já ouvi falar', '', 'Com Saberes 10, sabe o sentido e a essência de um Assombro só pela descrição.'], ['Caminho cantado', '', 'Nunca se perde numa estrada que alguém já lhe cantou.']] }],
     armas: ['Faca'] },
   { k: 'cacador', n: 'Caçador', d: 'Vai atrás do que ronda as roças. Lê rastros, prepara armadilhas e sabe que um Assombro morto vale mais que dez afastados.',
     pericias: ['Pontaria', 'Percepção'], fortes: 'Agilidade, Juízo',
     hab: ['Ler o rastro', 'Pelos sinais deixados, você descobre o sentido com que um Assombro caça antes de vê-lo.'],
     equip: 'Arco e 12 flechas (6 marcadas), faca, corda, iscas, armadilha de laço.', protecao: 0,
+    caminhos: [{ k: 'rastreador', n: 'Rastreador', d: 'Achar e enganar', habs: [['Faro de covil', '', 'Encontra onde um Assombro se esconde durante o dia, perto das fendas que não fecham.'], ['Isca certa', '', 'Suas iscas e armadilhas enganam qualquer sentido.']] },
+      { k: 'matador', n: 'Matador de Assombros', d: 'Abater e esfolar', habs: [['Golpe na essência', '2 Sangue', '+1 dado de dano contra um Assombro.'], ['Esfolar', '', 'Sempre tira despojos inteiros; pele e sangue vêm em dobro.']] }],
     armas: ['Arco (6 flechas marcadas)', 'Faca'] },
   { k: 'guardiao', n: 'Guardião', d: 'Fica na linha quando o círculo rompe. Segura a brecha, protege quem traça, é o último a dormir e o primeiro a acordar.',
     pericias: ['Luta', 'Atletismo'], fortes: 'Vigor, Firmeza',
     hab: ['Firme na linha', 'Enquanto você defende uma brecha, nenhum Assombro passa por ela sem antes derrubar você.'],
     equip: 'Lança marcada com ponta de osso, couraça de couro cru (+2), escudo de madeira (+1), facão.', protecao: 3,
+    caminhos: [{ k: 'muralha', n: 'Muralha', d: 'Proteger', habs: [['Escudo vivo', '1 Sangue', 'Recebe no lugar de um aliado ao seu lado o ataque que era para ele.'], ['Não recuo', '', 'Não recebe Pavor enquanto estiver numa brecha.']] },
+      { k: 'lanca', n: 'Lança', d: 'Atacar', habs: [['Investida', '2 Sangue', 'Ataca dois Assombros na mesma ação.'], ['Contragolpe', '', 'Quando um Assombro erra um ataque contra você, você ataca de volta na hora.']] }],
     armas: ['Lança marcada (ponta de osso)', 'Facão'] },
 ];
 
@@ -96,6 +108,37 @@ export const ESSENCIAS = { Cinza: 'vence Raiz', Raiz: 'vence Osso', Osso: 'vence
 
 export const KIT = 'Roupa de tecido grosso, cobertor, cantil, carvão para traçar, um saco de sal (3 linhas de soleira), pederneira e comida para três dias.';
 
+export const RAIZES = [
+  { n: 'Barrar', grau: 'básica', d: 'Fecha a passagem. O Assombro precisa superar a força para atravessar.' },
+  { n: 'Repelir', grau: 'básica', d: 'Empurra. Quem não supera a força recua e perde a ação.' },
+  { n: 'Revelar', grau: 'básica', d: 'Mostra o escondido: Assombros parados, rastros, fendas prestes a abrir, traços apagados.' },
+  { n: 'Ferir', grau: 'avançada', d: 'Num objeto, a arma fere Assombros. No chão, quem atravessa sofre d6.' },
+  { n: 'Calar', grau: 'avançada', d: 'Abafa som, luz e cheiro. Assombros que ouvem ou farejam não percebem quem está dentro.' },
+  { n: 'Prender', grau: 'avançada', d: 'Quem toca fica preso até vencer a força numa ação.' },
+  { n: 'Som', grau: 'mestra', d: 'Num tambor de pele de Assombro: o círculo ganha +4 e quem ouve não se aproxima.' },
+  { n: 'Ocultar', grau: 'mestra', d: 'Quem está dentro some para todos os sentidos dos Assombros, parado e em silêncio.' },
+];
+
+export const DOM = [
+  { k: 'adormecido', n: 'Adormecido', brasa: 0, d: 'Seus traços saem apagados, sem a força da Brasa.' },
+  { k: 'faisca', n: 'Faísca', brasa: 2, d: 'Acende traços básicos.' },
+  { k: 'chama', n: 'Chama', brasa: 4, d: 'Acende traços avançados.' },
+  { k: 'fogueira', n: 'Fogueira', brasa: 6, d: 'Acende traços mestres.' },
+  { k: 'incendio', n: 'Incêndio', brasa: 8, d: 'O limite humano conhecido.' },
+];
+
+export const GRAUS = ['sem treino', 'treinado', 'experiente', 'mestre'];
+
+export const MARCOS_EXEMPLOS = [
+  'Sobreviveu a uma noite terrível',
+  'Protegeu alguém correndo risco real',
+  'Aprendeu um traço de outro sotaque',
+  'Matou um Assombro Forte ou Velho',
+  'Cumpriu o alvo da aventura',
+  'Perdeu algo que importava',
+  'A sessão de hoje',
+];
+
 export const novoPersonagem = () => ({
   nome: '', conceito: '', aparencia: '',
   origem: '', sotaqueEstrada: '', periciaExtra: '',
@@ -104,13 +147,23 @@ export const novoPersonagem = () => ({
   atrib: { vigor: 1, agilidade: 1, juizo: 1, presenca: 1, firmeza: 1 },
   respostaOrigem: '', marcaNoite: '', laco: '', medo: '', protege: '',
   notas: '',
+  // evolução
+  marcos: [], melhorias: [], caminho: '', domSubidas: 0,
 });
+
+// fichas antigas não têm os campos de evolução
+export function norm(p) {
+  p.marcos ||= []; p.melhorias ||= []; p.caminho ||= ''; p.domSubidas ||= 0; p.essencias ||= [];
+  return p;
+}
 
 export const pontosTotais = (p) => (p.dom === 'faisca' ? 5 : 6);
 export const pontosUsados = (p) => ATRIBUTOS.reduce((a, x) => a + (p.atrib[x.k] - 1), 0);
 
 export function origemDe(p) { return ORIGENS.find((o) => o.k === p.origem); }
 export function oficioDe(p) { return OFICIOS.find((o) => o.k === p.oficio); }
+export function caminhoDe(p) { return oficioDe(p)?.caminhos.find((c) => c.k === p.caminho); }
+const melh = (p, tipo) => norm(p).melhorias.filter((m) => m.tipo === tipo);
 
 // a perícia da origem repetida com o ofício vira uma à escolha
 export function periciaOrigemRepete(p) {
@@ -118,7 +171,8 @@ export function periciaOrigemRepete(p) {
   return !!(o && f && f.pericias.includes(o.pericia));
 }
 
-export function pericias(p) {
+// perícias da criação (treinadas)
+export function periciasIniciais(p) {
   const o = origemDe(p), f = oficioDe(p), out = [];
   if (f) out.push(...f.pericias);
   if (o) {
@@ -127,48 +181,134 @@ export function pericias(p) {
   }
   return [...new Set(out)];
 }
+// grau de cada perícia: 0 sem treino, 1 treinado (+3), 2 experiente (+6), 3 mestre (+9)
+export function grauPericia(p, n) {
+  const base = periciasIniciais(p).includes(n) ? 1 : 0;
+  return Math.min(3, base + melh(p, 'pericia').filter((m) => m.alvo === n).length);
+}
+export function pericias(p) { return PERICIAS.map(([n]) => n).filter((n) => grauPericia(p, n) > 0); }
+export const bonusPericia = (g) => g * 3;
 
-export function sotaque(p) {
+export function atrib(p) {
+  const a = { ...p.atrib };
+  melh(p, 'atributo').forEach((m) => { a[m.alvo] = Math.min(5, a[m.alvo] + 1); });
+  return a;
+}
+
+export function sotaqueInicial(p) {
   const o = origemDe(p);
   if (!o) return '';
   return o.sotaque || p.sotaqueEstrada || '';
 }
+export const sotaque = sotaqueInicial;
+export function sotaques(p) { return [sotaqueInicial(p), ...melh(p, 'sotaque').map((m) => m.alvo)].filter(Boolean); }
 
-export function sabeTracos(p) { return pericias(p).includes('Traços'); }
-export function essenciasPermitidas(p) { return sabeTracos(p) ? (oficioDe(p)?.essenciaExtra ? 2 : 1) : 0; }
+export function sabeTracos(p) { return grauPericia(p, 'Traços') > 0; }
+export function essenciasPermitidas(p) { return periciasIniciais(p).includes('Traços') ? (oficioDe(p)?.essenciaExtra ? 2 : 1) : 0; }
+export function essencias(p) { return [...new Set([...(p.essencias || []), ...melh(p, 'essencia').map((m) => m.alvo)])]; }
 
 export function tracosConhecidos(p) {
   const r = ['Barrar'];
-  if (sabeTracos(p)) r.push('Repelir', 'Revelar');
-  return r;
+  if (periciasIniciais(p).includes('Traços')) r.push('Repelir', 'Revelar');
+  melh(p, 'raiz').forEach((m) => { if (!r.includes(m.alvo)) r.push(m.alvo); });
+  return RAIZES.map((x) => x.n).filter((n) => r.includes(n));
+}
+
+export function domIndex(p) {
+  const base = p.dom === 'faisca' ? 1 : 0;
+  return Math.min(DOM.length - 1, base + (p.domSubidas || 0));
+}
+export const domDe = (p) => DOM[domIndex(p)];
+
+// todas as Marcas: a da criação e as recebidas nos marcos
+export function marcas(p) {
+  const out = [];
+  if (p.dom === 'faisca' && p.marca) out.push({ k: p.marca, sangue: !!p.marcaSangue });
+  melh(p, 'marca').forEach((m) => out.push({ k: m.alvo, sangue: !!m.sangue }));
+  return out.map((m) => ({ ...MARCAS.find((x) => x.k === m.k), sangue: m.sangue }));
 }
 
 export function barras(p) {
-  const a = p.atrib, f = oficioDe(p);
-  const marcaComum = p.dom === 'faisca' && p.marca && !p.marcaSangue ? 1 : 0;
+  const a = atrib(p), f = oficioDe(p), ms = marcas(p);
   return {
     sangue: 10 + a.vigor * 3,
-    prumo: 6 + a.firmeza * 2 - marcaComum,
-    brasa: p.dom === 'faisca' ? 2 : 0,
+    prumo: 6 + a.firmeza * 2 - ms.filter((m) => !m.sangue).length,
+    brasa: domDe(p).brasa,
     defesa: 10 + a.agilidade + (f?.protecao || 0),
-    sombra: p.dom === 'faisca' && p.marca && p.marcaSangue ? 1 : 0,
+    sombra: ms.filter((m) => m.sangue).length,
   };
+}
+
+// ---------- evolução por marcos ----------
+export const marcosGanhos = (p) => norm(p).marcos.length;
+export const melhoriasFeitas = (p) => norm(p).melhorias.length;
+export const melhoriasPendentes = (p) => Math.max(0, marcosGanhos(p) - melhoriasFeitas(p));
+// no terceiro marco, além da melhoria, escolhe o caminho do ofício
+export const precisaCaminho = (p) => !p.caminho && marcosGanhos(p) >= 3 && melhoriasFeitas(p) >= 2;
+// a cada quatro marcos o Dom pode subir um grau, se a mesa concordar
+export const domPodeSubir = (p) => Math.floor(marcosGanhos(p) / 4) > (p.domSubidas || 0) && domIndex(p) < DOM.length - 1;
+
+const RAIZ_PEDE = { 'básica': 0, 'avançada': 2, 'mestra': 3 };
+
+// opções de melhoria, cada uma com os alvos possíveis e, se bloqueada, o motivo
+export function opcoesMelhoria(p) {
+  const a = atrib(p), di = domIndex(p), conhecidas = tracosConhecidos(p), ess = essencias(p), sot = sotaques(p);
+  const ops = [];
+  ops.push({ tipo: 'atributo', n: '+1 em um atributo', d: 'Máximo 5. Sangue e Prumo sobem junto, se for o caso.',
+    alvos: ATRIBUTOS.filter((x) => a[x.k] < 5).map((x) => ({ v: x.k, n: `${x.n} ${a[x.k]} → ${a[x.k] + 1}`, d: x.d })) });
+  ops.push({ tipo: 'pericia', n: '+1 grau numa perícia', d: 'De sem treino a treinado, a experiente, a mestre. Vale também para aprender uma perícia nova.',
+    alvos: PERICIAS.filter(([n]) => grauPericia(p, n) < 3).map(([n, d]) => { const g = grauPericia(p, n); return { v: n, n: `${n}: ${GRAUS[g]} → ${GRAUS[g + 1]} (+${(g + 1) * 3})`, d }; }) });
+  ops.push({ tipo: 'raiz', n: 'Aprender uma raiz de traço', d: 'Raízes avançadas pedem o Dom em Chama; mestras, em Fogueira.',
+    alvos: RAIZES.filter((r) => !conhecidas.includes(r.n)).map((r) => ({ v: r.n, n: `${r.n} (${r.grau})`, d: r.d, bloq: di < RAIZ_PEDE[r.grau] ? `Pede o Dom em ${DOM[RAIZ_PEDE[r.grau]].n}` : '' })) });
+  ops.push({ tipo: 'essencia', n: 'Aprender uma essência', d: 'Seus traços valem +4 contra o tipo de Assombro que ela vence.',
+    alvos: Object.entries(ESSENCIAS).filter(([e]) => !ess.includes(e)).map(([e, d]) => ({ v: e, n: e, d })) });
+  ops.push({ tipo: 'marca', n: 'Receber uma Marca', d: 'Pede o Dom desperto e alguém que tatue. Combine a cena com o mestre.',
+    bloq: di < 1 ? 'Pede o Dom desperto (Faísca ou mais)' : '',
+    alvos: MARCAS.map((m) => ({ v: m.k, n: m.n, d: `${m.onde}. ${m.d}` })) });
+  ops.push({ tipo: 'sotaque', n: 'Aprender outro sotaque', d: 'Exige alguém que ensine e algumas noites de prática.',
+    alvos: Object.keys(SOTAQUES).filter((x) => !sot.includes(x)).map((x) => ({ v: x, n: x, d: SOTAQUES[x] })) });
+  return ops.map((o) => ({ ...o, bloq: o.bloq || (o.alvos.filter((x) => !x.bloq).length ? '' : 'Nada disponível agora') }));
+}
+
+export function descreveMelhoria(m) {
+  const at = ATRIBUTOS.find((x) => x.k === m.alvo);
+  return {
+    atributo: `+1 em ${at?.n}`,
+    pericia: `+1 grau em ${m.alvo}`,
+    raiz: `Aprendeu a raiz ${m.alvo}`,
+    essencia: `Aprendeu a essência ${m.alvo}`,
+    marca: `Recebeu a ${MARCAS.find((x) => x.k === m.alvo)?.n}${m.sangue ? ' (sangue de Assombro)' : ''}`,
+    sotaque: `Aprendeu o sotaque ${m.alvo}`,
+  }[m.tipo] || m.tipo;
+}
+
+// sugestão de atributos pelo ofício: os dois fortes primeiro
+export function sugerirAtributos(p) {
+  const f = oficioDe(p); if (!f) return null;
+  const nomes = f.fortes.split(',').map((x) => x.trim());
+  const ks = nomes.map((n) => ATRIBUTOS.find((a) => a.n === n)?.k).filter(Boolean);
+  const ordem = [...ks, ...['firmeza', 'vigor', 'agilidade', 'juizo', 'presenca'].filter((k) => !ks.includes(k))];
+  const a = { vigor: 1, agilidade: 1, juizo: 1, presenca: 1, firmeza: 1 };
+  let pts = pontosTotais(p);
+  const plano = pts === 6 ? [2, 2, 1, 1] : [2, 2, 1];
+  plano.forEach((n, i) => { a[ordem[i]] += n; pts -= n; });
+  return a;
 }
 
 // o que ainda falta para a ficha estar completa (por passo)
 export function pendencias(p) {
   const f = [];
-  if (!p.nome.trim()) f.push(['nome', 'Dê um nome ao personagem.']);
+  if (!p.nome.trim()) f.push(['conceito', 'Dê um nome ao personagem.']);
   if (!p.origem) f.push(['origem', 'Escolha uma origem.']);
   else {
     if (p.origem === 'estrada' && !p.sotaqueEstrada) f.push(['origem', 'Escolha o sotaque de quem vem da estrada.']);
-    if (periciaOrigemRepete(p) && !p.periciaExtra) f.push(['origem', 'A perícia da origem repete a do ofício: escolha outra.']);
+    if (periciaOrigemRepete(p) && !p.periciaExtra) f.push(['oficio', 'A perícia da origem repete a do ofício: escolha outra.']);
   }
   if (!p.oficio) f.push(['oficio', 'Escolha um ofício.']);
   const sobra = pontosTotais(p) - pontosUsados(p);
   if (sobra > 0) f.push(['atributos', `Ainda sobram ${sobra} ponto${sobra > 1 ? 's' : ''} de atributo.`]);
   if (sobra < 0) f.push(['atributos', 'Você gastou pontos demais nos atributos.']);
-  if (p.essencias.length < essenciasPermitidas(p)) f.push(['dom', 'Escolha a essência de traço que você conhece.']);
+  if ((p.essencias || []).length < essenciasPermitidas(p)) f.push(['dom', 'Escolha a essência de traço que você conhece.']);
   if (!p.marcaNoite.trim()) f.push(['historia', 'Escreva a noite que te mudou.']);
   if (!p.laco.trim()) f.push(['historia', 'Escreva o seu laço.']);
   return f;
