@@ -268,14 +268,16 @@ function stepConceito(p) {
 function stepOrigem(p) {
   const o = R.origemDe(p);
   const opts = R.ORIGENS.map((x) => `<button class="opt${p.origem === x.k ? ' sel' : ''}" data-set="origem" data-v="${x.k}" aria-pressed="${p.origem === x.k}">
-      <span class="meta">Perícia: ${x.pericia} · Sotaque: ${x.sotaque || 'um à escolha'}</span><b>${x.n}</b><p>${x.d}</p></button>`).join('');
+      <span class="meta">Perícia: ${x.pericia} · Sotaque: ${x.sotaque || 'um à escolha'}</span><b>${x.n}</b><p>${x.d}</p>
+      <span class="hab"><b>${x.costume[0]}.</b> ${x.costume[1]}</span>
+      ${p.origem === x.k ? `<span class="hab dim"><b>Como é a gente de lá:</b> ${x.visual}</span>` : ''}</button>`).join('');
   let extra = '';
   if (o?.k === 'estrada') {
     extra += `<div><label class="flab">Que sotaque de traços você aprendeu pelo caminho?</label><div class="sub-opts">${Object.keys(R.SOTAQUES).map((s) => `<button class="pill${p.sotaqueEstrada === s ? ' sel' : ''}" data-set="sotaqueEstrada" data-v="${esc(s)}">${esc(s)}</button>`).join('')}</div></div>`;
   }
   extra += extraPicker(p);
   const sot = R.sotaque(p);
-  return `<p class="intro">De que tipo de lugar você vem? A origem dá uma perícia treinada e o seu jeito de riscar traços, o sotaque.</p>
+  return `<p class="intro">De que tipo de lugar você vem? A origem dá uma perícia treinada, um costume da terra e o seu jeito de riscar traços, o sotaque.</p>
     <div class="opts">${opts}</div>${extra}
     ${sot ? `<div class="box"><b>Sotaque ${esc(sot)}:</b> ${esc(R.SOTAQUES[sot])}</div>` : ''}`;
 }
@@ -382,6 +384,7 @@ function sheetBody(p, c = null) {
     ${b.sombra ? `<p class="small" style="margin-top:8px">Sombra: <b style="color:var(--brasa2)">${b.sombra}</b> de 7.</p>` : ''}
     <h2>Perícias</h2>
     <div class="skills">${R.PERICIAS.map(([n]) => { const g = R.grauPericia(p, n); return `<div class="${g ? 't' : ''}"><span>${n}${g > 1 ? ` <span class="dim small">${R.GRAUS[g]}</span>` : ''}</span>${g ? `<em>+${R.bonusPericia(g)}</em>` : '<span>—</span>'}</div>`; }).join('')}</div>
+    ${or ? `<h2>Origem</h2><dl class="kv"><div><dt>Costume da terra</dt><dd><b>${or.costume[0]}.</b> ${or.costume[1]}</dd></div><div><dt>Como é a gente de lá</dt><dd class="small">${or.visual}</dd></div></dl>` : ''}
     ${of ? `<h2>Ofício</h2><dl class="kv"><div><dt>Habilidade inicial</dt><dd><b>${of.hab[0]}.</b> ${of.hab[1]}</dd></div>
       ${cam ? cam.habs.map(([n, custo, d]) => `<div><dt>Caminho ${esc(cam.n)}</dt><dd><b>${n}.</b>${custo ? ` <span class="dim">(${custo})</span>` : ''} ${d}</dd></div>`).join('') : `<div><dt>Caminho</dt><dd class="dim">Escolhido no terceiro marco: ${of.caminhos.map((x) => x.n).join(' ou ')}.</dd></div>`}</dl>` : ''}
     <h2>Traços e Dom</h2>
