@@ -6,7 +6,7 @@ const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
-const S = { session: null, me: null, chars: [], members: [], invites: [], notes: {}, ready: false };
+const S = { session: null, me: null, chars: [], members: [], invites: [], notes: {}, rolls: [], ready: false };
 const ui = { invite: null, inviteErr: '', loginErr: '', busy: false, saved: '' };
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -47,6 +47,8 @@ async function loadAll() {
   ]);
   S.chars = (chars.data || []).map((c) => ({ ...c, data: R.norm(c.data || {}) }));
   S.members = members.data || [];
+  const rl = await sb.from('breu_rolls').select('*').order('created_at', { ascending: false }).limit(30);
+  S.rolls = rl.data || [];
   if (isGM()) {
     const { data } = await sb.from('breu_gm_notes').select('*');
     S.notes = Object.fromEntries((data || []).map((n) => [n.character_id, n.note]));
@@ -71,6 +73,11 @@ function subscribe() {
         else if (route().name !== 'criar' || route().arg !== p.new.id) S.chars[i] = p.new;
       }
       if (!['criar', 'evoluir'].includes(route().name) || (route().name === 'evoluir' && !ui.evo?.tipo)) rerender();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'breu_rolls' }, (p) => {
+      if (S.rolls.some((r) => r.id === p.new.id)) return;
+      S.rolls.unshift(p.new); S.rolls = S.rolls.slice(0, 30);
+      if (route().name === '') rerender();
     })
     .subscribe();
 }
@@ -214,6 +221,7 @@ function viewMesa() {
       <a class="btn block" style="margin-top:8px" href="#/prontos">Ou escolher um personagem pronto</a>` : ''}
     <h2>O grupo</h2>
     ${outros.length ? `<div class="chars">${outros.map(charCard).join('')}</div>` : `<p class="muted">Ninguém mais criou personagem ainda.</p>`}
+    ${S.rolls.length ? `<h2>Rolagens da mesa</h2><div class="rolls">${S.rolls.slice(0, 12).map(rollRow).join('')}</div>` : ''}
     <h2>Antes de começar</h2>
     <div class="box">Pense em quem você é antes de pensar em números: de onde veio, o que faz, qual noite te mudou e quem você quer proteger. As regras se encaixam depois.</div>`;
 }
@@ -390,7 +398,8 @@ function sheetBody(p, c = null) {
     </div>
     ${c ? evoBanner(c) : ''}
     <h2>Atributos</h2>
-    <div class="stat-row">${R.ATRIBUTOS.map((a) => `<div class="stat"><strong>${at[a.k]}</strong><span>${a.n}</span></div>`).join('')}</div>
+    <div class="stat-row">${R.ATRIBUTOS.map((a) => podeRolar(c) ? `<button class="stat rollable" data-roll-attr="${a.k}" aria-label="Rolar ${a.n}"><strong>${at[a.k]}</strong><span>${a.n}</span></button>` : `<div class="stat"><strong>${at[a.k]}</strong><span>${a.n}</span></div>`).join('')}</div>
+    ${podeRolar(c) ? '<p class="small" style="margin-top:6px;color:var(--brasa2)">Toque num atributo ou numa perícia para rolar.</p>' : ''}
     <p class="small dim" style="margin-top:6px">Na rolagem, pegue tantos d20 quanto o atributo e fique com o maior.</p>
     <h2>Barras</h2>
     <div class="bars">
@@ -401,7 +410,7 @@ function sheetBody(p, c = null) {
     </div>
     ${b.sombra ? `<p class="small" style="margin-top:8px">Sombra: <b style="color:var(--brasa2)">${b.sombra}</b> de 7.</p>` : ''}
     <h2>Perícias</h2>
-    <div class="skills">${R.PERICIAS.map(([n]) => { const g = R.grauPericia(p, n); return `<div class="${g ? 't' : ''}"><span>${n}${g > 1 ? ` <span class="dim small">${R.GRAUS[g]}</span>` : ''}</span>${g ? `<em>+${R.bonusPericia(g)}</em>` : '<span>—</span>'}</div>`; }).join('')}</div>
+    <div class="skills">${R.PERICIAS.map(([n]) => { const g = R.grauPericia(p, n); const tag = podeRolar(c) ? 'button' : 'div'; return `<${tag} class="${g ? 't' : ''}${podeRolar(c) ? ' rollable' : ''}" ${podeRolar(c) ? `data-roll-per="${esc(n)}"` : ''}><span>${n}${g > 1 ? ` <span class="dim small">${R.GRAUS[g]}</span>` : ''}</span>${g ? `<em>+${R.bonusPericia(g)}</em>` : '<span>—</span>'}</${tag}>`; }).join('')}</div>
     ${or ? `<h2>Origem</h2><div class="or-wrap"><img class="or-fig" src="img/or-${or.k}.webp" alt=""><dl class="kv"><div><dt>Costume da terra</dt><dd><b>${or.costume[0]}.</b> ${or.costume[1]}</dd></div><div><dt>Como é a gente de lá</dt><dd class="small">${or.visual}</dd></div></dl></div>` : ''}
     ${of ? `<h2>Ofício</h2><dl class="kv"><div><dt>Habilidade inicial</dt><dd><b>${of.hab[0]}.</b> ${of.hab[1]}</dd></div>
       ${cam ? cam.habs.map(([n, custo, d]) => `<div><dt>Caminho ${esc(cam.n)}</dt><dd><b>${n}.</b>${custo ? ` <span class="dim">(${custo})</span>` : ''} ${d}</dd></div>`).join('') : `<div><dt>Caminho</dt><dd class="dim">Escolhido no terceiro marco: ${of.caminhos.map((x) => x.n).join(' ou ')}.</dd></div>`}</dl>` : ''}
@@ -415,7 +424,7 @@ function sheetBody(p, c = null) {
       ${ms.map((m) => `<div><dt>Marca</dt><dd><img class="marca-ic" src="img/m-${m.k}.webp" alt=""><b>${m.n}</b> (${m.onde.toLowerCase()}${m.sangue ? ', com sangue de Assombro' : ''}). ${m.d} Custa ${Math.max(1, m.custo - (m.sangue ? 1 : 0))} Brasa.</dd></div>`).join('')}
     </dl>
     <h2>Equipamento</h2>
-    ${armas.length ? `<table class="weap"><thead><tr><th>Arma</th><th>Dano</th><th>Alcance</th></tr></thead><tbody>${armas.map((a) => `<tr><td>${esc(a)}<div class="small dim">${esc(R.ARMAS[a]?.[2] || '')}</div></td><td>${R.ARMAS[a]?.[0] || ''}</td><td>${R.ARMAS[a]?.[1] || ''}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${armas.length ? `<table class="weap"><thead><tr><th>Arma</th><th>Dano</th><th>Alcance</th></tr></thead><tbody>${armas.map((a) => `<tr><td>${esc(a)}<div class="small dim">${esc(R.ARMAS[a]?.[2] || '')}</div></td><td>${podeRolar(c) && R.ARMAS[a]?.[0] ? `<button class="dmg" data-roll-dmg="${R.ARMAS[a][0]}" data-arma="${esc(a)}">${R.ARMAS[a][0]}</button>` : R.ARMAS[a]?.[0] || ''}</td><td>${R.ARMAS[a]?.[1] || ''}</td></tr>`).join('')}</tbody></table>` : ''}
     <dl class="kv" style="margin-top:12px">
       ${of ? `<div><dt>Do ofício</dt><dd>${esc(of.equip)}</dd></div>` : ''}
       <div><dt>Kit comum</dt><dd>${esc(R.KIT)}</dd></div>
@@ -481,7 +490,48 @@ function viewSheet(c) {
     ${sheetBody(p, c)}
     ${gm}
     ${isGM() ? `<h2>Anotações do mestre</h2><textarea class="field" data-gmnote="${c.id}" placeholder="Só o mestre vê isto.">${esc(S.notes[c.id] || '')}</textarea>` : ''}
-    <div class="actions">${acts.join('')}<a class="btn ghost" href="#/">Voltar à mesa</a></div>`;
+    <div class="actions">${acts.join('')}<a class="btn ghost" href="#/">Voltar à mesa</a></div>
+    ${ui.roller?.cid === c.id ? viewRoller(c) : ''}`;
+}
+
+// ---------- rolagem ----------
+const podeRolar = (c) => !!c && canEdit(c) && c.status === 'aprovado';
+const ATN = Object.fromEntries(R.ATRIBUTOS.map((a) => [a.k, a.n]));
+function rollRow(r) {
+  const c = charById(r.character_id), d = r.detail || {};
+  const nome = c?.data?.nome || 'Alguém';
+  const quando = new Date(r.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const res = d.tipo === 'dano' ? `${r.total} de dano` : `${r.total}${d.dif ? (d.passou ? ' · passou' : ' · falhou') : ''}`;
+  const extra = d.marcante ? ' · 20!' : d.desastre ? ' · tudo 1' : '';
+  return `<div class="roll-row${d.passou === false ? ' fail' : ''}${d.marcante ? ' crit' : ''}"><span class="rr-who">${esc(nome)}</span><span class="rr-what">${esc(r.label)}<span class="dim small"> · ${esc((d.dados || []).join(', '))}</span></span><b>${esc(res + extra)}</b><span class="dim small">${quando}</span></div>`;
+}
+function viewRoller(c) {
+  const p = c.data, ro = ui.roller, at = R.atrib(p);
+  const mao = Math.min(5, (at[ro.attr] || 1) + ro.ajuste);
+  const bonus = ro.pericia ? R.bonusPericia(R.grauPericia(p, ro.pericia)) : 0;
+  const res = ro.res;
+  return `<div class="roller-back" data-act="fecharRoll"></div>
+  <section class="roller" role="dialog" aria-label="Rolagem">
+    <div class="ro-head"><b>${esc(p.nome)}</b><button class="btn sm ghost" data-act="fecharRoll" aria-label="Fechar">Fechar</button></div>
+    ${res ? `<div class="ro-res${res.passou === false ? ' fail' : res.passou ? ' ok' : ''}">
+      <div class="ro-dice">${res.dados.map((x, i) => `<span class="die${x === res.fica && i === res.dados.indexOf(res.fica) ? ' kept' : ''}${x === 20 ? ' vinte' : ''}">${x}</span>`).join('')}</div>
+      <div class="ro-total"><strong>${res.total}</strong><span>${res.vazia ? 'mão vazia: ficou o pior' : 'ficou o maior'}${res.bonus ? ` + ${res.bonus}` : ''}${res.dif ? ` · dificuldade ${res.dif}` : ''}</span></div>
+      ${res.dif ? `<p class="ro-verdict">${res.passou ? 'Deu certo.' : 'Não deu.'}</p>` : ''}
+      ${res.marcante ? '<p class="ro-note">Saiu um 20: o mestre acrescenta algo a seu favor.</p>' : ''}
+      ${res.desastre ? '<p class="ro-note">Todos os dados deram 1: algo dá errado, mesmo que passe.</p>' : ''}
+    </div>` : ''}
+    <div><span class="flab">Atributo</span><div class="sub-opts">${R.ATRIBUTOS.map((a) => `<button class="pill${ro.attr === a.k ? ' sel' : ''}" data-ro-attr="${a.k}">${a.n} ${at[a.k]}</button>`).join('')}</div></div>
+    <div><label class="flab" for="ro-per">Perícia</label><select class="field" id="ro-per"><option value="">Nenhuma</option>${R.PERICIAS.map(([n]) => { const g = R.grauPericia(p, n); return `<option value="${esc(n)}" ${ro.pericia === n ? 'selected' : ''}>${n}${g ? ` (+${R.bonusPericia(g)})` : ''}</option>`; }).join('')}</select></div>
+    <div class="ro-adj"><div><span class="flab">Regra de ouro</span><p class="fhelp" style="margin:0">Pavor, ferida, cansaço tiram; ajuda, canto, calma devolvem.</p></div>
+      <div class="stepper"><button data-ro-adj="-1" aria-label="Tirar um dado">−</button><span class="v">${ro.ajuste > 0 ? '+' + ro.ajuste : ro.ajuste}</span><button data-ro-adj="1" aria-label="Devolver um dado">+</button></div></div>
+    <div><span class="flab">Dificuldade (o mestre diz)</span><div class="sub-opts">${R.DIFICULDADES.map(([n, t]) => `<button class="pill${ro.dif === n ? ' sel' : ''}" data-ro-dif="${n}">${n} <span class="dim small">${t}</span></button>`).join('')}</div></div>
+    <button class="btn primary block ro-go" data-act="rolar">Rolar ${mao <= 0 ? '2d20 (mão vazia, fica o pior)' : `${mao}d20`}${bonus ? ` + ${bonus}` : ''}</button>
+  </section>`;
+}
+async function registrar(c, label, res, detail) {
+  const { data, error } = await sb.from('breu_rolls').insert({ character_id: c.id, user_id: S.session.user.id, label, total: res.total, detail }).select().single();
+  if (!error && data && !S.rolls.some((r) => r.id === data.id)) { S.rolls.unshift(data); S.rolls = S.rolls.slice(0, 30); }
+  if (error) toast('Rolou, mas não consegui mostrar para a mesa.');
 }
 
 // ---------- evoluir ----------
@@ -547,7 +597,7 @@ function viewAdmin() {
 
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
+  const t = e.target.closest('[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
   const c = wiz ? charById(wiz.dataset.char) : null;
@@ -578,6 +628,20 @@ document.addEventListener('click', async (e) => {
     p.atrib[k] = nv; saveSoon(c); rerender(); return;
   }
 
+  const fc = route().name === 'ficha' ? charById(route().arg) : null;
+  if (fc && (t.dataset.rollAttr || t.dataset.rollPer)) {
+    const per = t.dataset.rollPer || '';
+    ui.roller = { cid: fc.id, attr: t.dataset.rollAttr || R.PERICIA_ATRIB[per] || 'juizo', pericia: per, ajuste: ui.roller?.ajuste || 0, dif: ui.roller?.dif || 0, res: null };
+    rerender(); return;
+  }
+  if (fc && t.dataset.rollDmg) {
+    const r = R.rolarDano(t.dataset.rollDmg); if (!r) return;
+    toast(`${t.dataset.arma}: ${r.total} de dano (${t.dataset.rollDmg})`);
+    registrar(fc, `Dano: ${t.dataset.arma}`, r, { tipo: 'dano', dados: r.dados, expr: r.expr }); return;
+  }
+  if (ui.roller && t.dataset.roAttr) { ui.roller.attr = t.dataset.roAttr; ui.roller.res = null; rerender(); return; }
+  if (ui.roller && t.dataset.roAdj) { ui.roller.ajuste = Math.max(-5, Math.min(4, ui.roller.ajuste + +t.dataset.roAdj)); ui.roller.res = null; rerender(); return; }
+  if (ui.roller && t.dataset.roDif) { const n = +t.dataset.roDif; ui.roller.dif = ui.roller.dif === n ? 0 : n; ui.roller.res = null; rerender(); return; }
   if (t.dataset.pronto) {
     const base = R.PRONTOS.find((x) => x.id === t.dataset.pronto); if (!base) return;
     t.disabled = true;
@@ -592,6 +656,14 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.evoCaminho) { ui.evo = { caminho: t.dataset.evoCaminho }; rerender(); return; }
 
   const act = t.dataset.act;
+  if (act === 'fecharRoll') { ui.roller = null; rerender(); return; }
+  if (act === 'rolar' && fc && ui.roller) {
+    const ro = ui.roller, res = R.rolar(fc.data, ro);
+    ro.res = res; rerender();
+    const label = [ATN[ro.attr], ro.pericia].filter(Boolean).join(' + ');
+    registrar(fc, label, res, { tipo: 'teste', dados: res.dados, fica: res.fica, bonus: res.bonus, mao: res.mao, ajuste: ro.ajuste, dif: ro.dif, passou: res.passou, marcante: res.marcante, desastre: res.desastre, vazia: res.vazia });
+    return;
+  }
   if (act === 'sugerir') {
     const ch = charById($('.wiz').dataset.char), a = R.sugerirAtributos(ch.data);
     if (a) { ch.data.atrib = a; saveSoon(ch); rerender(); toast('Distribuí pelos atributos fortes do ofício. Ajuste à vontade.'); }
@@ -704,6 +776,7 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('change', async (e) => {
   const t = e.target;
+  if (t.id === 'ro-per' && ui.roller) { ui.roller.pericia = t.value; if (t.value) ui.roller.attr = R.PERICIA_ATRIB[t.value] || ui.roller.attr; ui.roller.res = null; rerender(); return; }
   if (t.id === 'mc-mot') { $('#mc-out').style.display = t.value ? 'none' : 'block'; return; }
   if (t.dataset.role) {
     const { error } = await sb.from('breu_members').update({ role: t.value }).eq('user_id', t.dataset.role);
@@ -744,7 +817,7 @@ document.addEventListener('submit', async (e) => {
   }
 });
 
-window.addEventListener('hashchange', () => { ui.saved = ''; ui.evo = null; render(); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { ui.saved = ''; ui.evo = null; ui.roller = null; render(); window.scrollTo(0, 0); });
 
 // ---------- início ----------
 async function boot() {

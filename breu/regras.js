@@ -373,3 +373,29 @@ export const PRONTOS = [
     protege: 'A roça dos outros. Não conseguiu proteger o marido.',
     medo: 'Ficar velha demais para puxar o arco.' }),
 ];
+
+// ---------- rolagem ----------
+// atributo que a perícia costuma usar (o mestre pode pedir outro)
+export const PERICIA_ATRIB = { Atletismo: 'vigor', Luta: 'vigor', Pontaria: 'agilidade', Furtividade: 'agilidade', Sobrevivência: 'juizo', Percepção: 'juizo', Traços: 'juizo', 'Ervas e Cura': 'juizo', Ofícios: 'juizo', Saberes: 'juizo', Lábia: 'presenca', Canto: 'presenca' };
+export const DIFICULDADES = [[10, 'Fácil'], [15, 'Normal'], [20, 'Difícil'], [25, 'Quase impossível']];
+const d = (n) => { const a = new Uint32Array(1); crypto.getRandomValues(a); return 1 + (a[0] % n); };
+
+// mão de d20: atributo ± ajustes (máx. 5). Mão vazia: 2d20, fica com o pior.
+export function rolar(p, { attr, pericia = '', ajuste = 0, dif = 0 }) {
+  const a = atrib(p)[attr] || 1;
+  const mao = Math.min(5, a + ajuste);
+  const vazia = mao <= 0;
+  const dados = Array.from({ length: vazia ? 2 : mao }, () => d(20));
+  const fica = vazia ? Math.min(...dados) : Math.max(...dados);
+  const bonus = pericia ? bonusPericia(grauPericia(p, pericia)) : 0;
+  const total = fica + bonus;
+  return { attr, pericia, ajuste, dif, mao, vazia, dados, fica, bonus, total,
+    passou: dif ? total >= dif : null,
+    marcante: !vazia && dados.includes(20),
+    desastre: dados.every((x) => x === 1) };
+}
+export function rolarDano(expr) {
+  const m = String(expr).match(/^(\d*)d(\d+)$/); if (!m) return null;
+  const n = +(m[1] || 1), f = +m[2], dados = Array.from({ length: n }, () => d(f));
+  return { expr, dados, total: dados.reduce((s, x) => s + x, 0) };
+}
