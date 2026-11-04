@@ -687,19 +687,20 @@ function viewEvoluir(c) {
 // ---------- administração ----------
 function inviteLink(token) { return new URL('#/convite/' + token, location.href.split('#')[0]).href; }
 function viewAdmin() {
-  const abertos = S.invites.filter((i) => !i.used_at && !i.revoked);
-  const usados = S.invites.filter((i) => i.used_at);
+  const abertos = S.invites.filter((i) => !i.revoked && (i.uses ?? 0) < (i.max_uses ?? 1));
+  const usados = S.invites.filter((i) => (i.uses ?? 0) >= (i.max_uses ?? 1));
   return `${top()}
     <h1>Convites e pessoas</h1>
     <h2>Novo convite</h2>
     <form class="card form" data-form="invite">
-      <div><label class="flab" for="nv-label">Para quem</label><input class="field" id="nv-label" name="label" placeholder="Ex.: Ana" maxlength="60" required></div>
+      <div><label class="flab" for="nv-label">Para quem</label><input class="field" id="nv-label" name="label" placeholder="Ex.: Ana, ou Grupo da primeira mesa" maxlength="60" required></div>
+      <div><label class="flab" for="nv-max">Quantas pessoas podem usar este link</label><p class="fhelp">1 para mandar no privado. Mais de 1 para mandar no grupo: o link para de funcionar quando todos entrarem.</p><input class="field" id="nv-max" name="max" type="number" min="1" max="30" value="1" style="width:110px"></div>
       <div><label class="flab" for="nv-role">Papel</label><select class="field" id="nv-role" name="role"><option value="player">Jogador</option><option value="gm">Mestre</option></select></div>
       <button class="btn primary">Criar link</button>
-      <p class="small dim" style="margin:0">Cada link serve para uma pessoa. Quem já tem conta no Por Um Fio entra com o mesmo e-mail e senha.</p>
+      <p class="small dim" style="margin:0">Quem já tem conta no Por Um Fio entra com o mesmo e-mail e senha.</p>
     </form>
     <h2>Links abertos</h2>
-    ${abertos.length ? `<div class="list">${abertos.map((i) => `<div class="row"><div class="who"><b>${esc(i.label)}</b> <span class="dim small">${PAPEL[i.role]}</span><div class="linkbox">${esc(inviteLink(i.token))}</div></div>
+    ${abertos.length ? `<div class="list">${abertos.map((i) => `<div class="row"><div class="who"><b>${esc(i.label)}</b> <span class="dim small">${PAPEL[i.role]}${(i.max_uses ?? 1) > 1 ? ` · ${i.uses ?? 0} de ${i.max_uses} entraram` : ''}</span><div class="linkbox">${esc(inviteLink(i.token))}</div></div>
       <div style="display:flex;gap:6px"><button class="btn sm primary" data-act="copiar" data-token="${i.token}">Copiar</button><button class="btn sm ghost" data-act="revogar" data-token="${i.token}">Cancelar</button></div></div>`).join('')}</div>` : '<p class="muted">Nenhum link aberto.</p>'}
     <h2>Na mesa</h2>
     <div class="list">${S.members.map((m) => `<div class="row"><div class="who"><b>${esc(m.display_name)}</b></div>
@@ -947,7 +948,7 @@ document.addEventListener('submit', async (e) => {
   }
   if (kind === 'invite') {
     const token = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join('');
-    const { error } = await sb.from('breu_invites').insert({ token, label: f.label.value.trim(), role: f.role.value, created_by: S.session.user.id });
+    const { error } = await sb.from('breu_invites').insert({ token, label: f.label.value.trim(), role: f.role.value, max_uses: Math.max(1, Math.min(30, +f.max.value || 1)), created_by: S.session.user.id });
     if (error) { toast('Não consegui criar o link.'); return; }
     await loadInvites(); render();
     try { await navigator.clipboard.writeText(inviteLink(token)); toast('Link criado e copiado.'); } catch { toast('Link criado.'); }

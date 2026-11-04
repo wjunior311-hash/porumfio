@@ -45,8 +45,8 @@ async function callerIsAdmin(req: Request) {
 
 async function loadBreuInvite(token: string) {
   if (!token || typeof token !== "string" || token.length > 64) return null;
-  const { data } = await admin.from("breu_invites").select("token, label, role, used_at, revoked").eq("token", token).maybeSingle();
-  if (!data || data.revoked || data.used_at) return null;
+  const { data } = await admin.from("breu_invites").select("token, label, role, revoked, uses, max_uses").eq("token", token).maybeSingle();
+  if (!data || data.revoked || data.uses >= data.max_uses) return null;
   return data;
 }
 
@@ -88,15 +88,14 @@ async function breuAccept(req: Request, body: Record<string, unknown>) {
   const { data: ja } = await admin.from("breu_members").select("user_id").eq("user_id", userId).maybeSingle();
   if (ja) return json({ ok: true, already: true });
 
-  const { data: claimed } = await admin.from("breu_invites")
-    .update({ used_at: new Date().toISOString(), used_by: userId })
-    .eq("token", inv.token).is("used_at", null).eq("revoked", false)
-    .select("token").maybeSingle();
-  if (!claimed) return json({ error: "Este convite acabou de ser usado." }, 409);
+  // reserva uma vaga (o link de grupo serve para várias pessoas)
+  const { data: claimed } = await admin.rpc("breu_claim_invite", { tk: inv.token });
+  if (!claimed) return json({ error: "Este convite já foi usado por todas as pessoas previstas." }, 409);
+  if (inv.max_uses === 1) await admin.from("breu_invites").update({ used_by: userId }).eq("token", inv.token);
 
   const { error: mErr } = await admin.from("breu_members").insert({ user_id: userId, display_name: name, role: inv.role });
   if (mErr) {
-    await admin.from("breu_invites").update({ used_at: null, used_by: null }).eq("token", inv.token);
+    await admin.rpc("breu_release_invite", { tk: inv.token });
     return json({ error: "Não consegui te colocar na mesa. Tente de novo." }, 400);
   }
   return json({ ok: true });
@@ -113,7 +112,7 @@ Deno.serve(async (req) => {
   if (action === "breu_peek") {
     const inv = await loadBreuInvite(String(body.token || ""));
     if (!inv) return json({ error: "Este convite não existe, já foi usado ou foi cancelado." }, 404);
-    return json({ label: inv.label, role: inv.role });
+    return json({ label: inv.label, role: inv.role, grupo: inv.max_uses > 1 });
   }
   if (action === "breu_accept") return await breuAccept(req, body);
 
