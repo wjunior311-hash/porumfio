@@ -1,12 +1,13 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import * as R from './regras.js';
+import * as M from './mestre-dados.js';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
-const S = { session: null, me: null, chars: [], members: [], invites: [], notes: {}, rolls: [], ready: false };
+const S = { session: null, me: null, chars: [], members: [], invites: [], notes: {}, rolls: [], noite: null, ready: false };
 const ui = { invite: null, inviteErr: '', loginErr: '', busy: false, saved: '' };
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -47,6 +48,8 @@ async function loadAll() {
   ]);
   S.chars = (chars.data || []).map((c) => ({ ...c, data: R.norm(c.data || {}) }));
   S.members = members.data || [];
+  const nt = await sb.from('breu_state').select('*').eq('key', 'noite').maybeSingle();
+  S.noite = nt.data?.value || null;
   const rl = await sb.from('breu_rolls').select('*').order('created_at', { ascending: false }).limit(30);
   S.rolls = rl.data || [];
   if (isGM()) {
@@ -73,6 +76,11 @@ function subscribe() {
         else if (route().name !== 'criar' || route().arg !== p.new.id) S.chars[i] = p.new;
       }
       if (!['criar', 'evoluir'].includes(route().name) || (route().name === 'evoluir' && !ui.evo?.tipo)) rerender();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_state' }, (p) => {
+      if (p.new?.key !== 'noite') return;
+      if (noiteSalvando) return;
+      S.noite = p.new.value; if (['', 'noite'].includes(route().name)) rerender();
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'breu_rolls' }, (p) => {
       if (S.rolls.some((r) => r.id === p.new.id)) return;
@@ -112,6 +120,7 @@ function render() {
   else if (r.name === 'ficha' && charById(r.arg)) html = viewSheet(charById(r.arg));
   else if (r.name === 'admin' && isAdmin()) html = viewAdmin();
   else if (r.name === 'prontos') html = viewProntos();
+  else if (r.name === 'noite' && isGM()) html = viewNoite();
   else if (r.name === '') html = viewMesa();
   else { location.replace('#/'); return; }
   app.innerHTML = html;
@@ -119,7 +128,7 @@ function render() {
 
 function top(extra = '') {
   return `<header class="top"><a href="#/" aria-label="Início"><img src="img/logo-horizontal.webp" alt="Breu"></a>
-    <div class="acts">${extra}${isAdmin() ? '<a class="btn sm ghost" href="#/admin">Convites</a>' : ''}<button class="btn sm ghost" data-act="logout">Sair</button></div></header>`;
+    <div class="acts">${extra}${isGM() ? '<a class="btn sm ghost" href="#/noite">Mestre</a>' : ''}${isAdmin() ? '<a class="btn sm ghost" href="#/admin">Convites</a>' : ''}<button class="btn sm ghost" data-act="logout">Sair</button></div></header>`;
 }
 
 // ---------- entrar ----------
@@ -215,6 +224,7 @@ function viewMesa() {
   const podeCriar = isGM() || meus.length === 0;
   return `${top()}
     <section class="hero"><p class="lbl">Olá, ${esc(S.me.display_name)}</p><h1>A mesa</h1></section>
+    ${faixaNoite()}
     <h2>${isGM() && meus.length > 1 ? 'Seus personagens' : 'Seu personagem'}</h2>
     ${meus.length ? `<div class="chars">${meus.map(charCard).join('')}</div>` : `<div class="empty"><p>Você ainda não tem personagem.</p><p class="small">A criação leva uns 20 minutos e salva sozinha: dá para parar e voltar depois.</p></div>`}
     ${podeCriar ? `<button class="btn primary block" style="margin-top:12px" data-act="novo">${meus.length ? 'Criar outro personagem' : 'Criar meu personagem'}</button>
@@ -224,6 +234,108 @@ function viewMesa() {
     ${S.rolls.length ? `<h2>Rolagens da mesa</h2><div class="rolls">${S.rolls.slice(0, 12).map(rollRow).join('')}</div>` : ''}
     <h2>Antes de começar</h2>
     <div class="box">Pense em quem você é antes de pensar em números: de onde veio, o que faz, qual noite te mudou e quem você quer proteger. As regras se encaixam depois.</div>`;
+}
+
+// ---------- painel do mestre: a noite ----------
+let noiteSalvando = false;
+const aprovados = () => S.chars.filter((c) => c.status === 'aprovado');
+const bestOf = (id) => M.BESTIARIO.find((b) => b.id === id);
+function novaNoite() {
+  const pjs = Math.max(1, aprovados().length || 4);
+  return { tipo: 'dura', pjs, familias: [], fases: [[], [], [], []], fase: -1, pavorDif: 15, pressagio: null, paisagem: 'A terra seca', complicacao: null, circulo: 14, grupo: {}, log: [] };
+}
+async function salvarNoite() {
+  noiteSalvando = true;
+  const { error } = await sb.from('breu_state').upsert({ key: 'noite', value: S.noite, updated_at: new Date().toISOString() });
+  setTimeout(() => { noiteSalvando = false; }, 600);
+  if (error) toast('Não consegui salvar a noite.');
+}
+function logNoite(t) { S.noite.log.unshift({ t, em: Date.now() }); S.noite.log = S.noite.log.slice(0, 40); }
+function trackerDe(c) {
+  const b = R.barras(c.data);
+  return (S.noite.grupo[c.id] ||= { sangue: b.sangue, prumo: b.prumo, pavor: 0, brasa: b.brasa });
+}
+function faixaNoite() {
+  const n = S.noite;
+  if (!n || n.fase < 0) return '';
+  const f = M.FASES[n.fase];
+  return `<div class="faixa-noite"><img src="img/fase-${f.k}.webp" alt=""><div><span class="lbl">A noite agora</span><b>${f.n}</b></div></div>`;
+}
+
+function viewNoite() {
+  const n = (S.noite ||= novaNoite());
+  const total = M.ameacaTotal(n.tipo, n.pjs), alvo = M.ameacaFase(total);
+  const montar = `
+    <h2>Montar a noite</h2>
+    <div class="card form">
+      <div><span class="flab">Tipo de noite</span><div class="sub-opts">${M.NOITES.map((x) => `<button class="pill${n.tipo === x.k ? ' sel' : ''}" data-nt="tipo" data-v="${x.k}">${x.n}</button>`).join('')}</div></div>
+      <div class="ro-adj"><div><span class="flab">Personagens</span><p class="fhelp" style="margin:0">Sem ninguém com o Dom desperto, conte a noite um degrau abaixo.</p></div>
+        <div class="stepper"><button data-nt-pjs="-1" aria-label="Menos">−</button><span class="v">${n.pjs}</span><button data-nt-pjs="1" aria-label="Mais">+</button></div></div>
+      <div class="pool"><span class="lbl">Ameaça da noite</span><strong>${total}</strong></div>
+      <div><span class="flab">Famílias (uma ou duas)</span><div class="sub-opts">${M.FAMILIAS.map((f) => `<button class="pill${n.familias.includes(f) ? ' sel' : ''}" data-nt-fam="${f}">${f}</button>`).join('')}</div></div>
+      <button class="btn primary" data-act="sortear">Sortear Assombros</button>
+    </div>
+    <div class="fases-m">${M.FASES.slice(0, 4).map((f, i) => { const ids = n.fases[i] || [], c = M.custo(ids);
+      return `<div class="fase-m${n.fase === i ? ' agora' : ''}"><div class="fm-head"><img src="img/fase-${f.k}.webp" alt=""><b>${f.n}</b><span class="${c === alvo[i] ? 'ok' : 'warn'}">${c} de ${alvo[i]}</span></div>
+        ${ids.map((id, j) => { const b = bestOf(id); return `<div class="ass-m"><div><b>${esc(b.nome)}</b> <span class="dim small">${b.familia} · ${b.grau} · ${b.sentido}</span><div class="small">Sangue ${b.sangue} · Defesa ${b.defesa} · Ataque ${b.atq} · Dano ${b.dano}</div></div><button class="btn sm ghost" data-nt-rm="${i}:${j}" aria-label="Tirar">×</button></div>`; }).join('') || '<p class="small dim" style="margin:4px 0">Ninguém.</p>'}
+        <select class="field sm" data-nt-add="${i}"><option value="">+ Pôr um Assombro…</option>${M.BESTIARIO.map((b) => `<option value="${b.id}">${b.nome} (${b.familia}, ${b.grau})</option>`).join('')}</select></div>`; }).join('')}</div>
+    <h2>Presságio e complicação</h2>
+    <div class="card form">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn" data-act="pressagio">Rolar presságio</button>${n.pressagio ? `<span class="small"><b>${n.pressagio.r}:</b> ${esc(n.pressagio.t)} <span class="dim">(${esc(n.pressagio.s)})</span></span>` : ''}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select class="field sm" id="nt-pais" style="width:auto">${Object.keys(M.COMPLICACOES).map((k) => `<option ${n.paisagem === k ? 'selected' : ''}>${k}</option>`).join('')}</select><button class="btn" data-act="complicacao">Rolar complicação</button></div>
+      ${n.complicacao ? `<p class="small" style="margin:0">${esc(n.complicacao)}</p>` : ''}
+    </div>`;
+
+  const prox = n.fase + 1;
+  const conduzir = `
+    <h2>Conduzir</h2>
+    <div class="relogio-m">${M.FASES.map((f, i) => `<div class="rm${i === n.fase ? ' on' : i < n.fase ? ' foi' : ''}"><img src="img/fase-${f.k}.webp" alt=""><span>${f.n}</span></div>`).join('')}</div>
+    ${n.fase >= 0 ? `<div class="box">${esc(M.FASES[n.fase].d)}</div>` : ''}
+    ${n.fase >= 0 && n.fase < 4 && n.fases[n.fase]?.length ? `<p class="small" style="margin:0">Chegam agora: <b>${n.fases[n.fase].map((id) => bestOf(id).nome).join(', ')}</b>.</p>` : ''}
+    <div class="ro-adj"><div><span class="flab">Teste de Pavor na virada</span><p class="fhelp" style="margin:0">Firmeza contra ${n.pavorDif}. Quem falha recebe 1 Pavor.</p></div>
+      <div class="sub-opts">${[15, 20].map((v) => `<button class="pill${n.pavorDif === v ? ' sel' : ''}" data-nt-pdif="${v}">${v}</button>`).join('')}</div></div>
+    ${prox <= 4 ? `<button class="btn primary block" data-act="virarFase">${n.fase < 0 ? 'Começar a noite: Crepúsculo' : `Virar para ${M.FASES[prox].n}`}</button>` : `<button class="btn block" data-act="novaNoite">Começar uma nova noite</button>`}`;
+
+  const grupo = `
+    <h2>O grupo</h2>
+    ${aprovados().length ? `<div class="grupo-m">${aprovados().map((c) => { const t = trackerDe(c), b = R.barras(c.data);
+      const est = [t.sangue <= 0 ? 'caído' : t.sangue <= b.sangue / 2 ? 'ferido' : '', t.prumo <= 0 ? 'pânico' : ''].filter(Boolean);
+      const cnt = (k, max, lbl) => `<div class="cnt"><span>${lbl}</span><div><button data-trk="${c.id}:${k}:-1" aria-label="Menos ${lbl}">−</button><b>${t[k]}${max != null ? `<small>/${max}</small>` : ''}</b><button data-trk="${c.id}:${k}:1" aria-label="Mais ${lbl}">+</button></div></div>`;
+      return `<div class="pj-m${est.length ? ' alerta' : ''}"><div class="pj-head"><img src="${picOf(c.data)}" alt=""><div><b>${esc(c.data.nome)}</b><span class="small dim">Defesa ${b.defesa} · Firmeza ${R.atrib(c.data).firmeza}${t.pavor ? ` · mão −${t.pavor}` : ''}</span></div>${est.map((e) => `<span class="chip pronto">${e}</span>`).join('')}</div>
+        <div class="cnts">${cnt('sangue', b.sangue, 'Sangue')}${cnt('prumo', b.prumo, 'Prumo')}${cnt('pavor', null, 'Pavor')}${cnt('brasa', b.brasa, 'Brasa')}</div>
+        ${t.prumo <= 0 ? `<button class="btn sm" data-panico="${c.id}">Rolar pânico</button>` : ''}</div>`; }).join('')}</div>` : '<p class="muted">Nenhuma ficha aprovada ainda.</p>'}
+    <h2>O círculo</h2>
+    <div class="card circ-m">
+      <div class="pool"><span class="lbl">Força do círculo</span><strong>${n.circulo > 0 ? n.circulo : 'Rompido'}</strong></div>
+      <div class="sub-opts"><button class="btn sm" data-act="investida">Investida não passou (−3)</button><button class="btn sm" data-act="brecha">Abriu brecha</button></div>
+      <div style="display:flex;gap:8px;align-items:center"><label class="flab" for="nt-forca" style="margin:0">Refazer com força</label><input class="field" id="nt-forca" type="number" min="0" max="40" value="${Math.max(0, n.circulo)}" style="width:90px"><button class="btn sm" data-act="refazer">Refazer</button></div>
+    </div>
+    ${n.log.length ? `<h2>O que aconteceu</h2><ol class="marcos">${n.log.slice(0, 15).map((l) => `<li class="small">${esc(l.t)}</li>`).join('')}</ol>` : ''}`;
+  return `${top()}<h1>A noite</h1><p class="muted" style="margin-top:6px">Só você vê esta tela. Os jogadores veem apenas a fase atual na mesa.</p>${conduzir}${grupo}${montar}`;
+}
+
+async function virarFase() {
+  const n = S.noite, prox = n.fase + 1;
+  if (prox > 4) return;
+  n.fase = prox;
+  const f = M.FASES[prox];
+  const res = [];
+  if (prox === 4) {
+    aprovados().forEach((c) => { const t = trackerDe(c); t.pavor = 0; t.brasa = R.barras(c.data).brasa; });
+    logNoite('Aurora. As fendas fecharam; o Pavor sumiu e a Brasa voltou.');
+  } else {
+    for (const c of aprovados()) {
+      const t = trackerDe(c);
+      const r = R.rolar(c.data, { attr: 'firmeza', ajuste: -t.pavor, dif: n.pavorDif });
+      if (!r.passou) t.pavor += 1;
+      res.push(`${c.data.nome} ${r.total}${r.passou ? '' : ' (+1 Pavor)'}`);
+      await sb.from('breu_rolls').insert({ character_id: c.id, user_id: S.session.user.id, label: `Pavor na virada (${f.n})`, total: r.total, detail: { tipo: 'teste', dados: r.dados, fica: r.fica, bonus: 0, dif: n.pavorDif, passou: r.passou, vazia: r.vazia, marcante: r.marcante, desastre: r.desastre } });
+    }
+    const chegam = (n.fases[prox] || []).map((id) => bestOf(id).nome);
+    logNoite(`${f.n}. Pavor: ${res.join(', ') || 'ninguém'}.${chegam.length ? ' Chegam: ' + chegam.join(', ') + '.' : ''}`);
+  }
+  await salvarNoite(); rerender();
+  toast(prox === 4 ? 'Aurora!' : `${f.n}: Pavor rolado para todos.`);
 }
 
 // ---------- personagens prontos ----------
@@ -597,7 +709,7 @@ function viewAdmin() {
 
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
+  const t = e.target.closest('[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
   const c = wiz ? charById(wiz.dataset.char) : null;
@@ -642,6 +754,19 @@ document.addEventListener('click', async (e) => {
   if (ui.roller && t.dataset.roAttr) { ui.roller.attr = t.dataset.roAttr; ui.roller.res = null; rerender(); return; }
   if (ui.roller && t.dataset.roAdj) { ui.roller.ajuste = Math.max(-5, Math.min(4, ui.roller.ajuste + +t.dataset.roAdj)); ui.roller.res = null; rerender(); return; }
   if (ui.roller && t.dataset.roDif) { const n = +t.dataset.roDif; ui.roller.dif = ui.roller.dif === n ? 0 : n; ui.roller.res = null; rerender(); return; }
+  if (route().name === 'noite' && S.noite) {
+    const n = S.noite;
+    if (t.dataset.nt === 'tipo') { n.tipo = t.dataset.v; salvarNoite(); rerender(); return; }
+    if (t.dataset.ntPjs) { n.pjs = Math.max(1, Math.min(8, n.pjs + +t.dataset.ntPjs)); salvarNoite(); rerender(); return; }
+    if (t.dataset.ntFam) { const f = t.dataset.ntFam; n.familias = n.familias.includes(f) ? n.familias.filter((x) => x !== f) : [...n.familias, f].slice(-2); salvarNoite(); rerender(); return; }
+    if (t.dataset.ntRm) { const [i, j] = t.dataset.ntRm.split(':').map(Number); n.fases[i].splice(j, 1); salvarNoite(); rerender(); return; }
+    if (t.dataset.ntPdif) { n.pavorDif = +t.dataset.ntPdif; salvarNoite(); rerender(); return; }
+    if (t.dataset.trk) { const [id, k, dlt] = t.dataset.trk.split(':'); const c = charById(id), tr = trackerDe(c), b = R.barras(c.data);
+      const max = { sangue: b.sangue, prumo: b.prumo, brasa: b.brasa, pavor: 9 }[k]; tr[k] = Math.max(0, Math.min(max, tr[k] + +dlt));
+      salvarNoite(); rerender(); return; }
+    if (t.dataset.panico) { const c = charById(t.dataset.panico), r = M.d(20), l = M.tabela(M.PANICO, r);
+      logNoite(`${c.data.nome} entrou em pânico (${r}): ${l[2]}`); toast(`${c.data.nome}: ${l[2]}`); salvarNoite(); rerender(); return; }
+  }
   if (t.dataset.pronto) {
     const base = R.PRONTOS.find((x) => x.id === t.dataset.pronto); if (!base) return;
     t.disabled = true;
@@ -656,6 +781,17 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.evoCaminho) { ui.evo = { caminho: t.dataset.evoCaminho }; rerender(); return; }
 
   const act = t.dataset.act;
+  if (S.noite && route().name === 'noite') {
+    const n = S.noite;
+    if (act === 'sortear') { n.fases = M.sortear(M.ameacaTotal(n.tipo, n.pjs), n.familias); salvarNoite(); rerender(); return; }
+    if (act === 'pressagio') { const r = M.d(20), l = M.tabela(M.PRESSAGIOS, r); n.pressagio = { r, t: l[2], s: l[3] }; salvarNoite(); rerender(); return; }
+    if (act === 'complicacao') { n.paisagem = $('#nt-pais').value; n.complicacao = M.pick(M.COMPLICACOES[n.paisagem]); salvarNoite(); rerender(); return; }
+    if (act === 'virarFase') { t.disabled = true; await virarFase(); return; }
+    if (act === 'novaNoite') { if (!confirm('Começar uma nova noite? O relógio, o grupo e o círculo voltam ao início.')) return; S.noite = novaNoite(); salvarNoite(); rerender(); return; }
+    if (act === 'investida') { n.circulo = Math.max(0, n.circulo - 3); logNoite(`Investida no círculo: força ${n.circulo}.`); salvarNoite(); rerender(); return; }
+    if (act === 'brecha') { n.circulo = 0; logNoite('O círculo abriu uma brecha.'); salvarNoite(); rerender(); return; }
+    if (act === 'refazer') { n.circulo = Math.max(0, +$('#nt-forca').value || 0); logNoite(`Círculo refeito com força ${n.circulo}.`); salvarNoite(); rerender(); return; }
+  }
   if (act === 'fecharRoll') { ui.roller = null; rerender(); return; }
   if (act === 'rolar' && fc && ui.roller) {
     const ro = ui.roller, res = R.rolar(fc.data, ro);
@@ -776,6 +912,7 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('change', async (e) => {
   const t = e.target;
+  if (t.dataset.ntAdd != null && t.value && S.noite) { S.noite.fases[+t.dataset.ntAdd].push(t.value); salvarNoite(); rerender(); return; }
   if (t.id === 'ro-per' && ui.roller) { ui.roller.pericia = t.value; if (t.value) ui.roller.attr = R.PERICIA_ATRIB[t.value] || ui.roller.attr; ui.roller.res = null; rerender(); return; }
   if (t.id === 'mc-mot') { $('#mc-out').style.display = t.value ? 'none' : 'block'; return; }
   if (t.dataset.role) {
