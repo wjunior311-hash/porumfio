@@ -2,6 +2,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
+import { criarMapa } from './mapa.js?v=11';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -28,6 +29,8 @@ const charById = (id) => S.chars.find((c) => c.id === id);
 const canEdit = (c) => c && (c.owner === S.session?.user.id || isGM());
 // a criação fica aberta até o mestre aprovar; depois, a ficha muda só pelos marcos
 const canEditCreation = (c) => c && (isGM() || (c.owner === S.session?.user.id && c.status !== 'aprovado'));
+
+const MAPA = criarMapa({ sb, S, isGM: () => isGM(), esc, toast, picOf: (p) => picOf(p), charById: (id) => charById(id), rerender: () => rerender() });
 
 // ---------- rotas ----------
 function route() {
@@ -79,7 +82,10 @@ function subscribe() {
       }
       if (!['criar', 'evoluir'].includes(route().name) || (route().name === 'evoluir' && !ui.evo?.tipo)) rerender();
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_cenas' }, (p) => MAPA.onCena(p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_tokens' }, (p) => MAPA.onToken(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_state' }, (p) => {
+      if (p.new?.key === 'cena') { MAPA.onAtiva(p.new.value); return; }
       if (p.new?.key === 'mesa') { S.mesa = p.new.value || {}; return; }
       if (p.new?.key !== 'noite') return;
       if (noiteSalvando) return;
@@ -115,6 +121,7 @@ function render() {
   const app = $('#app');
   let html = '';
   app.classList.toggle('wide', r.name === 'admin');
+  app.classList.toggle('mapa', r.name === 'mapa');
   if (r.name === 'convite') html = viewInvite(r.arg);
   else if (!S.session) html = viewLogin();
   else if (!S.me) html = viewNoMember();
@@ -124,14 +131,16 @@ function render() {
   else if (r.name === 'admin' && isAdmin()) html = viewAdmin();
   else if (r.name === 'prontos') html = viewProntos();
   else if (r.name === 'noite' && isGM()) html = viewNoite();
+  else if (r.name === 'mapa') html = top() + MAPA.view();
   else if (r.name === '') html = viewMesa();
   else { location.replace('#/'); return; }
   app.innerHTML = html;
+  if (r.name === 'mapa' && S.me) MAPA.mount(); else MAPA.unmount();
 }
 
 function top(extra = '') {
   return `<header class="top"><a href="#/" aria-label="Início"><img src="img/logo-horizontal.webp" alt="Breu"></a>
-    <div class="acts">${extra}${isGM() ? '<a class="btn sm ghost" href="#/noite">Mestre</a>' : ''}${isAdmin() ? '<a class="btn sm ghost" href="#/admin">Convites</a>' : ''}<button class="btn sm ghost" data-act="logout">Sair</button></div></header>`;
+    <div class="acts">${extra}<a class="btn sm ghost" href="#/mapa">Mapa</a>${isGM() ? '<a class="btn sm ghost" href="#/noite">Mestre</a>' : ''}${isAdmin() ? '<a class="btn sm ghost" href="#/admin">Convites</a>' : ''}<button class="btn sm ghost" data-act="logout">Sair</button></div></header>`;
 }
 
 // ---------- entrar ----------
@@ -228,6 +237,7 @@ function viewMesa() {
   return `${top()}
     <section class="hero"><p class="lbl">Olá, ${esc(S.me.display_name)}</p><h1>A mesa</h1></section>
     ${faixaNoite()}
+    <a class="btn primary block mapa-cta" href="#/mapa">Abrir o mapa da mesa</a>
     <h2>${isGM() && meus.length > 1 ? 'Seus personagens' : 'Seu personagem'}</h2>
     ${meus.length ? `<div class="chars">${meus.map(charCard).join('')}</div>` : `<div class="empty"><p>Você ainda não tem personagem.</p><p class="small">A criação leva uns 20 minutos e salva sozinha: dá para parar e voltar depois.</p></div>`}
     ${podeCriar ? `<button class="btn primary block" style="margin-top:12px" data-act="novo">${meus.length ? 'Criar outro personagem' : 'Criar meu personagem'}</button>
@@ -752,6 +762,7 @@ function viewAdmin() {
 
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
+  if (route().name === 'mapa' && e.target.closest('[data-mp]')) { await MAPA.click(e); return; }
   const t = e.target.closest('[data-dia],[data-po],[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
@@ -968,6 +979,7 @@ document.addEventListener('input', (e) => {
 
 document.addEventListener('change', async (e) => {
   const t = e.target;
+  if (route().name === 'mapa' && await MAPA.onChange(t)) return;
   if (t.dataset.ntAdd != null && t.value && S.noite) { S.noite.fases[+t.dataset.ntAdd].push(t.value); salvarNoite(); rerender(); return; }
   if (t.id === 'ro-per' && ui.roller) { ui.roller.pericia = t.value; if (t.value) ui.roller.attr = R.PERICIA_ATRIB[t.value] || ui.roller.attr; ui.roller.res = null; rerender(); return; }
   if (t.id === 'mc-mot') { $('#mc-out').style.display = t.value ? 'none' : 'block'; return; }
@@ -981,6 +993,7 @@ document.addEventListener('change', async (e) => {
 
 document.addEventListener('submit', async (e) => {
   const f = e.target, kind = f.dataset.form;
+  if (f.dataset.mpform) { e.preventDefault(); await MAPA.onSubmit(f); return; }
   if (!kind) return;
   e.preventDefault();
   if (kind === 'login') {
