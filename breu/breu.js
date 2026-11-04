@@ -7,7 +7,7 @@ const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
-const S = { session: null, me: null, chars: [], members: [], invites: [], notes: {}, rolls: [], noite: null, ready: false };
+const S = { session: null, me: null, chars: [], members: [], invites: [], notes: {}, rolls: [], noite: null, mesa: {}, ready: false };
 const ui = { invite: null, inviteErr: '', loginErr: '', busy: false, saved: '' };
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -48,8 +48,9 @@ async function loadAll() {
   ]);
   S.chars = (chars.data || []).map((c) => ({ ...c, data: R.norm(c.data || {}) }));
   S.members = members.data || [];
-  const nt = await sb.from('breu_state').select('*').eq('key', 'noite').maybeSingle();
-  S.noite = nt.data?.value || null;
+  const nt = await sb.from('breu_state').select('*').in('key', ['noite', 'mesa']);
+  const est = Object.fromEntries((nt.data || []).map((r) => [r.key, r.value]));
+  S.noite = est.noite || null; S.mesa = est.mesa || {};
   const rl = await sb.from('breu_rolls').select('*').order('created_at', { ascending: false }).limit(30);
   S.rolls = rl.data || [];
   if (isGM()) {
@@ -78,6 +79,7 @@ function subscribe() {
       if (!['criar', 'evoluir'].includes(route().name) || (route().name === 'evoluir' && !ui.evo?.tipo)) rerender();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_state' }, (p) => {
+      if (p.new?.key === 'mesa') { S.mesa = p.new.value || {}; return; }
       if (p.new?.key !== 'noite') return;
       if (noiteSalvando) return;
       S.noite = p.new.value; if (['', 'noite'].includes(route().name)) rerender();
@@ -311,7 +313,10 @@ function viewNoite() {
       <div style="display:flex;gap:8px;align-items:center"><label class="flab" for="nt-forca" style="margin:0">Refazer com força</label><input class="field" id="nt-forca" type="number" min="0" max="40" value="${Math.max(0, n.circulo)}" style="width:90px"><button class="btn sm" data-act="refazer">Refazer</button></div>
     </div>
     ${n.log.length ? `<h2>O que aconteceu</h2><ol class="marcos">${n.log.slice(0, 15).map((l) => `<li class="small">${esc(l.t)}</li>`).join('')}</ol>` : ''}`;
-  return `${top()}<h1>A noite</h1><p class="muted" style="margin-top:6px">Só você vê esta tela. Os jogadores veem apenas a fase atual na mesa.</p>${conduzir}${grupo}${montar}`;
+  const regras = `<h2>Regras desta mesa</h2>
+    <div class="card"><div class="ro-adj"><div><span class="flab">Começar com Marca</span><p class="fhelp" style="margin:0">Quem cria em Faísca pode escolher uma Marca já na criação.</p></div>
+      <div class="sub-opts">${[[true, 'Sim'], [false, 'Não']].map(([v, l]) => `<button class="pill${marcaInicialLiberada() === v ? ' sel' : ''}" data-mesa-marca="${v}">${l}</button>`).join('')}</div></div></div>`;
+  return `${top()}<h1>A noite</h1><p class="muted" style="margin-top:6px">Só você vê esta tela. Os jogadores veem apenas a fase atual na mesa.</p>${conduzir}${grupo}${montar}${regras}`;
 }
 
 async function virarFase() {
@@ -364,6 +369,7 @@ const PASSOS = [
 
 function viewWizard(c, step) {
   const p = c.data;
+  if (!marcaInicialLiberada() && p.marca) { p.marca = ''; p.marcaSangue = false; saveSoon(c); }
   step = Math.max(0, Math.min(PASSOS.length - 1, step));
   const [key, nome] = PASSOS[step];
   const bars = PASSOS.map((_, i) => `<i class="${i === step ? 'on' : i < step ? 'done' : ''}"></i>`).join('');
@@ -436,14 +442,18 @@ function stepOficio(p) {
     <div class="opts">${opts}</div>${extraPicker(p)}`;
 }
 
+// regra da mesa: o mestre decide se dá para começar com Marca
+const marcaInicialLiberada = () => S.mesa?.marcaInicial !== false;
+
 function stepDom(p) {
   const n = R.essenciasPermitidas(p);
+  const semMarca = !marcaInicialLiberada();
   let html = `<p class="intro">Algumas pessoas nascem com uma chama por dentro que faz os traços valerem mais. Quase sempre ela dorme.</p>
     <div class="opts">
       <button class="opt${p.dom === 'adormecido' ? ' sel' : ''}" data-set="dom" data-v="adormecido"><span class="meta">6 pontos de atributo · Brasa 0</span><b>Adormecido</b><p>O Dom ainda dorme. Você risca traços, mas apagados, sem a força da Brasa. Ele pode despertar jogando.</p></button>
-      <button class="opt${p.dom === 'faisca' ? ' sel' : ''}" data-set="dom" data-v="faisca"><span class="meta">5 pontos de atributo · Brasa 2</span><b>Faísca</b><p>O Dom já acordou. Você acende traços básicos. Custa 1 ponto de atributo, e você pode começar com uma Marca tatuada.</p></button>
+      <button class="opt${p.dom === 'faisca' ? ' sel' : ''}" data-set="dom" data-v="faisca"><span class="meta">5 pontos de atributo · Brasa 2</span><b>Faísca</b><p>O Dom já acordou. Você acende traços básicos. Custa 1 ponto de atributo${semMarca ? '. Nesta mesa, as Marcas vêm jogando.' : ', e você pode começar com uma Marca tatuada.'}</p></button>
     </div>`;
-  if (p.dom === 'faisca') {
+  if (p.dom === 'faisca' && !semMarca) {
     html += `<h2>Uma Marca?</h2><p class="intro">Opcional. Se escolher, ela foi a noite que acordou o seu Dom.</p>
       <div class="opts"><button class="opt${!p.marca ? ' sel' : ''}" data-set="marca" data-v=""><b>Nenhuma por enquanto</b></button>
       ${R.MARCAS.map((m) => `<button class="opt${p.marca === m.k ? ' sel' : ''}" data-set="marca" data-v="${m.k}"><span class="meta">${m.onde} · ${m.custo} Brasa</span><b>${m.n}</b><p>${m.d}</p></button>`).join('')}</div>`;
@@ -710,7 +720,7 @@ function viewAdmin() {
 
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
+  const t = e.target.closest('[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
   const c = wiz ? charById(wiz.dataset.char) : null;
@@ -757,6 +767,11 @@ document.addEventListener('click', async (e) => {
   if (ui.roller && t.dataset.roDif) { const n = +t.dataset.roDif; ui.roller.dif = ui.roller.dif === n ? 0 : n; ui.roller.res = null; rerender(); return; }
   if (route().name === 'noite' && S.noite) {
     const n = S.noite;
+    if (t.dataset.mesaMarca) {
+      S.mesa = { ...S.mesa, marcaInicial: t.dataset.mesaMarca === 'true' };
+      sb.from('breu_state').upsert({ key: 'mesa', value: S.mesa, updated_at: new Date().toISOString() }).then(({ error }) => toast(error ? 'Não consegui salvar.' : 'Regra da mesa salva.'));
+      rerender(); return;
+    }
     if (t.dataset.nt === 'tipo') { n.tipo = t.dataset.v; salvarNoite(); rerender(); return; }
     if (t.dataset.ntPjs) { n.pjs = Math.max(1, Math.min(8, n.pjs + +t.dataset.ntPjs)); salvarNoite(); rerender(); return; }
     if (t.dataset.ntFam) { const f = t.dataset.ntFam; n.familias = n.familias.includes(f) ? n.familias.filter((x) => x !== f) : [...n.familias, f].slice(-2); salvarNoite(); rerender(); return; }
