@@ -417,7 +417,7 @@ function resumo(p) {
   return `<div class="resumo"><span>${it.map(esc).join(' · ')}</span>${of ? `<span class="dim">Sangue ${b.sangue} · Prumo ${b.prumo} · Defesa ${b.defesa}</span>` : ''}</div>`;
 }
 
-const picOf = (p) => (p.pronto ? `img/pr-${p.pronto}.webp` : R.oficioDe(p) ? `img/of-${R.oficioDe(p).k}.webp` : '');
+const picOf = (p) => (p.retrato ? p.retrato : p.pronto ? `img/pr-${p.pronto}.webp` : R.oficioDe(p) ? `img/of-${R.oficioDe(p).k}.webp` : '');
 
 const inp = (k, v, ph = '', max = 80) => `<input class="field" data-k="${k}" value="${esc(v)}" placeholder="${esc(ph)}" maxlength="${max}">`;
 const area = (k, v, ph = '') => `<textarea class="field" data-k="${k}" placeholder="${esc(ph)}" maxlength="1200">${esc(v)}</textarea>`;
@@ -546,7 +546,7 @@ function sheetBody(p, c = null) {
   const armas = of ? of.armas : [];
   return `
     <div class="sheet-head">
-      <div class="pic${p.pronto ? ' retrato' : ''}">${of ? `<img src="${picOf(p)}" alt="">` : ''}</div>
+      <div class="pic${p.pronto || p.retrato ? ' retrato' : ''}">${of ? `<img src="${picOf(p)}" alt="">` : ''}</div>
       <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, cam?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}${c && R.marcosGanhos(p) ? `<span class="chip" style="margin-top:8px;display:inline-block">${R.patamar(p).n}</span>` : ''}</div>
     </div>
     ${c ? evoBanner(c) : ''}
