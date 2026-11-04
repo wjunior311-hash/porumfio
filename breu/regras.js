@@ -1,4 +1,5 @@
 // Regras de criação de personagem do Breu (capítulo 4 do Livro Básico).
+import * as C from './conteudo.js';
 
 export const ATRIBUTOS = [
   { k: 'vigor', n: 'Vigor', d: 'Força, resistência, aguentar o tranco.' },
@@ -85,7 +86,11 @@ export const OFICIOS = [
     armas: ['Lança marcada (ponta de osso)', 'Facão'] },
 ];
 
+OFICIOS.push(C.POZEIRO);
+export const POS = C.POS;
+
 export const ARMAS = {
+  ...C.ARMAS_EXTRA,
   Faca: ['d6', 'Perto ou arremesso', 'Discreta. Cabe na bota.'],
   Facão: ['d8', 'Perto', '+1 dado para atravessar vegetação fechada.'],
   Funda: ['d6', 'Longe', 'Munição em qualquer chão.'],
@@ -149,11 +154,12 @@ export const novoPersonagem = () => ({
   notas: '',
   // evolução
   marcos: [], melhorias: [], caminho: '', domSubidas: 0,
+  pos: [], respostaPozeiro: '',
 });
 
 // fichas antigas não têm os campos de evolução
 export function norm(p) {
-  p.marcos ||= []; p.melhorias ||= []; p.caminho ||= ''; p.domSubidas ||= 0; p.essencias ||= [];
+  p.marcos ||= []; p.melhorias ||= []; p.caminho ||= ''; p.domSubidas ||= 0; p.essencias ||= []; p.pos ||= [];
   return p;
 }
 
@@ -229,11 +235,11 @@ export function marcas(p) {
 }
 
 export function barras(p) {
-  const a = atrib(p), f = oficioDe(p), ms = marcas(p);
+  const a = atrib(p), f = oficioDe(p), ms = marcas(p), g = geraisDe(p).map((x) => x.k);
   return {
-    sangue: 10 + a.vigor * 3,
-    prumo: 6 + a.firmeza * 2 - ms.filter((m) => !m.sangue).length,
-    brasa: domDe(p).brasa,
+    sangue: 10 + a.vigor * 3 + (g.includes('couro-duro') ? 3 : 0),
+    prumo: 6 + a.firmeza * 2 - ms.filter((m) => !m.sangue).length + (g.includes('cabeca-fria') ? 2 : 0),
+    brasa: domDe(p).brasa + (g.includes('brasa-guardada') && domIndex(p) > 0 ? 1 : 0),
     defesa: 10 + a.agilidade + (f?.protecao || 0),
     sombra: ms.filter((m) => m.sangue).length,
   };
@@ -267,6 +273,14 @@ export function opcoesMelhoria(p) {
     alvos: MARCAS.map((m) => ({ v: m.k, n: m.n, d: `${m.onde}. ${m.d}` })) });
   ops.push({ tipo: 'sotaque', n: 'Aprender outro sotaque', d: 'Exige alguém que ensine e algumas noites de prática.',
     alvos: Object.keys(SOTAQUES).filter((x) => !sot.includes(x)).map((x) => ({ v: x, n: x, d: SOTAQUES[x] })) });
+  const feitos = melhoriasFeitas(p), ja = geraisDe(p).map((x) => x.k), dom = domIndex(p) > 0;
+  ops.push({ tipo: 'geral', n: 'Uma habilidade geral', d: 'Aberta a qualquer ofício, se você cumprir o pedido.',
+    alvos: C.GERAIS.filter((g) => !ja.includes(g.k)).map((g) => ({ v: g.k, n: g.n, d: g.d, bloq: reqFalta(p, g.req) })) });
+  ops.push({ tipo: 'oficio', n: 'A habilidade inicial de outro ofício', d: 'Com alguém daquele ofício ensinando, em cena.',
+    bloq: feitos < 3 ? 'A partir do 4º marco' : '',
+    alvos: OFICIOS.filter((o) => o.k !== p.oficio && !melh(p, 'oficio').some((m) => m.alvo === o.k)).map((o) => ({ v: o.k, n: `${o.hab[0]} (${o.n})`, d: o.hab[1] })) });
+  if (p.oficio === 'pozeiro') ops.push({ tipo: 'po', n: 'Um pó novo', d: 'Só o Pozeiro.',
+    alvos: C.POS.filter((x) => !posDe(p).includes(x.k)).map((x) => ({ v: x.k, n: x.n, d: x.d })) });
   return ops.map((o) => ({ ...o, bloq: o.bloq || (o.alvos.filter((x) => !x.bloq).length ? '' : 'Nada disponível agora') }));
 }
 
@@ -279,6 +293,9 @@ export function descreveMelhoria(m) {
     essencia: `Aprendeu a essência ${m.alvo}`,
     marca: `Recebeu a ${MARCAS.find((x) => x.k === m.alvo)?.n}${m.sangue ? ' (sangue de Assombro)' : ''}`,
     sotaque: `Aprendeu o sotaque ${m.alvo}`,
+    geral: `Habilidade geral: ${C.GERAIS.find((g) => g.k === m.alvo)?.n}`,
+    oficio: `Aprendeu ${OFICIOS.find((o) => o.k === m.alvo)?.hab[0]} (${OFICIOS.find((o) => o.k === m.alvo)?.n})`,
+    po: `Aprendeu o pó ${C.POS.find((x) => x.k === m.alvo)?.n}`,
   }[m.tipo] || m.tipo;
 }
 
@@ -305,6 +322,7 @@ export function pendencias(p) {
     if (periciaOrigemRepete(p) && !p.periciaExtra) f.push(['oficio', 'A perícia da origem repete a do ofício: escolha outra.']);
   }
   if (!p.oficio) f.push(['oficio', 'Escolha um ofício.']);
+  if (p.oficio === 'pozeiro' && (p.pos || []).length < 3) f.push(['oficio', 'Escolha os três pós que você conhece.']);
   const sobra = pontosTotais(p) - pontosUsados(p);
   if (sobra > 0) f.push(['atributos', `Ainda sobram ${sobra} ponto${sobra > 1 ? 's' : ''} de atributo.`]);
   if (sobra < 0) f.push(['atributos', 'Você gastou pontos demais nos atributos.']);
@@ -398,4 +416,32 @@ export function rolarDano(expr) {
   const m = String(expr).match(/^(\d*)d(\d+)$/); if (!m) return null;
   const n = +(m[1] || 1), f = +m[2], dados = Array.from({ length: n }, () => d(f));
   return { expr, dados, total: dados.reduce((s, x) => s + x, 0) };
+}
+
+// ---------- rodada 5: habilidades gerais, patamares, pós, traços prontos ----------
+export const GERAIS = C.GERAIS;
+export const TRACOS_PRONTOS = C.TRACOS_PRONTOS;
+export const TRACO_SOTAQUE = C.TRACO_SOTAQUE;
+export function geraisDe(p) { return (p.melhorias || []).filter((m) => m.tipo === 'geral').map((m) => C.GERAIS.find((g) => g.k === m.alvo)).filter(Boolean); }
+export function oficiosAprendidos(p) { return (p.melhorias || []).filter((m) => m.tipo === 'oficio').map((m) => OFICIOS.find((o) => o.k === m.alvo)).filter(Boolean); }
+export function posDe(p) { return [...new Set([...(p.pos || []), ...(p.melhorias || []).filter((m) => m.tipo === 'po').map((m) => m.alvo)])]; }
+export function reqFalta(p, req) {
+  if (!req) return '';
+  if (req.atrib) { const a = atrib(p); const [k, v] = Object.entries(req.atrib)[0]; return a[k] >= v ? '' : `Pede ${ATRIBUTOS.find((x) => x.k === k).n} ${v}`; }
+  if (req.pericia) return grauPericia(p, req.pericia) > 0 ? '' : `Pede ${req.pericia}`;
+  if (req.dom) return domIndex(p) > 0 ? '' : 'Pede o Dom desperto';
+  return '';
+}
+export function patamar(p) { const n = marcosGanhos(p); return [...C.PATAMARES].reverse().find((x) => n >= x.m); }
+// habilidades de Veterano (6) e mestria (9) já alcançadas
+export function caminhoAlto(p) {
+  const cam = caminhoDe(p); if (!cam) return [];
+  const alto = C.CAMINHO_ALTO[cam.k] || [], n = marcosGanhos(p), out = [];
+  if (n >= 6 && alto[0]) out.push({ marco: 6, n: alto[0][0], d: alto[0][1] });
+  if (n >= 9 && alto[1]) out.push({ marco: 9, n: alto[1][0], d: alto[1][1] });
+  return out;
+}
+export function tracosProntos(p) {
+  const r = tracosConhecidos(p);
+  return C.TRACOS_PRONTOS.filter((t) => r.includes(t[1]));
 }

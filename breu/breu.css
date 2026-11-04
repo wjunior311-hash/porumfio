@@ -273,3 +273,10 @@ button.stat { font: inherit; color: inherit; cursor: pointer; }
 .circ-m { display: grid; gap: 10px; }
 @media (max-width: 420px) { .cnts { grid-template-columns: repeat(2, 1fr); } }
 .ro-adj .sub-opts { flex-wrap: nowrap; }
+details.prontos { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--page); }
+details.prontos summary { cursor: pointer; font-family: var(--label); letter-spacing: .1em; text-transform: uppercase; font-size: 13px; color: var(--osso2); }
+.dia-m { grid-template-columns: repeat(4, 1fr); }
+.dia-m button.rm { background: none; border: 0; color: inherit; cursor: pointer; }
+.dia-m .sol { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--line); background: var(--breu); display: grid; place-items: center; font-size: 24px; }
+.dia-m .rm.on .sol { border-color: var(--brasa); box-shadow: 0 0 0 2px var(--brasa); }
+.sol-f { width: 44px; height: 44px; border-radius: 50%; background: var(--breu); display: grid; place-items: center; font-size: 22px; }

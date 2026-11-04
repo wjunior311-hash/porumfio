@@ -1,6 +1,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
+import * as CT from './conteudo.js';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -259,7 +260,9 @@ function trackerDe(c) {
 }
 function faixaNoite() {
   const n = S.noite;
-  if (!n || n.fase < 0) return '';
+  if (!n) return '';
+  if ((n.fase < 0 || n.fase === 4) && (n.dia ?? -1) >= 0) return `<div class="faixa-noite"><span class="sol-f">${['🌅', '☀️', '🌤️', '🌇'][n.dia]}</span><div><span class="lbl">O dia agora</span><b>${CT.PARTES_DIA[n.dia].n}</b></div></div>`;
+  if (n.fase < 0) return '';
   const f = M.FASES[n.fase];
   return `<div class="faixa-noite"><img src="img/fase-${f.k}.webp" alt=""><div><span class="lbl">A noite agora</span><b>${f.n}</b></div></div>`;
 }
@@ -288,6 +291,13 @@ function viewNoite() {
       ${n.complicacao ? `<p class="small" style="margin:0">${esc(n.complicacao)}</p>` : ''}
     </div>`;
 
+  const dia = n.dia ?? -1;
+  const diaHtml = `
+    <h2>O dia</h2>
+    <div class="relogio-m dia-m">${CT.PARTES_DIA.map((x, i) => `<button class="rm${i === dia ? ' on' : i < dia ? ' foi' : ''}" data-dia="${i}"><span class="sol">${['🌅', '☀️', '🌤️', '🌇'][i]}</span><span>${x.n}</span></button>`).join('')}</div>
+    ${dia >= 0 ? `<div class="box">${esc(CT.PARTES_DIA[dia].d)} Cada coisa importante que o grupo faz gasta uma parte do dia.</div>` : '<p class="small dim">Toque na parte do dia em que o grupo está.</p>'}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn sm" data-act="evento">Rolar evento de estrada</button>${n.evento ? `<span class="small" style="align-self:center"><b>${n.evento.r}:</b> ${esc(n.evento.t)}</span>` : ''}</div>
+    <details class="prontos" style="margin-top:10px"><summary>Pousos da estrada</summary><table class="weap"><tbody>${CT.POUSOS.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</tbody></table></details>`;
   const prox = n.fase + 1;
   const conduzir = `
     <h2>Conduzir</h2>
@@ -316,17 +326,18 @@ function viewNoite() {
   const regras = `<h2>Regras desta mesa</h2>
     <div class="card"><div class="ro-adj"><div><span class="flab">Começar com Marca</span><p class="fhelp" style="margin:0">Quem cria em Faísca pode escolher uma Marca já na criação.</p></div>
       <div class="sub-opts">${[[true, 'Sim'], [false, 'Não']].map(([v, l]) => `<button class="pill${marcaInicialLiberada() === v ? ' sel' : ''}" data-mesa-marca="${v}">${l}</button>`).join('')}</div></div></div>`;
-  return `${top()}<h1>A noite</h1><p class="muted" style="margin-top:6px">Só você vê esta tela. Os jogadores veem apenas a fase atual na mesa.</p>${conduzir}${grupo}${montar}${regras}`;
+  return `${top()}<h1>A noite</h1><p class="muted" style="margin-top:6px">Só você vê esta tela. Os jogadores veem apenas a fase atual na mesa.</p>${diaHtml}${conduzir}${grupo}${montar}${regras}`;
 }
 
 async function virarFase() {
   const n = S.noite, prox = n.fase + 1;
   if (prox > 4) return;
-  n.fase = prox;
+  n.fase = prox; if (prox === 0) n.dia = -1;
   const f = M.FASES[prox];
   const res = [];
   if (prox === 4) {
     aprovados().forEach((c) => { const t = trackerDe(c); t.pavor = 0; t.brasa = R.barras(c.data).brasa; });
+    n.dia = 0;
     logNoite('Aurora. As fendas fecharam; o Pavor sumiu e a Brasa voltou.');
   } else {
     for (const c of aprovados()) {
@@ -439,7 +450,16 @@ function stepOficio(p) {
       <span class="meta">${x.pericias.join(' · ')}</span><b>${x.n}</b><p>${x.d}</p>
       ${p.oficio === x.k ? `<span class="hab"><b>${x.hab[0]}.</b> ${x.hab[1]}<br><span class="dim">Leva: ${x.equip}</span></span>` : ''}</button>`).join('');
   return `<p class="intro">O que você faz por causa da noite. O ofício dá duas perícias treinadas, uma habilidade e o seu equipamento. Mais tarde, você escolhe um caminho dentro dele.</p>
-    <div class="opts">${opts}</div>${extraPicker(p)}`;
+    <div class="opts">${opts}</div>${extraPicker(p)}${posPicker(p)}`;
+}
+
+function posPicker(p) {
+  if (p.oficio !== 'pozeiro') return '';
+  const of = R.oficioDe(p);
+  return `<h2>Seus três pós</h2>
+    <p class="intro">No Almofariz você aprendeu a moer três pós. Os outros vêm com os marcos.</p>
+    <div class="opts">${R.POS.map((x) => `<button class="opt${p.pos.includes(x.k) ? ' sel' : ''}" data-po="${x.k}" aria-pressed="${p.pos.includes(x.k)}"><span class="meta">Base: ${x.ingr}</span><b>${x.n}</b><p>${x.d}</p></button>`).join('')}</div>
+    <div class="box"><b>A licença.</b> ${of.licenca}</div>`;
 }
 
 // regra da mesa: o mestre decide se dá para começar com Marca
@@ -493,6 +513,7 @@ function stepHistoria(p) {
   const o = R.origemDe(p);
   return `<p class="intro">Respostas curtas bastam. O mestre vai usar tudo isso na história.</p>
     <div><label class="flab">A noite que te mudou</label><p class="fhelp">A cicatriz, a perda ou o susto que fez você sair depois do Crepúsculo. Uma ou duas frases.</p>${area('marcaNoite', p.marcaNoite)}</div>
+    ${p.oficio === 'pozeiro' ? `<div><label class="flab">${esc(R.oficioDe(p).pergunta)}</label>${area('respostaPozeiro', p.respostaPozeiro)}</div>` : ''}
     <div><label class="flab">Seu laço</label><p class="fhelp">Alguém do grupo ou da sua comunidade que importa para você, e por quê.</p>${area('laco', p.laco)}</div>
     ${o ? `<div><label class="flab">${esc(o.pergunta)}</label>${area('respostaOrigem', p.respostaOrigem)}</div>` : ''}
     <div><label class="flab">Quem você quer proteger? E quem você não conseguiu?</label>${area('protege', p.protege)}</div>
@@ -516,7 +537,7 @@ function sheetBody(p, c = null) {
   return `
     <div class="sheet-head">
       <div class="pic${p.pronto ? ' retrato' : ''}">${of ? `<img src="${picOf(p)}" alt="">` : ''}</div>
-      <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, cam?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}</div>
+      <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, cam?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}${c && R.marcosGanhos(p) ? `<span class="chip" style="margin-top:8px;display:inline-block">${R.patamar(p).n}</span>` : ''}</div>
     </div>
     ${c ? evoBanner(c) : ''}
     <h2>Atributos</h2>
@@ -535,7 +556,13 @@ function sheetBody(p, c = null) {
     <div class="skills">${R.PERICIAS.map(([n]) => { const g = R.grauPericia(p, n); const tag = podeRolar(c) ? 'button' : 'div'; return `<${tag} class="${g ? 't' : ''}${podeRolar(c) ? ' rollable' : ''}" ${podeRolar(c) ? `data-roll-per="${esc(n)}"` : ''}><span>${n}${g > 1 ? ` <span class="dim small">${R.GRAUS[g]}</span>` : ''}</span>${g ? `<em>+${R.bonusPericia(g)}</em>` : '<span>—</span>'}</${tag}>`; }).join('')}</div>
     ${or ? `<h2>Origem</h2><div class="or-wrap"><img class="or-fig" src="img/or-${or.k}.webp" alt=""><dl class="kv"><div><dt>Costume da terra</dt><dd><b>${or.costume[0]}.</b> ${or.costume[1]}</dd></div><div><dt>Como é a gente de lá</dt><dd class="small">${or.visual}</dd></div></dl></div>` : ''}
     ${of ? `<h2>Ofício</h2><dl class="kv"><div><dt>Habilidade inicial</dt><dd><b>${of.hab[0]}.</b> ${of.hab[1]}</dd></div>
-      ${cam ? cam.habs.map(([n, custo, d]) => `<div><dt>Caminho ${esc(cam.n)}</dt><dd><b>${n}.</b>${custo ? ` <span class="dim">(${custo})</span>` : ''} ${d}</dd></div>`).join('') : `<div><dt>Caminho</dt><dd class="dim">Escolhido no terceiro marco: ${of.caminhos.map((x) => x.n).join(' ou ')}.</dd></div>`}</dl>` : ''}
+      ${cam ? cam.habs.map(([n, custo, d]) => `<div><dt>Caminho ${esc(cam.n)}</dt><dd><b>${n}.</b>${custo ? ` <span class="dim">(${custo})</span>` : ''} ${d}</dd></div>`).join('') : `<div><dt>Caminho</dt><dd class="dim">Escolhido no terceiro marco: ${of.caminhos.map((x) => x.n).join(' ou ')}.</dd></div>`}
+      ${R.caminhoAlto(p).map((h) => `<div><dt>${h.marco === 6 ? 'Veterano' : 'Mestria'}</dt><dd><b>${h.n}.</b> ${h.d}</dd></div>`).join('')}
+      ${R.oficiosAprendidos(p).map((o) => `<div><dt>De outro ofício (${o.n})</dt><dd><b>${o.hab[0]}.</b> ${o.hab[1]}</dd></div>`).join('')}
+      ${of.k === 'pozeiro' ? `<div><dt>A licença</dt><dd class="small">${of.licenca}</dd></div>` : ''}</dl>` : ''}
+    ${R.posDe(p).length ? `<h2>Pós</h2><dl class="kv">${R.posDe(p).map((k) => { const x = R.POS.find((y) => y.k === k); return `<div><dt>${x.n} · base ${x.ingr}</dt><dd>${x.d}</dd></div>`; }).join('')}</dl>
+      <p class="small dim" style="margin-top:6px">Na mão, na ponta, soprado, na linha ou na chama. A força é a rolagem de Ofícios do preparo; o Assombro resiste com a mão de ataque dele.</p>` : ''}
+    ${R.geraisDe(p).length ? `<h2>Habilidades gerais</h2><dl class="kv">${R.geraisDe(p).map((g) => `<div><dt>${g.n}</dt><dd>${g.d}</dd></div>`).join('')}</dl>` : ''}
     <h2>Traços e Dom</h2>
     <dl class="kv">
       <div><dt>Dom</dt><dd><b>${dom.n}</b> (Brasa ${dom.brasa}). ${dom.d}</dd></div>
@@ -543,8 +570,12 @@ function sheetBody(p, c = null) {
       <div><dt>Raízes</dt><dd>${R.tracosConhecidos(p).join(', ')}</dd></div>
       <div><dt>Modos</dt><dd>No chão, no ar, em volta, num objeto, na pele</dd></div>
       <div><dt>Essências</dt><dd>${ess.length ? ess.map((e) => `${e} (${R.ESSENCIAS[e]})`).join(', ') : 'Nenhuma'}</dd></div>
+      ${R.sotaques(p).filter((x) => R.TRACO_SOTAQUE[x]).map((x) => `<div><dt>Traço do sotaque ${esc(x)}</dt><dd><b>${R.TRACO_SOTAQUE[x][0]}.</b> ${R.TRACO_SOTAQUE[x][1]}</dd></div>`).join('')}
       ${ms.map((m) => `<div><dt>Marca</dt><dd><img class="marca-ic" src="img/m-${m.k}.webp" alt=""><b>${m.n}</b> (${m.onde.toLowerCase()}${m.sangue ? ', com sangue de Assombro' : ''}). ${m.d} Custa ${Math.max(1, m.custo - (m.sangue ? 1 : 0))} Brasa.</dd></div>`).join('')}
     </dl>
+    <details class="prontos"><summary>Traços prontos que você sabe (${R.tracosProntos(p).length})</summary>
+      <table class="weap"><tbody>${R.tracosProntos(p).map(([n, r, m, d]) => `<tr><td>${n}<div class="small dim">${r} · ${m}</div></td><td>${d}</td></tr>`).join('')}</tbody></table>
+      <p class="small dim">Às pressas: numa ação, com metade da força, some na próxima virada de fase.</p></details>
     <h2>Equipamento</h2>
     ${armas.length ? `<table class="weap"><thead><tr><th>Arma</th><th>Dano</th><th>Alcance</th></tr></thead><tbody>${armas.map((a) => `<tr><td>${esc(a)}<div class="small dim">${esc(R.ARMAS[a]?.[2] || '')}</div></td><td>${podeRolar(c) && R.ARMAS[a]?.[0] ? `<button class="dmg" data-roll-dmg="${R.ARMAS[a][0]}" data-arma="${esc(a)}">${R.ARMAS[a][0]}</button>` : R.ARMAS[a]?.[0] || ''}</td><td>${R.ARMAS[a]?.[1] || ''}</td></tr>`).join('')}</tbody></table>` : ''}
     <dl class="kv" style="margin-top:12px">
@@ -559,7 +590,8 @@ function sheetBody(p, c = null) {
       ${p.marcaNoite ? `<div><dt>A noite que me mudou</dt><dd class="quote">${esc(p.marcaNoite)}</dd></div>` : ''}
       ${p.laco ? `<div><dt>Laço</dt><dd>${esc(p.laco)}</dd></div>` : ''}
       ${or && p.respostaOrigem ? `<div><dt>${esc(or.pergunta)}</dt><dd>${esc(p.respostaOrigem)}</dd></div>` : ''}
-      ${p.protege ? `<div><dt>Quem protejo</dt><dd>${esc(p.protege)}</dd></div>` : ''}
+      ${p.respostaPozeiro ? `<div><dt>Por que o Almofariz me deixou sair</dt><dd>${esc(p.respostaPozeiro)}</dd></div>` : ''}
+    ${p.protege ? `<div><dt>Quem protejo</dt><dd>${esc(p.protege)}</dd></div>` : ''}
       ${p.medo ? `<div><dt>Meu maior medo</dt><dd>${esc(p.medo)}</dd></div>` : ''}
     </dl>
     ${c ? evoHistorico(p) : ''}`;
@@ -720,7 +752,7 @@ function viewAdmin() {
 
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
+  const t = e.target.closest('[data-dia],[data-po],[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
   const c = wiz ? charById(wiz.dataset.char) : null;
@@ -735,6 +767,12 @@ document.addEventListener('click', async (e) => {
     if (k === 'dom' && v === 'adormecido') { c.data.marca = ''; c.data.marcaSangue = false; }
     if (k === 'dom') fitAttrs(c.data);
     if (k === 'marca' && !v) c.data.marcaSangue = false;
+    saveSoon(c); rerender(); return;
+  }
+  if (t.dataset.po && c) {
+    const k = t.dataset.po, arr = c.data.pos;
+    if (arr.includes(k)) c.data.pos = arr.filter((x) => x !== k);
+    else { arr.push(k); if (arr.length > 3) arr.shift(); }
     saveSoon(c); rerender(); return;
   }
   if (t.dataset.ess && c) {
@@ -772,6 +810,7 @@ document.addEventListener('click', async (e) => {
       sb.from('breu_state').upsert({ key: 'mesa', value: S.mesa, updated_at: new Date().toISOString() }).then(({ error }) => toast(error ? 'Não consegui salvar.' : 'Regra da mesa salva.'));
       rerender(); return;
     }
+    if (t.dataset.dia != null) { n.dia = +t.dataset.dia; logNoite(`Dia: ${CT.PARTES_DIA[n.dia].n}.`); salvarNoite(); rerender(); return; }
     if (t.dataset.nt === 'tipo') { n.tipo = t.dataset.v; salvarNoite(); rerender(); return; }
     if (t.dataset.ntPjs) { n.pjs = Math.max(1, Math.min(8, n.pjs + +t.dataset.ntPjs)); salvarNoite(); rerender(); return; }
     if (t.dataset.ntFam) { const f = t.dataset.ntFam; n.familias = n.familias.includes(f) ? n.familias.filter((x) => x !== f) : [...n.familias, f].slice(-2); salvarNoite(); rerender(); return; }
@@ -799,6 +838,7 @@ document.addEventListener('click', async (e) => {
   const act = t.dataset.act;
   if (S.noite && route().name === 'noite') {
     const n = S.noite;
+    if (act === 'evento') { const r = M.d(20); n.evento = { r, t: CT.EVENTOS_ESTRADA[r - 1] }; logNoite(`Estrada (${r}): ${n.evento.t}`); salvarNoite(); rerender(); return; }
     if (act === 'sortear') { n.fases = M.sortear(M.ameacaTotal(n.tipo, n.pjs), n.familias); salvarNoite(); rerender(); return; }
     if (act === 'pressagio') { const r = M.d(20), l = M.tabela(M.PRESSAGIOS, r); n.pressagio = { r, t: l[2], s: l[3] }; salvarNoite(); rerender(); return; }
     if (act === 'complicacao') { n.paisagem = $('#nt-pais').value; n.complicacao = M.pick(M.COMPLICACOES[n.paisagem]); salvarNoite(); rerender(); return; }
