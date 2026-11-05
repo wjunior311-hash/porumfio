@@ -141,7 +141,7 @@ export const TRACOS_PRONTOS = [
 
 export const TRACO_SOTAQUE = {
   Serra: ['Pedra de esquina', 'Um traço entalhado que dura um mês, feito na metade do tempo normal.'],
-  Litoral: ['Espiral de maré', 'Um círculo que a água não apaga e que se refaz sozinho uma vez por noite.'],
+  'Maré': ['Espiral de maré', 'Um círculo que a água não apaga e que se refaz sozinho uma vez por noite.'],
   'Terra seca': ['Ponto corrido', 'Uma linha pontilhada riscada correndo, numa ação, com metade da força.'],
   Mata: ['Trança de cerca', 'Traços amarrados em cordas e cercas, que podem ser desmontados e levados para outro lugar.'],
   Cidades: ['Selo de muralha', 'Um traço carimbado em placa de metal, igual em toda parte: quem sabe ler o reconhece e confia nele.'],

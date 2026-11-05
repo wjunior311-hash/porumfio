@@ -444,7 +444,7 @@ function stepConceito(p) {
 function stepOrigem(p) {
   const o = R.origemDe(p);
   const opts = R.ORIGENS.map((x) => `<button class="opt of${p.origem === x.k ? ' sel' : ''}" data-set="origem" data-v="${x.k}" aria-pressed="${p.origem === x.k}">
-      <span class="pic or"><img src="img/or-${x.k}.webp" alt=""></span>
+      <span class="pic or"><img src="img/or-${x.k}.webp" alt="" onerror="this.remove()"></span>
       <span class="meta">Perícia: ${x.pericia} · Sotaque: ${x.sotaque || 'um à escolha'}</span><b>${x.n}</b><p>${x.d}</p>
       <span class="hab"><b>${x.costume[0]}.</b> ${x.costume[1]}</span>
       ${p.origem === x.k ? `<span class="hab dim"><b>Como é a gente de lá:</b> ${x.visual}</span>` : ''}</button>`).join('');
@@ -585,7 +585,7 @@ function sheetBody(p, c = null) {
     ${b.sombra ? `<p class="small" style="margin-top:8px">Sombra: <b style="color:var(--brasa2)">${b.sombra}</b> de 7.</p>` : ''}
     <h2>Perícias</h2>
     <div class="skills">${R.PERICIAS.map(([n]) => { const g = R.grauPericia(p, n); const tag = podeRolar(c) ? 'button' : 'div'; return `<${tag} class="${g ? 't' : ''}${podeRolar(c) ? ' rollable' : ''}" ${podeRolar(c) ? `data-roll-per="${esc(n)}"` : ''}><span>${n}${g > 1 ? ` <span class="dim small">${R.GRAUS[g]}</span>` : ''}</span>${g ? `<em>+${R.bonusPericia(g)}</em>` : '<span class="dim">+0</span>'}</${tag}>`; }).join('')}</div>
-    ${or ? `<h2>Origem</h2><div class="or-wrap"><img class="or-fig" src="img/or-${or.k}.webp" alt=""><dl class="kv"><div><dt>Costume da terra</dt><dd><b>${or.costume[0]}.</b> ${or.costume[1]}</dd></div><div><dt>Como é a gente de lá</dt><dd class="small">${or.visual}</dd></div></dl></div>` : ''}
+    ${or ? `<h2>Origem</h2><div class="or-wrap"><img class="or-fig" src="img/or-${or.k}.webp" alt="" onerror="this.remove()"><dl class="kv"><div><dt>Costume da terra</dt><dd><b>${or.costume[0]}.</b> ${or.costume[1]}</dd></div><div><dt>Como é a gente de lá</dt><dd class="small">${or.visual}</dd></div></dl></div>` : ''}
     ${of ? `<h2>Ofício</h2><dl class="kv"><div><dt>Habilidade inicial</dt><dd><b>${of.hab[0]}.</b> ${of.hab[1]}</dd></div>
       ${cam ? cam.habs.map(([n, custo, d]) => `<div><dt>Caminho ${esc(cam.n)}</dt><dd><b>${n}.</b>${custo ? ` <span class="dim">(${custo})</span>` : ''} ${d}</dd></div>`).join('') : `<div><dt>Caminho</dt><dd class="dim">Escolhido no terceiro marco: ${of.caminhos.map((x) => x.n).join(' ou ')}.</dd></div>`}
       ${R.caminhoAlto(p).map((h) => `<div><dt>${h.marco === 6 ? 'Veterano' : 'Mestria'}</dt><dd><b>${h.n}.</b> ${h.d}</dd></div>`).join('')}
@@ -876,7 +876,7 @@ document.addEventListener('click', async (e) => {
     if (act === 'evento') { const r = M.d(20); n.evento = { r, t: CT.EVENTOS_ESTRADA[r - 1] }; logNoite(`Estrada (${r}): ${n.evento.t}`); salvarNoite(); rerender(); return; }
     if (act === 'sortear') { n.fases = M.sortear(M.ameacaTotal(n.tipo, n.pjs), n.familias); salvarNoite(); rerender(); return; }
     if (act === 'pressagio') { const r = M.d(20), l = M.tabela(M.PRESSAGIOS, r); n.pressagio = { r, t: l[2], s: l[3] }; salvarNoite(); rerender(); return; }
-    if (act === 'complicacao') { n.paisagem = $('#nt-pais').value; n.complicacao = M.pick(M.COMPLICACOES[n.paisagem]); salvarNoite(); rerender(); return; }
+    if (act === 'complicacao') { n.paisagem = $('#nt-pais').value; n.complicacao = M.pick(M.COMPLICACOES[n.paisagem] || Object.values(M.COMPLICACOES)[0]); salvarNoite(); rerender(); return; }
     if (act === 'virarFase') { t.disabled = true; await virarFase(); return; }
     if (act === 'novaNoite') { if (!confirm('Começar uma nova noite? O relógio, o grupo e o círculo voltam ao início.')) return; S.noite = novaNoite(); salvarNoite(); rerender(); return; }
     if (act === 'investida') { n.circulo = Math.max(0, n.circulo - 3); logNoite(`Investida no círculo: força ${n.circulo}.`); salvarNoite(); rerender(); return; }

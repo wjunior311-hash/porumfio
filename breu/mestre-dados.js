@@ -281,7 +281,8 @@ export const PRESSAGIOS = [
 ];
 export const COMPLICACOES = {
   'A serra': ['Neblina que apaga a lanterna', 'Deslizamento que bloqueia o caminho', 'Um traço entalhado antigo, de sotaque desconhecido', 'Frio que custa 1 de Sangue por fase a quem não tem abrigo'],
-  'O litoral e o mangue': ['A maré sobe e apaga parte do círculo', 'Um barco à deriva com alguém dentro', 'Lama até os joelhos (−1 dado em movimento)', 'Um Lodo que estava enterrado'],
+  'O mar': ['Uma ressaca engole a praia e apaga parte do círculo', 'Um barco à deriva com alguém dentro', 'O vento do mar apaga as lanternas', 'Algo foi trazido pela maré e está na areia'],
+  'O mangue': ['A maré sobe e apaga parte do círculo', 'Lama até os joelhos (−1 dado em movimento)', 'As raízes escondem quem chega', 'Um Lodo que estava enterrado'],
   'A terra seca': ['O poço da vila secou', 'Tempestade de poeira', 'O carvão acabou', 'Um viajante pede abrigo, e ninguém sabe quem é'],
   'A mata': ['O rio subiu e cortou a trilha', 'Uma armadilha de caçador esquecida', 'As árvores cobrem o céu, e o sol chega mais tarde', 'Um Raiz confundido com um tronco'],
   'As cidades de vigília': ['Toque de recolher', 'A guarda exige documento', 'Alguém pagou para não ser convocado e o grupo foi chamado no lugar', 'Um traço oficial falsificado'],
