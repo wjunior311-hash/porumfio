@@ -146,7 +146,7 @@ export const MARCOS_EXEMPLOS = [
 
 export const novoPersonagem = () => ({
   nome: '', conceito: '', aparencia: '',
-  origem: '', sotaqueEstrada: '', periciaExtra: '',
+  origem: '', sotaqueEstrada: '', periciaExtra: '', periciaLivre: '',
   oficio: '',
   dom: 'adormecido', marca: '', marcaSangue: false, essencias: [],
   atrib: { vigor: 1, agilidade: 1, juizo: 1, presenca: 1, firmeza: 1 },
@@ -178,6 +178,8 @@ export function periciaOrigemRepete(p) {
 }
 
 // perícias da criação (treinadas)
+// perícias que já vêm da origem e do ofício (sem a livre)
+export function periciasFixas(p) { return periciasIniciais({ ...p, periciaLivre: '' }); }
 export function periciasIniciais(p) {
   const o = origemDe(p), f = oficioDe(p), out = [];
   if (f) out.push(...f.pericias);
@@ -185,6 +187,7 @@ export function periciasIniciais(p) {
     if (periciaOrigemRepete(p)) { if (p.periciaExtra) out.push(p.periciaExtra); }
     else out.push(o.pericia);
   }
+  if (p.periciaLivre && !out.includes(p.periciaLivre)) out.push(p.periciaLivre);
   return [...new Set(out)];
 }
 // grau de cada perícia: 0 sem treino, 1 treinado (+3), 2 experiente (+6), 3 mestre (+9)
@@ -322,6 +325,7 @@ export function pendencias(p) {
     if (periciaOrigemRepete(p) && !p.periciaExtra) f.push(['oficio', 'A perícia da origem repete a do ofício: escolha outra.']);
   }
   if (!p.oficio) f.push(['oficio', 'Escolha um ofício.']);
+  else if (!p.pronto && !p.periciaLivre) f.push(['oficio', 'Escolha a sua perícia livre.']);
   if (p.oficio === 'pozeiro' && (p.pos || []).length < 3) f.push(['oficio', 'Escolha os três pós que você conhece.']);
   const sobra = pontosTotais(p) - pontosUsados(p);
   if (sobra > 0) f.push(['atributos', `Ainda sobram ${sobra} ponto${sobra > 1 ? 's' : ''} de atributo.`]);

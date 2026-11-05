@@ -472,7 +472,15 @@ function stepOficio(p) {
       <span class="meta">${x.pericias.join(' · ')}</span><b>${x.n}</b><p>${x.d}</p>
       ${p.oficio === x.k ? `<span class="hab"><b>${x.hab[0]}.</b> ${x.hab[1]}<br><span class="dim">Leva: ${x.equip}</span></span>` : ''}</button>`).join('');
   return `<p class="intro">O que você faz por causa da noite. O ofício dá duas perícias treinadas, uma habilidade e o seu equipamento. Mais tarde, você escolhe um caminho dentro dele.</p>
-    <div class="opts">${opts}</div>${extraPicker(p)}${posPicker(p)}`;
+    <div class="opts">${opts}</div>${extraPicker(p)}${livrePicker(p)}${posPicker(p)}`;
+}
+
+function livrePicker(p, attr = 'data-set="periciaLivre"') {
+  if (!p.oficio || !p.origem) return '';
+  const ja = R.periciasFixas(p);
+  return `<h2>Sua perícia livre</h2>
+    <p class="intro">Além das três que vêm da origem e do ofício, escolha mais uma, qualquer uma. É o que ninguém espera de alguém como você.</p>
+    <div class="sub-opts">${R.PERICIAS.map(([n]) => n).filter((n) => !ja.includes(n)).map((n) => `<button class="pill${p.periciaLivre === n ? ' sel' : ''}" ${attr} data-v="${esc(n)}">${esc(n)}</button>`).join('')}</div>`;
 }
 
 function posPicker(p) {
@@ -561,6 +569,7 @@ function sheetBody(p, c = null) {
       <div class="pic${p.pronto || p.retrato ? ' retrato' : ''}">${of ? `<img src="${c ? picChar(c) : picOf(p)}" alt="">` : ''}</div>
       <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, cam?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}${c && R.marcosGanhos(p) ? `<span class="chip" style="margin-top:8px;display:inline-block">${R.patamar(p).n}</span>` : ''}</div>
     </div>
+    ${c && c.status === 'aprovado' && !p.pronto && !p.periciaLivre && canEdit(c) ? `<div class="evo livre"><div><span class="lbl">Regra nova</span><p style="margin:4px 0 0">Agora todo personagem começa com uma <b>perícia livre</b>, além das três da origem e do ofício.</p></div></div>${livrePicker(p, 'data-livre="1"')}` : ''}
     ${c ? evoBanner(c) : ''}
     <h2>Atributos</h2>
     <div class="stat-row">${R.ATRIBUTOS.map((a) => podeRolar(c) ? `<button class="stat rollable" data-roll-attr="${a.k}" aria-label="Rolar ${a.n}"><strong>${at[a.k]}</strong><span>${a.n}</span></button>` : `<div class="stat"><strong>${at[a.k]}</strong><span>${a.n}</span></div>`).join('')}</div>
@@ -575,7 +584,7 @@ function sheetBody(p, c = null) {
     </div>
     ${b.sombra ? `<p class="small" style="margin-top:8px">Sombra: <b style="color:var(--brasa2)">${b.sombra}</b> de 7.</p>` : ''}
     <h2>Perícias</h2>
-    <div class="skills">${R.PERICIAS.map(([n]) => { const g = R.grauPericia(p, n); const tag = podeRolar(c) ? 'button' : 'div'; return `<${tag} class="${g ? 't' : ''}${podeRolar(c) ? ' rollable' : ''}" ${podeRolar(c) ? `data-roll-per="${esc(n)}"` : ''}><span>${n}${g > 1 ? ` <span class="dim small">${R.GRAUS[g]}</span>` : ''}</span>${g ? `<em>+${R.bonusPericia(g)}</em>` : '<span>—</span>'}</${tag}>`; }).join('')}</div>
+    <div class="skills">${R.PERICIAS.map(([n]) => { const g = R.grauPericia(p, n); const tag = podeRolar(c) ? 'button' : 'div'; return `<${tag} class="${g ? 't' : ''}${podeRolar(c) ? ' rollable' : ''}" ${podeRolar(c) ? `data-roll-per="${esc(n)}"` : ''}><span>${n}${g > 1 ? ` <span class="dim small">${R.GRAUS[g]}</span>` : ''}</span>${g ? `<em>+${R.bonusPericia(g)}</em>` : '<span class="dim">+0</span>'}</${tag}>`; }).join('')}</div>
     ${or ? `<h2>Origem</h2><div class="or-wrap"><img class="or-fig" src="img/or-${or.k}.webp" alt=""><dl class="kv"><div><dt>Costume da terra</dt><dd><b>${or.costume[0]}.</b> ${or.costume[1]}</dd></div><div><dt>Como é a gente de lá</dt><dd class="small">${or.visual}</dd></div></dl></div>` : ''}
     ${of ? `<h2>Ofício</h2><dl class="kv"><div><dt>Habilidade inicial</dt><dd><b>${of.hab[0]}.</b> ${of.hab[1]}</dd></div>
       ${cam ? cam.habs.map(([n, custo, d]) => `<div><dt>Caminho ${esc(cam.n)}</dt><dd><b>${n}.</b>${custo ? ` <span class="dim">(${custo})</span>` : ''} ${d}</dd></div>`).join('') : `<div><dt>Caminho</dt><dd class="dim">Escolhido no terceiro marco: ${of.caminhos.map((x) => x.n).join(' ou ')}.</dd></div>`}
@@ -775,7 +784,7 @@ function viewAdmin() {
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
   if (route().name === 'mapa' && e.target.closest('[data-mp]')) { await MAPA.click(e); return; }
-  const t = e.target.closest('[data-dia],[data-po],[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-ret],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
+  const t = e.target.closest('[data-dia],[data-po],[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-ret],[data-livre],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
   const c = wiz ? charById(wiz.dataset.char) : null;
@@ -786,6 +795,7 @@ document.addEventListener('click', async (e) => {
     if (k === 'marcaSangue') v = v === '1';
     c.data[k] = v;
     if (k === 'origem') { c.data.periciaExtra = ''; if (v !== 'estrada') c.data.sotaqueEstrada = ''; }
+    if (['origem', 'oficio', 'periciaExtra'].includes(k) && R.periciasFixas(c.data).includes(c.data.periciaLivre)) c.data.periciaLivre = '';
     if (k === 'oficio') { c.data.periciaExtra = ''; c.data.essencias = c.data.essencias.slice(0, R.essenciasPermitidas(c.data)); }
     if (k === 'dom' && v === 'adormecido') { c.data.marca = ''; c.data.marcaSangue = false; }
     if (k === 'dom') fitAttrs(c.data);
@@ -826,6 +836,7 @@ document.addEventListener('click', async (e) => {
   if (ui.roller && t.dataset.roAttr) { ui.roller.attr = t.dataset.roAttr; ui.roller.res = null; rerender(); return; }
   if (ui.roller && t.dataset.roAdj) { ui.roller.ajuste = Math.max(-5, Math.min(4, ui.roller.ajuste + +t.dataset.roAdj)); ui.roller.res = null; rerender(); return; }
   if (ui.roller && t.dataset.roDif) { const n = +t.dataset.roDif; ui.roller.dif = ui.roller.dif === n ? 0 : n; ui.roller.res = null; rerender(); return; }
+  if (t.dataset.livre) { const c = charById(route().arg); if (!c || c.owner !== S.session?.user.id && !isGM()) return; c.data.periciaLivre = t.dataset.v; await saveNow(c); rerender(); toast('Perícia livre escolhida.'); return; }
   if (route().name === 'noite' && S.noite) {
     const n = S.noite;
     if (t.dataset.mesaMarca) {
