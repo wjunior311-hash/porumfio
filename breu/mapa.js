@@ -5,7 +5,7 @@ import * as M from './mestre-dados.js';
 const RAIOS = [{ n: 'Pequeno', r: 1 }, { n: 'Médio', r: 3 }, { n: 'Grande', r: 6 }];
 
 export function criarMapa(ctx) {
-  const { sb, S, isGM, esc, toast, picOf, charById } = ctx;
+  const { sb, S, isGM, esc, toast, picOf, picChar, charById } = ctx;
   const uid = () => S.session?.user.id;
   const MP = { cenas: [], ativa: null, ver: null, tokens: [], tool: 'mover', brush: 3, sel: null, zoom: window.innerWidth < 700 ? 1.6 : 1, loaded: false, busy: false, live: {} };
   let bc = null; // canal de broadcast (arrasto ao vivo)
@@ -220,7 +220,7 @@ export function criarMapa(ctx) {
     }).join('');
     const pecas = vis.filter((t) => t.kind !== 'circulo').map((t) => {
       const ch = t.character_id ? charById(t.character_id) : null;
-      const src = t.img || (ch ? picOf(ch.data) : '');
+      const src = t.img || (ch ? picChar(ch) : '');
       const d = t.data || {};
       const ferido = d.max && d.sangue != null && d.sangue <= d.max / 2;
       return `<div class="mp-tok k-${t.kind} ${MP.sel === t.id ? 'sel' : ''} ${t.visivel ? '' : 'oculto'} ${t.owner === uid() ? 'meu' : ''} ${podeMover(t) ? 'mov' : ''} ${ferido ? 'ferido' : ''}" data-tok="${t.id}" style="width:${sz}px;height:${sz}px;left:${t.x * W}px;top:${t.y * H}px">
@@ -447,7 +447,7 @@ export function criarMapa(ctx) {
   }
 
   return {
-    view, mount, onCena, onToken, onAtiva, onChange, onSubmit, load,
+    view, mount, redraw: () => draw(), onCena, onToken, onAtiva, onChange, onSubmit, load,
     unmount() { el = null; },
     async click(e) {
       const t = e.target.closest('[data-mp]'); if (!t) return false;

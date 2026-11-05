@@ -2,7 +2,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
-import { criarMapa } from './mapa.js?v=11';
+import { criarMapa } from './mapa.js?v=12';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -30,7 +30,7 @@ const canEdit = (c) => c && (c.owner === S.session?.user.id || isGM());
 // a criação fica aberta até o mestre aprovar; depois, a ficha muda só pelos marcos
 const canEditCreation = (c) => c && (isGM() || (c.owner === S.session?.user.id && c.status !== 'aprovado'));
 
-const MAPA = criarMapa({ sb, S, isGM: () => isGM(), esc, toast, picOf: (p) => picOf(p), charById: (id) => charById(id), rerender: () => rerender() });
+const MAPA = criarMapa({ sb, S, isGM: () => isGM(), esc, toast, picOf: (p) => picOf(p), picChar: (c) => picChar(c), charById: (id) => charById(id), rerender: () => rerender() });
 
 // ---------- rotas ----------
 function route() {
@@ -90,6 +90,7 @@ function subscribe() {
       if (p.new?.key !== 'noite') return;
       if (noiteSalvando) return;
       S.noite = p.new.value; if (['', 'noite'].includes(route().name)) rerender();
+      else if (route().name === 'ficha') { const c = charById(route().arg), im = document.querySelector('.sheet-head .pic img'); if (c && im) im.src = picChar(c); } else if (route().name === 'mapa') MAPA.redraw();
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'breu_rolls' }, (p) => {
       if (S.rolls.some((r) => r.id === p.new.id)) return;
@@ -224,7 +225,7 @@ function charCard(c) {
   const st = c.status || 'rascunho';
   const href = c.status === 'rascunho' && canEdit(c) ? `#/criar/${c.id}/0` : `#/ficha/${c.id}`;
   return `<a class="ccard" href="${href}">
-    <div class="pic${of ? '' : ' vazio'}">${of ? `<img src="${picOf(p)}" alt="">` : '?'}</div>
+    <div class="pic${of ? '' : ' vazio'}">${of ? `<img src="${picChar(c)}" alt="">` : '?'}</div>
     <div><b>${esc(p.nome || 'Sem nome')}</b><span class="sub">${esc(sub)}</span><div class="small dim">${esc(memberName(c.owner))}${R.marcosGanhos(p) ? ` · ${R.marcosGanhos(p)} marco${R.marcosGanhos(p) > 1 ? 's' : ''}` : ''}</div>
     ${c.owner === S.session.user.id && (R.melhoriasPendentes(p) || R.precisaCaminho(p)) ? '<span class="badge">Pronto para evoluir</span>' : ''}</div>
     <span class="chip ${st}">${STATUS[st]}</span></a>`;
@@ -323,8 +324,9 @@ function viewNoite() {
     ${aprovados().length ? `<div class="grupo-m">${aprovados().map((c) => { const t = trackerDe(c), b = R.barras(c.data);
       const est = [t.sangue <= 0 ? 'caído' : t.sangue <= b.sangue / 2 ? 'ferido' : '', t.prumo <= 0 ? 'pânico' : ''].filter(Boolean);
       const cnt = (k, max, lbl) => `<div class="cnt"><span>${lbl}</span><div><button data-trk="${c.id}:${k}:-1" aria-label="Menos ${lbl}">−</button><b>${t[k]}${max != null ? `<small>/${max}</small>` : ''}</b><button data-trk="${c.id}:${k}:1" aria-label="Mais ${lbl}">+</button></div></div>`;
-      return `<div class="pj-m${est.length ? ' alerta' : ''}"><div class="pj-head"><img src="${picOf(c.data)}" alt=""><div><b>${esc(c.data.nome)}</b><span class="small dim">Defesa ${b.defesa} · Firmeza ${R.atrib(c.data).firmeza}${t.pavor ? ` · mão −${t.pavor}` : ''}</span></div>${est.map((e) => `<span class="chip pronto">${e}</span>`).join('')}</div>
+      return `<div class="pj-m${est.length ? ' alerta' : ''}"><div class="pj-head"><img src="${picChar(c)}" alt=""><div><b>${esc(c.data.nome)}</b><span class="small dim">Defesa ${b.defesa} · Firmeza ${R.atrib(c.data).firmeza}${t.pavor ? ` · mão −${t.pavor}` : ''}</span></div>${est.map((e) => `<span class="chip pronto">${e}</span>`).join('')}</div>
         <div class="cnts">${cnt('sangue', b.sangue, 'Sangue')}${cnt('prumo', b.prumo, 'Prumo')}${cnt('pavor', null, 'Pavor')}${cnt('brasa', b.brasa, 'Brasa')}</div>
+        ${c.data.retratos ? `<div class="ret-m"><span class="flab">Retrato</span><div class="sub-opts">${ESTADOS.map(([k, l]) => `<button class="pill${(S.noite.retrato?.[c.id] || 'auto') === k ? ' sel' : ''}" data-ret="${c.id}:${k}">${l}${k === 'auto' ? ` <small>(${ESTADOS.find((e) => e[0] === estadoDe(c, true))?.[1] || ''})</small>` : ''}</button>`).join('')}</div></div>` : ''}
         ${t.prumo <= 0 ? `<button class="btn sm" data-panico="${c.id}">Rolar pânico</button>` : ''}</div>`; }).join('')}</div>` : '<p class="muted">Nenhuma ficha aprovada ainda.</p>'}
     <h2>O círculo</h2>
     <div class="card circ-m">
@@ -417,6 +419,16 @@ function resumo(p) {
   return `<div class="resumo"><span>${it.map(esc).join(' · ')}</span>${of ? `<span class="dim">Sangue ${b.sangue} · Prumo ${b.prumo} · Defesa ${b.defesa}</span>` : ''}</div>`;
 }
 
+// estados do retrato: o mestre força um, ou ele segue o Sangue e o Prumo marcados no painel
+const ESTADOS = [['auto', 'Automático'], ['inteiro', 'Inteiro'], ['ferido', 'Ferido'], ['panico', 'Pânico'], ['caido', 'Caído']];
+function estadoDe(c, auto = false) {
+  const forc = S.noite?.retrato?.[c.id];
+  if (!auto && forc && forc !== 'auto') return forc;
+  const t = S.noite?.grupo?.[c.id]; if (!t) return 'inteiro';
+  const b = R.barras(c.data);
+  return t.sangue <= 0 ? 'caido' : t.prumo <= 0 ? 'panico' : t.sangue <= b.sangue / 2 ? 'ferido' : 'inteiro';
+}
+const picChar = (c) => { const r = c?.data?.retratos, e = c ? estadoDe(c) : 'inteiro'; return (r && e !== 'inteiro' && r[e]) || picOf(c.data); };
 const picOf = (p) => (p.retrato ? p.retrato : p.pronto ? `img/pr-${p.pronto}.webp` : R.oficioDe(p) ? `img/of-${R.oficioDe(p).k}.webp` : '');
 
 const inp = (k, v, ph = '', max = 80) => `<input class="field" data-k="${k}" value="${esc(v)}" placeholder="${esc(ph)}" maxlength="${max}">`;
@@ -546,7 +558,7 @@ function sheetBody(p, c = null) {
   const armas = of ? of.armas : [];
   return `
     <div class="sheet-head">
-      <div class="pic${p.pronto || p.retrato ? ' retrato' : ''}">${of ? `<img src="${picOf(p)}" alt="">` : ''}</div>
+      <div class="pic${p.pronto || p.retrato ? ' retrato' : ''}">${of ? `<img src="${c ? picChar(c) : picOf(p)}" alt="">` : ''}</div>
       <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, cam?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}${c && R.marcosGanhos(p) ? `<span class="chip" style="margin-top:8px;display:inline-block">${R.patamar(p).n}</span>` : ''}</div>
     </div>
     ${c ? evoBanner(c) : ''}
@@ -763,7 +775,7 @@ function viewAdmin() {
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
   if (route().name === 'mapa' && e.target.closest('[data-mp]')) { await MAPA.click(e); return; }
-  const t = e.target.closest('[data-dia],[data-po],[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
+  const t = e.target.closest('[data-dia],[data-po],[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-ret],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
   const c = wiz ? charById(wiz.dataset.char) : null;
@@ -830,6 +842,7 @@ document.addEventListener('click', async (e) => {
     if (t.dataset.trk) { const [id, k, dlt] = t.dataset.trk.split(':'); const c = charById(id), tr = trackerDe(c), b = R.barras(c.data);
       const max = { sangue: b.sangue, prumo: b.prumo, brasa: b.brasa, pavor: 9 }[k]; tr[k] = Math.max(0, Math.min(max, tr[k] + +dlt));
       salvarNoite(); rerender(); return; }
+    if (t.dataset.ret) { const [id, k] = t.dataset.ret.split(':'); n.retrato = { ...(n.retrato || {}), [id]: k }; salvarNoite(); rerender(); return; }
     if (t.dataset.panico) { const c = charById(t.dataset.panico), r = M.d(20), l = M.tabela(M.PANICO, r);
       logNoite(`${c.data.nome} entrou em pânico (${r}): ${l[2]}`); toast(`${c.data.nome}: ${l[2]}`); salvarNoite(); rerender(); return; }
   }

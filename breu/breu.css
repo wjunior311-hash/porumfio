@@ -345,3 +345,5 @@ details.prontos summary { cursor: pointer; font-family: var(--label); letter-spa
 .mp-nova h3 { margin-bottom: 10px; }
 .mp-tok, .mp-circ { touch-action: none; }
 .mp-stage.pintando { touch-action: none; cursor: crosshair; }
+.ret-m { display: grid; gap: 4px; margin-top: 6px; }
+.ret-m .pill small { opacity: .7; font-size: .85em; }
