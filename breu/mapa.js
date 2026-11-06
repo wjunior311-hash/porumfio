@@ -1,6 +1,10 @@
 // Mapa compartilhado da mesa: cena, peças, escuro, círculos e movimento limitado por rodada.
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
+import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=14';
+
+const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
+const VENTOS = [[0.15, 'Vento calmo'], [0.45, 'Vento médio'], [0.85, 'Vento forte']];
 
 const RAIOS = [{ n: 'Pequeno', r: 1 }, { n: 'Médio', r: 3 }, { n: 'Grande', r: 6 }];
 
@@ -9,12 +13,16 @@ export function criarMapa(ctx) {
   const uid = () => S.session?.user.id;
   const MP = { cenas: [], ativa: null, ver: null, tokens: [], tool: 'mover', brush: 3, sel: null, zoom: window.innerWidth < 700 ? 1.6 : 1, loaded: false, busy: false, live: {} };
   let bc = null; // canal de broadcast (arrasto ao vivo)
+  let viva = null; // cenário vivo desenhado em código
+  const vivaId = (c) => (c?.img?.startsWith('viva:') ? c.img.slice(5) : null);
+  const horaCena = (c) => (c?.fog?.hora != null && c.fog.hora !== '' ? +c.fog.hora : horaDaNoite(S.noite));
+  const syncViva = () => { const c = cena(); if (viva && c) { viva.setHora(horaCena(c)); viva.setVento(c.fog?.vento ?? 0.45); } };
   let el = null; // raiz montada
   let W = 0, H = 0;
 
   const cena = () => MP.cenas.find((c) => c.id === MP.ver) || null;
   const passoPx = () => (cena() ? W / cena().largura : 10);
-  const tokPx = () => Math.max(30, Math.min(68, passoPx() * 1.5));
+  const tokPx = () => Math.max(40, Math.min(72, passoPx() * 1.5));
   const meuPc = () => MP.tokens.find((t) => t.kind === 'pc' && t.owner === uid());
   const podeMover = (t) => isGM() || (t.owner === uid() && (t.kind === 'pc' || t.kind === 'circulo'));
   const distPassos = (t, x, y) => { const c = cena(); return Math.hypot(x - t.ax, (y - t.ay) * c.aspecto) * c.largura; };
@@ -55,7 +63,7 @@ export function criarMapa(ctx) {
     if (p.eventType === 'DELETE') { MP.cenas = MP.cenas.filter((c) => c.id !== p.old.id); if (MP.ver === p.old.id) MP.ver = null; refresh(); return; }
     const i = MP.cenas.findIndex((c) => c.id === p.new.id);
     if (i < 0) MP.cenas.push(p.new); else MP.cenas[i] = p.new;
-    if (p.new.id === MP.ver && el) { if (MP.tool === 'mover' || !isGM()) { drawFog(); draw(); paintBar(); } }
+    if (p.new.id === MP.ver && el) { syncViva(); if (MP.tool === 'mover' || !isGM()) { drawFog(); draw(); paintBar(); } }
   }
   function onToken(p) {
     if (p.eventType === 'DELETE') { MP.tokens = MP.tokens.filter((t) => t.id !== p.old.id); if (MP.sel === p.old.id) MP.sel = null; draw(); return; }
@@ -78,7 +86,7 @@ export function criarMapa(ctx) {
     const gm = isGM();
     if (!c) {
       return `<section class="hero"><p class="lbl">O mapa</p><h1>Nenhuma cena</h1></section>
-        ${gm ? formNovaCena(true) : `<div class="empty"><p>O mestre ainda não mostrou nenhuma cena.</p><p class="small">Quando ele mostrar, ela aparece aqui sozinha.</p></div>`}`;
+        ${gm ? `<button class="btn primary block" data-mp="vivas">Criar os cenários vivos da one-shot</button>${formNovaCena(true)}` : `<div class="empty"><p>O mestre ainda não mostrou nenhuma cena.</p><p class="small">Quando ele mostrar, ela aparece aqui sozinha.</p></div>`}`;
     }
     return `<div class="mp" data-mproot>
       <div class="mp-head">
@@ -87,7 +95,7 @@ export function criarMapa(ctx) {
       </div>
       <div class="mp-bar" data-mpbar>${barHtml()}</div>
       <div class="mp-wrap"><div class="mp-stage ${isGM() && MP.tool !== 'mover' ? 'pintando' : ''}" data-mpstage style="width:${MP.zoom * 100}%">
-        ${c.img ? `<img class="mp-bg" src="${esc(c.img)}" alt="" draggable="false">` : `<div class="mp-bg mp-blank"></div>`}
+        ${vivaId(c) ? `<canvas class="mp-bg mp-viva" data-mpviva aria-hidden="true"></canvas>` : c.img ? `<img class="mp-bg" src="${esc(c.img)}" alt="" draggable="false">` : `<div class="mp-bg mp-blank"></div>`}
         <svg class="mp-svg" data-mpsvg></svg>
         <div class="mp-toks" data-mptoks></div>
         <canvas class="mp-fog" data-mpfog></canvas>
@@ -105,17 +113,19 @@ export function criarMapa(ctx) {
       const pc = meuPc();
       const mov = pc ? `<span class="mp-mov">Movimento: <b>${Math.max(0, pc.passos - distPassos(pc, pc.x, pc.y)).toFixed(1).replace('.', ',')}</b> de ${String(pc.passos).replace('.', ',')} passos</span>` : '';
       const circ = pc ? `<div class="seg">${RAIOS.map((r) => `<button data-mp="circ" data-v="${r.r}">Círculo ${r.n.toLowerCase()}</button>`).join('')}</div>` : '';
-      return `${mov}${zoom}${circ}${!pc && meusChars().length ? meusChars().map((ch) => `<button class="btn sm" data-mp="entrar" data-v="${ch.id}">Colocar ${esc(ch.data.nome || 'meu personagem')} na cena</button>`).join('') : ''}`;
+      return `${mov}${zoom}${somBtn()}${circ}${!pc && meusChars().length ? meusChars().map((ch) => `<button class="btn sm" data-mp="entrar" data-v="${ch.id}">Colocar ${esc(ch.data.nome || 'meu personagem')} na cena</button>`).join('') : ''}`;
     }
     const fogOn = c.fog?.on !== false;
     return `<div class="seg"><button class="${MP.tool === 'mover' ? 'on' : ''}" data-mp="tool" data-v="mover">Mover</button><button class="${MP.tool === 'revelar' ? 'on' : ''}" data-mp="tool" data-v="revelar" ${fogOn ? '' : 'disabled'}>Revelar</button><button class="${MP.tool === 'cobrir' ? 'on' : ''}" data-mp="tool" data-v="cobrir" ${fogOn ? '' : 'disabled'}>Cobrir</button></div>
       ${MP.tool !== 'mover' ? `<div class="seg">${[1.5, 3, 6].map((b) => `<button class="${MP.brush === b ? 'on' : ''}" data-mp="brush" data-v="${b}">${b === 1.5 ? 'Pincel fino' : b === 3 ? 'Médio' : 'Largo'}</button>`).join('')}</div>` : ''}
       <button class="btn sm primary" data-mp="rodada">Nova rodada</button>
-      ${zoom}
+      ${zoom}${somBtn()}
+      ${vivaId(c) ? `<select class="field sm" data-mphora aria-label="Hora da cena">${HORAS.map(([v, n]) => `<option value="${v}" ${String(c.fog?.hora ?? '') === String(v) ? 'selected' : ''}>${n}</option>`).join('')}</select><select class="field sm" data-mpvento aria-label="Vento">${VENTOS.map(([v, n]) => `<option value="${v}" ${(c.fog?.vento ?? 0.45) === v ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
       <button class="btn sm" data-mp="fog">${fogOn ? 'Tirar o escuro' : 'Pôr o escuro'}</button>
       ${MP.ativa === c.id ? `<span class="mp-on">Os jogadores estão vendo</span>` : `<button class="btn sm" data-mp="mostrar">Mostrar aos jogadores</button>`}`;
   }
 
+  const somBtn = () => (vivaId(cena()) ? `<button class="btn sm ${viva?.somLigado() ? 'primary' : ''}" data-mp="som">${viva?.somLigado() ? 'Som ligado' : 'Ligar o som'}</button>` : '');
   const meusChars = () => S.chars.filter((ch) => ch.owner === uid() && ch.status === 'aprovado');
 
   function sideHtml() {
@@ -150,7 +160,8 @@ export function criarMapa(ctx) {
   }
 
   function listaCenas() {
-    return `<div class="mp-cenas">${MP.cenas.map((c) => `<div class="mp-cena ${c.id === MP.ver ? 'on' : ''}">
+    const faltam = Object.keys(CENAS_VIVAS).filter((k) => !MP.cenas.some((c) => c.img === 'viva:' + k));
+    return `${faltam.length ? `<button class="btn sm primary" data-mp="vivas">Criar os cenários vivos da one-shot (${faltam.length})</button>` : ''}<div class="mp-cenas">${MP.cenas.map((c) => `<div class="mp-cena ${c.id === MP.ver ? 'on' : ''}">
       <button class="linkish" data-mp="ver" data-v="${c.id}">${esc(c.nome)}</button>${c.id === MP.ativa ? '<span class="mp-on">no ar</span>' : ''}
       <label class="small">Largura em passos <input class="field sm" type="number" min="5" max="400" value="${c.largura}" data-mplarg="${c.id}"></label>
       <button class="btn sm ghost" data-mp="delcena" data-v="${c.id}">Apagar</button></div>`).join('')}</div>`;
@@ -173,6 +184,9 @@ export function criarMapa(ctx) {
     if (!el) { el = null; return; }
     const stage = el.querySelector('[data-mpstage]');
     const img = el.querySelector('img.mp-bg');
+    viva?.destruir(); viva = null;
+    const cvv = el.querySelector('[data-mpviva]');
+    if (cvv) { viva = criarCenaViva(cvv, vivaId(cena())); viva.setHora(horaCena(cena()), true); viva.setVento(cena().fog?.vento ?? 0.45); }
     const size = () => { W = stage.clientWidth; H = W * cena().aspecto; stage.style.height = H + 'px'; drawFog(); draw(); };
     if (img && !img.complete) img.addEventListener('load', size, { once: true });
     size();
@@ -323,6 +337,15 @@ export function criarMapa(ctx) {
     const a = t.dataset.mp, v = t.dataset.v, c = cena();
     const sel = MP.tokens.find((x) => x.id === MP.sel);
     if (a === 'zoom') { MP.zoom = +v; refresh(); return; }
+    if (a === 'som') { viva?.som(); paintBar(); return; }
+    if (a === 'vivas') {
+      const faltam = Object.entries(CENAS_VIVAS).filter(([k]) => !MP.cenas.some((x) => x.img === 'viva:' + k));
+      const rows = faltam.map(([k, d]) => ({ nome: d.nome, img: 'viva:' + k, aspecto: ASPECTO_VIVO, largura: d.largura, fog: { on: false, revela: [] } }));
+      const { data, error } = await sb.from('breu_cenas').insert(rows).select();
+      if (error) { toast('Não consegui criar os cenários.'); return; }
+      data.forEach((d) => { if (!MP.cenas.some((x) => x.id === d.id)) MP.cenas.push(d); });
+      MP.ver = data[0]?.id || MP.ver; await loadTokens(); toast('Cenários criados. Mostre aos jogadores quando quiser.'); refresh(); return;
+    }
     if (a === 'tool') { MP.tool = v; paintBar(); el.querySelector('[data-mpstage]').classList.toggle('pintando', v !== 'mover'); return; }
     if (a === 'brush') { MP.brush = +v; paintBar(); return; }
     if (a === 'ver') { MP.ver = v; MP.sel = null; await loadTokens(); refresh(); return; }
@@ -399,6 +422,13 @@ export function criarMapa(ctx) {
       if (error) toast('Não consegui pôr o Assombro.'); else { await loadTokens(); draw(); }
       return true;
     }
+    if (t.matches('[data-mphora]') || t.matches('[data-mpvento]')) {
+      const fog = { ...(c.fog || {}) };
+      if (t.matches('[data-mphora]')) fog.hora = t.value === '' ? null : +t.value; else fog.vento = +t.value;
+      c.fog = fog; syncViva();
+      await sb.from('breu_cenas').update({ fog }).eq('id', c.id);
+      return true;
+    }
     if (t.dataset.mplarg) {
       const v = Math.max(5, Math.min(400, +t.value || 30));
       await sb.from('breu_cenas').update({ largura: v }).eq('id', t.dataset.mplarg);
@@ -447,8 +477,8 @@ export function criarMapa(ctx) {
   }
 
   return {
-    view, mount, redraw: () => draw(), onCena, onToken, onAtiva, onChange, onSubmit, load,
-    unmount() { el = null; },
+    view, mount, redraw: () => { draw(); syncViva(); }, onCena, onToken, onAtiva, onChange, onSubmit, load,
+    unmount() { el = null; viva?.destruir(); viva = null; },
     async click(e) {
       const t = e.target.closest('[data-mp]'); if (!t) return false;
       e.preventDefault();
