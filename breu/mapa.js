@@ -122,7 +122,7 @@ export function criarMapa(ctx) {
       ${zoom}${somBtn()}
       ${vivaId(c) ? `<select class="field sm" data-mphora aria-label="Hora da cena">${HORAS.map(([v, n]) => `<option value="${v}" ${String(c.fog?.hora ?? '') === String(v) ? 'selected' : ''}>${n}</option>`).join('')}</select><select class="field sm" data-mpvento aria-label="Vento">${VENTOS.map(([v, n]) => `<option value="${v}" ${(c.fog?.vento ?? 0.45) === v ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
       <button class="btn sm" data-mp="fog">${fogOn ? 'Tirar o escuro' : 'Pôr o escuro'}</button>
-      ${MP.ativa === c.id ? `<span class="mp-on">Os jogadores estão vendo</span>` : `<button class="btn sm" data-mp="mostrar">Mostrar aos jogadores</button>`}`;
+      ${MP.ativa === c.id ? `<span class="mp-on">Os jogadores estão vendo</span><button class="btn sm" data-mp="esconderCena">Tirar dos jogadores</button>` : `<button class="btn sm" data-mp="mostrar">Mostrar aos jogadores</button>`}`;
   }
 
   const somBtn = () => (vivaId(cena()) ? `<button class="btn sm ${viva?.somLigado() ? 'primary' : ''}" data-mp="som">${viva?.somLigado() ? 'Som ligado' : 'Ligar o som'}</button>` : '');
@@ -349,6 +349,11 @@ export function criarMapa(ctx) {
     if (a === 'tool') { MP.tool = v; paintBar(); el.querySelector('[data-mpstage]').classList.toggle('pintando', v !== 'mover'); return; }
     if (a === 'brush') { MP.brush = +v; paintBar(); return; }
     if (a === 'ver') { MP.ver = v; MP.sel = null; await loadTokens(); refresh(); return; }
+    if (a === 'esconderCena') {
+      const { error } = await sb.from('breu_state').upsert({ key: 'cena', value: { ativa: null }, updated_at: new Date().toISOString() });
+      if (error) { toast('Não consegui tirar a cena.'); return; }
+      MP.ativa = null; toast('Os jogadores não veem mais esta cena.'); paintBar(); return;
+    }
     if (a === 'mostrar') {
       const { error } = await sb.from('breu_state').upsert({ key: 'cena', value: { ativa: c.id }, updated_at: new Date().toISOString() });
       if (error) { toast('Não consegui mostrar a cena.'); return; }
