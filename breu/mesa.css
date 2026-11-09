@@ -491,3 +491,7 @@ button.ms-link { background: none; border: 0; }
 @keyframes fx-pulsa { 50% { opacity: .45; } }
 @keyframes fx-panico { 25% { transform: skewX(.6deg) scale(1.005); } 50% { transform: skewY(-.5deg); filter: hue-rotate(-8deg); } 75% { transform: skewX(-.4deg); } }
 @media (prefers-reduced-motion: reduce) { .fx-treme, .fx-treme2, #app.fx-panico .mp-stage, #app.fx-ferido::after { animation: none !important; } }
+
+/* o vídeo de abertura em cima do mapa, não em tela cheia */
+.vd { inset: auto; position: fixed; border-radius: 10px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.7); border: 1px solid var(--line2); }
+.vd-ui { top: 10px; right: 10px; }

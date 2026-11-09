@@ -95,7 +95,7 @@ export function criarMesa(ctx) {
         <a class="ms-logo" href="#/" aria-label="Fichas"><img src="img/logo-horizontal.webp" alt="Breu"></a>
         <div class="ms-cenas" data-ms-cenas>${cenasHtml()}</div>
         <div class="ms-rel" data-ms-rel>${relogioHtml()}</div>
-        <div class="ms-links"><button class="btn sm" data-ms="video" title="Toca a abertura aqui (compartilhe a tela); no fim, mostra a estrada aos jogadores">▶ Abertura</button><a class="ms-link" href="#/noite" title="Montar a noite e as regras">Noite</a><a class="ms-link" href="#/" title="As fichas">Fichas</a></div>
+        <div class="ms-links"><button class="btn sm" data-ms="video" title="Toca a abertura em cima do mapa, para todos; no fim, mostra a estrada">▶ Abertura</button><a class="ms-link" href="#/noite" title="Montar a noite e as regras">Noite</a><a class="ms-link" href="#/" title="As fichas">Fichas</a></div>
       </header>
       <aside class="ms-guia" data-ms-guia>${G.html()}</aside>
       <section class="ms-centro">
@@ -411,10 +411,32 @@ export function criarMesa(ctx) {
     return baixando;
   }
   function mostrarProgresso() { const b = video?.querySelector('.vd-carrega i'); if (b) b.style.width = Math.round(progresso * 100) + '%'; }
-  const preCarregarVideo = () => { if (isGM()) setTimeout(baixarVideo, 1500); };
-  // o vídeo toca só na tela do mestre (ele compartilha a tela com a mesa)
-  function tocarVideo() { if (isGM()) abrirVideo({ id: uuid(), em: Date.now() }); }
-  function onVideo() {}
+  const preCarregarVideo = () => setTimeout(baixarVideo, 1500);
+  // o vídeo toca para todos, por cima do mapa (não em tela cheia)
+  async function tocarVideo() {
+    if (!isGM()) return;
+    const v = { id: uuid(), em: Date.now(), acao: 'tocar' };
+    S.video = v;
+    const { error } = await sb.from('breu_state').upsert({ key: 'video', value: v, updated_at: new Date().toISOString() });
+    if (error) toast('Não consegui mandar o vídeo para os jogadores.');
+    abrirVideo(v);
+  }
+  function onVideo(v) {
+    S.video = v;
+    if (!v || isGM()) return;
+    if (v.acao === 'tocar' && Date.now() - v.em < 120000 && S.videoVisto !== v.id) {
+      S.videoVisto = v.id;
+      if (!noMapa()) { ctx.go('mapa'); setTimeout(() => abrirVideo(v), 700); } else abrirVideo(v);
+    } else if (v.acao === 'parar' && video) fimVideo();
+  }
+  // a caixa do vídeo fica exatamente em cima da área do mapa
+  function encaixarVideo() {
+    if (!video) return;
+    const w = document.querySelector('.mp-wrap')?.getBoundingClientRect();
+    const r = w && w.width > 200 && w.height > 150 ? { left: w.left, top: Math.max(0, w.top), width: w.width, height: Math.min(w.height, innerHeight - Math.max(0, w.top)) }
+      : { left: Math.max(12, (innerWidth - 900) / 2), top: 80, width: Math.min(900, innerWidth - 24), height: Math.min(506, (Math.min(900, innerWidth - 24)) * 9 / 16) };
+    Object.assign(video.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  }
   function abrirVideo(v) {
     S.videoVisto = v.id;
     fecharVideo();
@@ -424,6 +446,7 @@ export function criarMesa(ctx) {
       <button class="vd-som" hidden>Toque para ligar o som</button>
       <div class="vd-ui">${isGM() ? '<button class="btn sm" data-vd="pular">Pular e abrir a estrada</button>' : ''}</div>`;
     document.body.appendChild(video);
+    encaixarVideo(); clearInterval(abrirVideo.t); abrirVideo.t = setInterval(encaixarVideo, 400);
     const el = video.querySelector('video'), somB = video.querySelector('.vd-som');
     document.body.classList.add('vendo-video');
     const caixa = video;
@@ -438,9 +461,12 @@ export function criarMesa(ctx) {
     });
     somB.addEventListener('click', () => { el.muted = false; somB.hidden = true; el.play(); });
     el.addEventListener('ended', () => fimVideo());
-    video.querySelector('[data-vd="pular"]')?.addEventListener('click', () => fimVideo());
+    video.querySelector('[data-vd="pular"]')?.addEventListener('click', async () => {
+      await sb.from('breu_state').upsert({ key: 'video', value: { ...v, acao: 'parar' }, updated_at: new Date().toISOString() });
+      fimVideo();
+    });
   }
-  function fecharVideo() { document.body.classList.remove('vendo-video'); if (video) { video.querySelector('video')?.pause(); video.remove(); video = null; } }
+  function fecharVideo() { clearInterval(abrirVideo.t); document.body.classList.remove('vendo-video'); if (video) { video.querySelector('video')?.pause(); video.remove(); video = null; } }
   async function fimVideo() {
     fecharVideo();
     if (isGM()) {
