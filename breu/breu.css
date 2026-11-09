@@ -361,3 +361,18 @@ details.prontos summary { cursor: pointer; font-family: var(--label); letter-spa
 @keyframes est-treme { 0% { transform: translate(0, 0); } 25% { transform: translate(-1px, 1px); } 50% { transform: translate(1px, -1px); } 75% { transform: translate(-1px, -1px); } }
 @media (prefers-reduced-motion: reduce) { .est-panico img, .est-ferido { animation: none !important; } }
 .mp-tok .nm .nm-oc { font-style: normal; color: #e0a46a; margin-left: 3px; }
+/* molduras pintadas das peças: cal para os personagens, palha para a gente da vila, brasa para os Assombros */
+.mp-tok.k-pc, .mp-tok.k-npc, .mp-tok.k-assombro { border-color: transparent; }
+.mp-tok.k-pc::after, .mp-tok.k-npc::after, .mp-tok.k-assombro::after { content: ""; position: absolute; inset: -21%; background: center / contain no-repeat; pointer-events: none; z-index: 1; }
+.mp-tok.k-pc::after { background-image: url(img/moldura-cal.webp); }
+.mp-tok.k-npc::after { background-image: url(img/moldura-palha.webp); }
+.mp-tok.k-assombro::after { background-image: url(img/moldura-brasa.webp); }
+.mp-tok .nm { top: 121%; z-index: 2; }
+.mp-tok.oculto::before { bottom: 121%; }
+.mp-tok.sel { outline-offset: 12px; }
+.mp-tok.meu::after { filter: drop-shadow(0 0 5px rgba(224,122,82,.9)); }
+.mp-tok.k-assombro img { object-fit: cover; }
+.mp-tok.est-ferido::after { filter: drop-shadow(0 0 6px rgba(220, 60, 40, .95)); animation: est-pulso-m 1.6s ease-in-out infinite; }
+.mp-tok.est-panico::after { filter: drop-shadow(0 0 6px rgba(150, 170, 230, .9)); }
+.mp-tok.est-caido::after { filter: grayscale(1) brightness(.6); }
+@keyframes est-pulso-m { 50% { filter: drop-shadow(0 0 1px rgba(220, 60, 40, .4)); } }
