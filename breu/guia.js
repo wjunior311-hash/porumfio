@@ -1,7 +1,18 @@
 // O guia da mesa, dentro do app: o mestre segue a sessão por aqui e aperta os botões que mexem no mapa.
-import { GENTE, VISTO, ROLA, FX_C, PISTAS, ATOS, RESOLVER, MOMENTOS as M } from './guia-dados.js?v=4';
+import { GENTE, VISTO, ROLA, FX_C, PISTAS, ATOS, RESOLVER, MOMENTOS as M } from './guia-dados.js?v=5';
 
-export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {} };
+export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {} };
+// o que o grupo conseguiu durante o dia; muda o conserto, o corpo e a noite
+export const RECURSOS = [
+  ['cal', 'Saco de cal', 'do mocó', 'Sem ele, o conserto do círculo tem −2.'],
+  ['lenha', 'Feixes de lenha', 'do mocó', 'Para queimar o corpo são precisos 2.', 2],
+  ['caixa', 'Caixa de riscador de Antero', 'no velório', '+1 dado no conserto.'],
+  ['caderno', 'Caderno de lições', 'na casa do aprendiz', '+1 dado no conserto.'],
+  ['bento', 'Bento ajudando', 'conversando com ele', '+1 dado no conserto.'],
+  ['po', 'O pó que chia', 'com o homem tatuado', 'Jogado no braço da bordadeira, revela as Marcas.'],
+  ['trancas', 'Trancas nas portas', 'mutirão na oficina', 'Se o círculo cair, quem está nas casas trancadas sobrevive.'],
+  ['agua', 'Potes cheios', 'na casa de farinha', 'A vila aguenta a noite sem sede.'],
+];
 export const faixaDe = (total) => (total < 10 ? 0 : total < 15 ? 1 : total < 20 ? 2 : 3);
 // o atributo de cada rolagem que não é perícia
 const ATR_DIRETO = { Firmeza: 'firmeza', Presença: 'presenca', Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo' };
@@ -11,7 +22,18 @@ export function criarGuia(ctx) {
   const { S, R, esc } = ctx;
   let E = { ...PADRAO_GUIA };
   const estado = () => E;
-  function setEstado(v) { E = { ...PADRAO_GUIA, ...(v || {}) }; }
+  function setEstado(v) { E = { ...PADRAO_GUIA, ...(v || {}) }; E.rec ||= {}; }
+  const rec = (k) => E.rec?.[k] || 0;
+  // o que vale agora no conserto do círculo, pelo que o grupo juntou
+  function bonusConserto() {
+    const d = ['caixa', 'caderno', 'bento'].filter((k) => rec(k)).length;
+    return `<div class="g-agora"><b>Agora:</b> ${d ? `+${d} dado${d > 1 ? 's' : ''} (${['caixa', 'caderno', 'bento'].filter((k) => rec(k)).map((k) => RECURSOS.find((r) => r[0] === k)[1].toLowerCase()).join(', ')})` : 'nenhum dado a mais'} · ${rec('cal') ? 'com cal' : '<span class="ruim">sem cal: −2 no resultado</span>'}. <small>Marque o que conseguiram na aba A história.</small></div>`;
+  }
+  function recBotoes(ks) {
+    return `<div class="g-recs">${ks.map((k) => { const r = RECURSOS.find((x) => x[0] === k), n = rec(k), max = r[4];
+      return max ? `<div class="g-rec ${n ? 'on' : ''}"><span>${r[1]}</span><button data-g="rec" data-k="${k}" data-v="-1" aria-label="Menos">−</button><b>${n}/${max}</b><button data-g="rec" data-k="${k}" data-v="1" aria-label="Mais">+</button></div>`
+        : `<button class="g-rec ${n ? 'on' : ''}" data-g="rec" data-k="${k}" data-v="t"><i>${n ? '✓' : ''}</i>${r[1]}</button>`; }).join('')}</div>`;
+  }
   function mudar(patch) { E = { ...E, ...patch }; ctx.salvar(E); }
 
   // ---------- dados dos personagens, tirados das fichas ----------
@@ -58,6 +80,7 @@ export function criarGuia(ctx) {
     return `<div class="g-rola">
       <p class="g-pede">Peça <b>${pers.join(' ou ')}</b> · ${esc(r.quem)}</p>
       ${r.pede ? `<p class="g-nota">${r.pede}</p>` : ''}
+      ${id === 'conserto' ? bonusConserto() : ''}
       <div class="g-pedir"><button class="g-acao forte" data-g="pedir" data-v="${id}" data-q="">${pedindo ? 'Pedir de novo a todos' : 'Pedir a todos'}</button>
         ${lista.map(({ c, d }) => `<button class="g-dado ${forca(d) === top ? 'bom' : ''}" data-g="pedir" data-v="${id}" data-q="${c.id}" title="Pedir só a ${esc(c.data.nome)}">${esc(c.data.nome)} ${txtDados(d)}</button>`).join('')}</div>
       ${respostasHtml(id)}
@@ -270,6 +293,7 @@ function mapaHtml() {
       if (m.hub) h += mapaHtml();
       if (m.leia) h += `<section class="g-bloco"><h3 class="g-rot">Leia ao entrarem</h3>${leiaHtml(m.leia)}</section>`;
       if (m.passos) h += passosHtml(m.passos, m.lugar ? 'Se acontecer' : 'Faça nesta ordem');
+      if (m.recursos) h += `<section class="g-bloco"><h3 class="g-rot">Marque o que conseguiram aqui</h3>${recBotoes(m.recursos)}</section>`;
       if (m.quem) h += `<section class="g-bloco"><h3 class="g-rot">Quem está aqui</h3><p class="g-nota">Clique numa pessoa para ver o que ela responde.</p>${genteHtml(m.quem)}</section>`;
       if (m.opcoes) h += `<section class="g-bloco"><h3 class="g-rot">${m.hub ? 'Também dá para fazer' : 'O que eles podem fazer'}</h3>${opcoesHtml(m.opcoes, E.aqui)}</section>`;
       if (m.vila) h += `<section class="g-bloco"><h3 class="g-rot">A vila não espera</h3><div class="g-trava"><p>Se a mesa parar, faça uma destas coisas acontecer:</p><ul>${m.vila.map((v) => `<li>${v}</li>`).join('')}</ul></div></section>`;
@@ -287,7 +311,9 @@ function mapaHtml() {
   function estadoHtml() {
     const seg = (k, ops) => `<div class="g-seg">${ops.map(([v, t]) => `<button class="${E[k] === v ? 'on' : ''}" data-g="set" data-k="${k}" data-v="${v}">${t}</button>`).join('')}</div>`;
     const n = E.pistas.length;
-    return `<div class="g-painel"><h4>Antes do pôr do sol <small>decide a noite</small></h4>
+    return `<div class="g-painel"><h4>O que o grupo conseguiu <small>clique para marcar</small></h4>${recBotoes(RECURSOS.map((r) => r[0]))}
+        <p class="g-cont">${rec('lenha') >= 2 ? '<b>Dá para queimar o corpo.</b>' : `Lenha para queimar o corpo: ${rec('lenha')} de 2.`} ${rec('cal') ? '' : 'Sem cal, o conserto tem −2.'}</p></div>
+      <div class="g-painel"><h4>Antes do pôr do sol <small>decide a noite</small></h4>
         <div class="g-esc"><span>O trecho apagado</span>${seg('trecho', [['aberto', 'Aberto'], ['fino', 'Consertado fino'], ['forte', 'Consertado 20+']])}</div>
         <div class="g-esc"><span>O corpo de Antero</span>${seg('corpo', [['velorio', 'No velório'], ['fechada', 'Casa fechada'], ['queimado', 'Queimado']])}</div>
         <div class="g-esc"><span>Celeste</span>${seg('celeste', [['', 'Escondida'], ['descoberta', 'Descoberta'], ['presa', 'Presa']])}</div>
@@ -333,6 +359,11 @@ function mapaHtml() {
     if (g === 'abre') { abertos.has(v) ? abertos.delete(v) : abertos.add(v); ctx.repintar(); return true; }
     if (g === 'npc') { if (GENTE[v]) npcGaveta(v); return true; }
     if (g === 'gaveta') { gaveta(v === 'dados' ? dadosTabela() : GAVETAS[v]()); if (v === 'gente') { /* chips dentro da gaveta */ } return true; }
+    if (g === 'rec') {
+      const k = t.dataset.k, r = RECURSOS.find((x) => x[0] === k), n = rec(k);
+      const novo = v === 't' ? (n ? 0 : 1) : Math.max(0, Math.min(r[4] || 1, n + +v));
+      mudar({ rec: { ...E.rec, [k]: novo } }); ctx.repintar(); return true;
+    }
     if (g === 'pista') { mudar({ pistas: E.pistas.includes(v) ? E.pistas.filter((x) => x !== v) : [...E.pistas, v] }); ctx.repintar(); return true; }
     if (g === 'set') { const k = t.dataset.k; mudar({ [k]: E[k] === v && v ? '' : v }); ctx.repintar(); return true; }
     if (g === 'zerar') { if (t.dataset.certo) { E = { ...PADRAO_GUIA }; ctx.salvar(E); ctx.repintar(true); } else { t.dataset.certo = '1'; t.textContent = 'Clique de novo para zerar tudo'; } return true; }
