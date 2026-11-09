@@ -1,6 +1,7 @@
 // Mapa compartilhado da mesa: cena, peças, escuro, círculos e movimento limitado por rodada.
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
+import * as R from './regras.js';
 import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=18';
 
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
@@ -69,6 +70,7 @@ export function criarMapa(ctx) {
         const t = MP.tokens.find((x) => x.id === p.id); if (!t) return;
         t.x = p.x; t.y = p.y; posToken(t);
       })
+      .on('broadcast', { event: 'dado' }, ({ payload: p }) => ctx.animar?.(p))
       .on('broadcast', { event: 'reload' }, async () => { if (!el) return; await loadTokens(); draw(); })
       .subscribe();
   }
@@ -173,6 +175,7 @@ export function criarMapa(ctx) {
         sel = `<div class="mp-sel"><b>${esc(t.nome)}</b>${b ? `<span class="small muted"> · ${b.grau} de ${b.familia} · ${b.sentido} · Defesa ${b.defesa} · ${b.atq} · ${b.dano}</span>` : ''}
           ${t.kind !== 'pc' ? `<div class="mp-row"><span>Sangue</span><button class="btn sm" data-mp="sangue" data-v="-5">−5</button><button class="btn sm" data-mp="sangue" data-v="-1">−1</button><b>${d.sangue ?? '–'}${d.max ? ' / ' + d.max : ''}</b><button class="btn sm" data-mp="sangue" data-v="1">+1</button></div>` : ''}
           <div class="mp-row"><span>Passos por rodada</span><button class="btn sm" data-mp="passos" data-v="-1">−</button><b>${t.passos}</b><button class="btn sm" data-mp="passos" data-v="1">+</button></div>
+          ${t.kind === 'assombro' && b ? ataqueHtml(t, b) : ''}
           ${t.kind === 'npc' && formaDe(t.nome) ? `<div class="mp-row"><span>Forma</span><b>${t.img === formaDe(t.nome) ? 'verdadeira' : 'disfarçada'}</b><button class="btn sm ${t.img === formaDe(t.nome) ? '' : 'primary'}" data-mp="forma">${t.img === formaDe(t.nome) ? 'Voltar ao disfarce' : 'Revelar a forma verdadeira'}</button></div>` : ''}
           ${t.kind === 'npc' || t.kind === 'assombro' ? `<div class="mp-row"><span>Nome para os jogadores</span><b>${d.nomeVisto ? esc(t.nome) : '??'}</b><button class="btn sm ${d.nomeVisto ? '' : 'primary'}" data-mp="nome">${d.nomeVisto ? 'Esconder o nome' : 'Revelar o nome'}</button></div>` : ''}
           <div class="mp-row">${t.kind !== 'pc' ? `<button class="btn sm" data-mp="visivel">${t.visivel ? 'Esconder dos jogadores' : 'Revelar aos jogadores'}</button>` : ''}<button class="btn sm ghost" data-mp="apagar">Tirar da cena</button></div></div>`;
@@ -180,6 +183,47 @@ export function criarMapa(ctx) {
     }
     return sel;
   }
+  // o ataque do Assombro: contra a Defesa de um personagem ou contra a força de um círculo
+  function ataqueHtml(t, b) {
+    const n = ctx.noite?.() || {}, pcs = MP.tokens.filter((x) => x.kind === 'pc' && x.character_id && charById(x.character_id));
+    const perto = (x) => Math.hypot(x.x - t.x, (x.y - t.y) * cena().aspecto) * cena().largura;
+    pcs.sort((a, c) => perto(a) - perto(c));
+    const circs = MP.tokens.filter((x) => x.kind === 'circulo');
+    const ops = [...pcs.map((x) => { const ch = charById(x.character_id); return `<option value="pc:${ch.id}">${esc(ch.data.nome)} (Defesa ${R.barras(ch.data).defesa})</option>`; }),
+      `<option value="circ">O círculo da vila (força ${n.circulo ?? 14})</option>`, ...circs.map((x) => `<option value="tok:${x.id}">${esc(x.nome || 'Círculo')} (força ${x.data?.forca ?? 0})</option>`)];
+    return `<div class="mp-atq"><span class="lbl">Atacar · ${esc(b.atq)} · dano ${esc(b.dano)}</span><div class="mp-row"><select class="field sm" data-mp-alvo aria-label="Alvo do ataque">${ops.join('')}</select><button class="btn sm primary" data-mp="atacar">Rolar ataque</button></div></div>`;
+  }
+  async function atacar(t) {
+    const b = M.BESTIARIO.find((x) => x.id === t.data?.best); if (!b) return;
+    const alvo = el.querySelector('[data-mp-alvo]')?.value || '';
+    const m = /(\d+)d20\s*\+?\s*(\d*)/.exec(b.atq) || [0, 1, 0], n = +m[1], bonus = +(m[2] || 0);
+    const dados = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 20)), fica = Math.max(...dados), total = fica + bonus;
+    let texto = '', ruim = false;
+    if (alvo.startsWith('pc:')) {
+      const ch = charById(alvo.slice(3)), def = R.barras(ch.data).defesa;
+      if (total >= def) {
+        const dn = R.rolarDano(b.dano) || { total: 1 }; ruim = true;
+        texto = `acertou ${ch.data.nome}: ${dn.total} de dano`;
+        ctx.ferir?.(ch, dn.total, `${t.nome} acertou ${ch.data.nome} (${total} contra Defesa ${def}): ${dn.total} de dano.`);
+      } else texto = `errou ${ch.data.nome} (Defesa ${def})`;
+    } else if (alvo === 'circ') {
+      const f = ctx.noite?.()?.circulo ?? 14;
+      if (total > f) { texto = `abriu uma brecha no círculo!`; ruim = true; ctx.forcaCirculo?.(0, `${t.nome} abriu uma brecha no círculo (${total} contra força ${f}).`); }
+      else { texto = `a linha segura: força ${Math.max(0, f - 3)}`; ctx.forcaCirculo?.(Math.max(0, f - 3), `${t.nome} investiu contra o círculo (${total} contra ${f}): segurou, força ${Math.max(0, f - 3)}.`); }
+    } else if (alvo.startsWith('tok:')) {
+      const c = MP.tokens.find((x) => x.id === alvo.slice(4)); if (!c) return;
+      const d = { ...(c.data || {}) }, f = d.forca ?? 0;
+      if (total > f) { texto = `rompeu o círculo!`; ruim = true; d.forca = 0; } else { d.forca = Math.max(0, f - 3); texto = `o círculo segura: força ${d.forca}`; }
+      c.data = d; await sb.from('breu_tokens').update({ data: d }).eq('id', c.id); draw(); paintSide();
+    }
+    const row = { id: 'atq-' + Date.now(), nome: t.nome, img: t.img, label: `Ataque: ${t.nome}`, total, detail: { tipo: 'ataque', dados, fica, bonus, resultado: texto, ruim } };
+    ctx.animar?.(row);
+    // escondido, só o mestre vê o ataque; sem o nome revelado, os jogadores veem ??
+    if (t.visivel) enviar('dado', t.data?.nomeVisto ? row : { ...row, nome: '??', label: 'Ataque' });
+    toast(`${t.nome}: ${total}, ${texto}.`);
+    paintSide();
+  }
+
   function addHtml() {
     if (!cena()) return '';
     const naCena = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id));
@@ -428,6 +472,7 @@ export function criarMapa(ctx) {
       MP.sel = data.id; draw(); paintSide(); return;
     }
     if (!sel) return;
+    if (a === 'atacar') { t.disabled = true; await atacar(sel); t.disabled = false; return; }
     const d = { ...(sel.data || {}) };
     if (a === 'forca') { d.forca = Math.max(0, (d.forca || 0) + +v); }
     else if (a === 'raio') { d.raio = +v; }

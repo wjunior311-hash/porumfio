@@ -39,10 +39,10 @@ export function criarGuia(ctx) {
 
   // respostas ao pedido que está valendo
   function respostasHtml(id) {
-    const p = S.pedido; if (!p || p.rola !== id) return '';
+    const p = [...(S.pedidos || [])].reverse().find((x) => x.rola === id); if (!p) return '';
     const r = ROLA[id], quem = p.quem?.length ? pjs().filter((c) => p.quem.includes(c.id)) : pjs();
     const rolls = S.rolls.filter((x) => x.detail?.pedido === p.id);
-    return `<div class="g-resp"><div class="g-resp-h"><b>Pedido no ar</b><button class="g-mini" data-g="cancelar">Encerrar o pedido</button></div>
+    return `<div class="g-resp"><div class="g-resp-h"><b>Pedido no ar</b><button class="g-mini" data-g="cancelar" data-v="${p.id}">Encerrar o pedido</button></div>
       ${quem.map((c) => { const x = rolls.find((y) => y.character_id === c.id);
         if (!x) return `<div class="g-r esperando"><span>${esc(c.data.nome)}</span><i>esperando…</i></div>`;
         const f = faixaDe(x.total);
@@ -54,7 +54,7 @@ export function criarGuia(ctx) {
     const lista = pjs().map((c) => ({ c, d: melhor(c, r) })).sort((a, b) => forca(b.d) - forca(a.d));
     const top = lista[0] ? forca(lista[0].d) : 0;
     const pista = pistaExtra || r.pista;
-    const pedindo = S.pedido?.rola === id;
+    const pedindo = (S.pedidos || []).some((x) => x.rola === id);
     return `<div class="g-rola">
       <p class="g-pede">Peça <b>${pers.join(' ou ')}</b> · ${esc(r.quem)}</p>
       ${r.pede ? `<p class="g-nota">${r.pede}</p>` : ''}
@@ -96,8 +96,8 @@ function noiteHtml() {
   const alvo = E.corpo === 'queimado' ? 'o trecho' : ondeCorpo;
   const mais = corpoNaVila ? ' + 1 Farejador de Borralho (o morto chama)' : '';
   const investida = aberto
-    ? { f: 'O trecho está aberto: eles entram', d: 'Não precisam investir contra nada. Passam pelo buraco e vão direto para ' + alvo + '. Quem estiver no caminho, luta.' }
-    : { f: 'Eles investem contra o trecho', d: `O trecho tem a força que o conserto tirou. Cada investida: o Assombro rola a mão dele contra essa força. <b>Não superou:</b> a linha segura e perde 3 de força. <b>Superou:</b> abre uma brecha e ele entra. Fechar a brecha leva uma rodada inteira e uma nova rolagem de Traços.` };
+    ? { f: 'O trecho está aberto: eles entram', d: 'Não precisam investir contra nada. Passam pelo buraco e vão direto para ' + alvo + '. Quem estiver no caminho, luta: clique no Assombro, escolha o personagem e aperte <b>Rolar ataque</b>. Se acertar, o dano sai do Sangue sozinho.' }
+    : { f: 'Eles investem contra o trecho', d: `O trecho tem a força que o conserto tirou. Cada investida: clique no Assombro, escolha <b>O círculo da vila</b> e aperte <b>Rolar ataque</b> (a força fica na aba A história). <b>Não superou:</b> a linha segura e perde 3 de força. <b>Superou:</b> abre uma brecha e ele entra. Fechar a brecha leva uma rodada inteira e uma nova rolagem de Traços.` };
   const rodadas = { f: 'Rode em rodadas', d: 'Diga: "Agora a noite anda em rodadas." Em cada rodada, <b>os jogadores agem primeiro</b>, na ordem que quiserem: cada um anda (até os passos dele) e faz uma ação (atacar, riscar, curar, encorajar, ajudar). <b>Depois agem os Assombros.</b> No app, aperte <b>Nova rodada</b> a cada volta. Arma sem traço não fere Assombro: só faz ele perder o próximo movimento.' };
   const pavor = { f: 'O Pavor da virada', d: 'Quando você vira a fase, o app pede Firmeza a todos: cada jogador rola no próprio celular. Quem tira menos de 15 ganha 1 Pavor sozinho (menos um dado em tudo até o amanhecer). Encorajar alguém (uma ação) tira 1.' };
   const fimFase = { f: 'Quando a ameaça desta fase acabar, avance', d: 'Os Assombros morreram, foram empurrados para fora, ou recuaram para o escuro. Não precisa matar todos: depois de três ou quatro rodadas sem chance, eles recuam e esperam a próxima fase.' };
@@ -331,7 +331,7 @@ function mapaHtml() {
     if (g === 'zerar') { if (t.dataset.certo) { E = { ...PADRAO_GUIA }; ctx.salvar(E); ctx.repintar(true); } else { t.dataset.certo = '1'; t.textContent = 'Clique de novo para zerar tudo'; } return true; }
     if (g === 'acao') { t.disabled = true; fecha(); await ctx.acao(t.dataset.t, v); t.disabled = false; return true; }
     if (g === 'pedir') { const r = ROLA[v]; await ctx.pedir({ rola: v, label: r.nome, per: r.per, alt: r.alt || '', quem: t.dataset.q ? [t.dataset.q] : [] }); ctx.repintar(); return true; }
-    if (g === 'cancelar') { await ctx.pedir(null); ctx.repintar(); return true; }
+    if (g === 'cancelar') { await ctx.encerrar(v); ctx.repintar(); return true; }
     return true;
   }
   function change(t) {
@@ -340,5 +340,5 @@ function mapaHtml() {
     tar[id][+t.dataset.k] = t.value; mudar({ tarefas: tar }); return true;
   }
 
-  return { html, estadoHtml, click, change, estado, setEstado, ir: (id) => mudar({ aqui: id }), respostasPainel: () => (S.pedido?.rola ? respostasHtml(S.pedido.rola) : ''), faixaTexto: (rola, total) => ROLA[rola]?.f[faixaDe(total)] };
+  return { html, estadoHtml, click, change, estado, setEstado, ir: (id) => mudar({ aqui: id }), faixaTexto: (rola, total) => ROLA[rola]?.f[faixaDe(total)] };
 }

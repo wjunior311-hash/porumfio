@@ -2,8 +2,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
-import { criarMapa } from './mapa.js?v=24';
-import { criarMesa } from './mesa.js?v=4';
+import { criarMapa } from './mapa.js?v=25';
+import { criarMesa } from './mesa.js?v=5';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -32,7 +32,10 @@ const canEdit = (c) => c && (c.owner === S.session?.user.id || isGM());
 const canEditCreation = (c) => c && (isGM() || (c.owner === S.session?.user.id && c.status !== 'aprovado'));
 
 const MAPA = criarMapa({ sb, S, isGM: () => isGM(), esc, toast, picOf: (p) => picOf(p), picChar: (c) => picChar(c), estCls: (c) => estCls(c), charById: (id) => charById(id), rerender: () => rerender(),
-  onCenas: () => MESA?.pintarTopo(), onSel: () => {} });
+  onCenas: () => MESA?.pintarTopo(), onSel: () => {},
+  animar: (r) => MESA?.animar(r), noite: () => S.noite,
+  ferir: (c, dano, txt) => { S.noite ||= novaNoite(); const t = trackerDe(c); t.sangue = Math.max(0, t.sangue - dano); logNoite(txt); salvarNoite(); MESA?.repintar(); },
+  forcaCirculo: (v, txt) => { S.noite ||= novaNoite(); S.noite.circulo = v; if (txt) logNoite(txt); salvarNoite(); MESA?.repintar(); } });
 let MESA = null;
 function criarAMesa() {
   MESA = criarMesa({ sb, S, esc, toast, isGM: () => isGM(), MAPA, route: () => route(), go: (p) => go(p), rerender: () => rerender(),
@@ -65,7 +68,7 @@ async function loadAll() {
   S.members = members.data || [];
   const nt = await sb.from('breu_state').select('*').in('key', ['noite', 'mesa', 'pedido', 'guia', 'video']);
   const est = Object.fromEntries((nt.data || []).map((r) => [r.key, r.value]));
-  S.noite = est.noite || null; S.mesa = est.mesa || {}; S.pedido = est.pedido || null; S.guia = est.guia || null; S.video = est.video || null;
+  S.noite = est.noite || null; S.mesa = est.mesa || {}; S.pedidos = est.pedido?.lista || (est.pedido?.id ? [est.pedido] : []); S.guia = est.guia || null; S.video = est.video || null;
   if (S.video?.id) S.videoVisto = S.video.id; // um vídeo que já passou não volta a tocar ao abrir o app
   const rl = await sb.from('breu_rolls').select('*').order('created_at', { ascending: false }).limit(30);
   S.rolls = rl.data || [];

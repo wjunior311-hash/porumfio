@@ -410,3 +410,16 @@ button.ms-link { background: none; border: 0; }
   #app.largo .ficha .sheet-head { margin-bottom: 8px; }
 }
 @media (min-width: 1000px) { #app.largo .hero { text-align: left; } }
+
+/* o ataque do Assombro e a força do círculo */
+.mp-atq { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
+.mp-atq .lbl { color: var(--brasa2); }
+.mp-atq .field { flex: 1; min-width: 0; padding: 6px 8px; font-size: 14px; }
+.ms-cf { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ms-cf > b { font-family: var(--display); font-size: 40px; color: var(--claro); line-height: 1; min-width: 56px; }
+.ms-cf > b.rompido { color: #f1a594; font-size: 26px; }
+.ms-cr { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--osso2); margin-top: 10px; }
+.ms-cr .field { width: 70px; padding: 4px 8px; }
+.ms-cr span { color: var(--osso3); font-size: 12px; }
+.dd-card.ataque .dd-total small { color: var(--claro); font-size: 14px; }
+.dd-card.ataque.dano .dd-total small { color: #f1a594; }

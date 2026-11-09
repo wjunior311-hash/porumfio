@@ -3,7 +3,7 @@
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=18';
-import { criarGuia, faixaDe } from './guia.js?v=2';
+import { criarGuia, faixaDe } from './guia.js?v=3';
 import { ROLA, FX_C } from './guia-dados.js?v=1';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
@@ -27,7 +27,7 @@ export function criarMesa(ctx) {
     S, R, esc,
     salvar: (E) => { S.guia = E; clearTimeout(salvarT); salvarT = setTimeout(() => sb.from('breu_state').upsert({ key: 'guia', value: E, updated_at: new Date().toISOString() }), 500); },
     repintar: (topo) => pintarGuia(topo),
-    nomeAcao, acao: (t, v) => acao(t, v), pedir: (p) => pedir(p),
+    nomeAcao, acao: (t, v) => acao(t, v), pedir: (p) => pedir(p), encerrar: (id) => encerrar(id),
   });
   G.setEstado(S.guia);
 
@@ -67,13 +67,21 @@ export function criarMesa(ctx) {
   async function virar() { ctx.garantirNoite(); await ctx.virarFase(); pintarTopo(); pintarGuia(); pintarPainel(); MAPA.redraw(); }
 
   // ---------- pedido de rolagem ----------
-  async function pedir(p) {
-    S.pedido = p ? { id: uuid(), em: Date.now(), ...p } : { fim: Date.now() };
-    const { error } = await sb.from('breu_state').upsert({ key: 'pedido', value: S.pedido, updated_at: new Date().toISOString() });
-    if (error) { toast('Não consegui mandar o pedido.'); return; }
-    if (p) { toast('Pedido enviado: ' + p.label + '.'); U.aba = 'rolagens'; }
-    pintarPainel(); pintarGuia();
+  // vários pedidos podem ficar no ar ao mesmo tempo; cada um some quando o mestre encerra
+  async function salvarPedidos() {
+    const { error } = await sb.from('breu_state').upsert({ key: 'pedido', value: { lista: S.pedidos }, updated_at: new Date().toISOString() });
+    if (error) toast('Não consegui mandar o pedido.');
+    pintarPainel(); pintarGuia(); pintarDock();
+    return !error;
   }
+  async function pedir(p) {
+    S.pedidos ||= [];
+    // pedir de novo a mesma rolagem do guia troca a antiga; um Pavor novo troca o Pavor velho
+    S.pedidos = S.pedidos.filter((x) => !(p.rola && x.rola === p.rola) && !(p.pavor && x.pavor));
+    S.pedidos = [...S.pedidos, { id: uuid(), em: Date.now(), ...p }].slice(-8);
+    if (await salvarPedidos()) { toast('Pedido enviado: ' + p.label + '.'); U.aba = 'rolagens'; pintarPainel(); }
+  }
+  async function encerrar(id) { S.pedidos = (S.pedidos || []).filter((x) => x.id !== id); await salvarPedidos(); }
   const respostas = (p) => S.rolls.filter((r) => r.detail?.pedido === p.id);
 
   // ---------- a tela do mestre ----------
@@ -125,17 +133,22 @@ export function criarMesa(ctx) {
   function abaHtml() {
     if (U.aba === 'grupo') return grupoHtml();
     if (U.aba === 'pecas') return `<div data-mpadd>${A.addHtml()}</div><details class="mp-more"><summary>Cenas e cenários próprios</summary>${A.listaCenas()}${A.formNovaCena(false)}</details>`;
-    if (U.aba === 'mesa') return `${G.estadoHtml()}${S.noite?.log?.length ? `<div class="g-painel"><h4>O que aconteceu na noite</h4><ol class="ms-log">${S.noite.log.slice(0, 12).map((l) => `<li>${esc(l.t)}</li>`).join('')}</ol></div>` : ''}`;
+    if (U.aba === 'mesa') return `${circuloHtml()}${G.estadoHtml()}${S.noite?.log?.length ? `<div class="g-painel"><h4>O que aconteceu na noite</h4><ol class="ms-log">${S.noite.log.slice(0, 12).map((l) => `<li>${esc(l.t)}</li>`).join('')}</ol></div>` : ''}`;
     return rolagensHtml();
   }
 
+  function circuloHtml() {
+    const f = S.noite?.circulo ?? 14;
+    return `<div class="g-painel ms-circ"><h4>O círculo da vila <small>os Assombros investem contra isto</small></h4>
+      <div class="ms-cf"><b class="${f <= 0 ? 'rompido' : ''}">${f > 0 ? f : 'Brecha'}</b><div class="g-seg"><button data-ms="circ" data-v="-3">Investida (−3)</button><button data-ms="circ" data-v="-1">−1</button><button data-ms="circ" data-v="1">+1</button><button data-ms="circ" data-v="0">Brecha</button></div></div>
+      <label class="ms-cr">Consertado com <input class="field sm" type="number" min="0" max="40" value="${Math.max(0, f)}" data-ms-forca> <span>(o resultado da rolagem de Traços)</span></label></div>`;
+  }
   function rolagensHtml() {
-    const p = S.pedido?.id ? S.pedido : null;
     let h = '';
-    if (p) {
+    for (const p of [...(S.pedidos || [])].reverse()) {
       const quem = p.quem?.length ? pjs().filter((c) => p.quem.includes(c.id)) : pjs();
       const rs = respostas(p), r = p.rola ? ROLA[p.rola] : null;
-      h += `<div class="ms-pedido"><div class="ms-ph"><span class="lbl">Pedido no ar</span><button class="btn sm ghost" data-g="cancelar">Encerrar</button></div>
+      h += `<div class="ms-pedido"><div class="ms-ph"><span class="lbl">Pedido no ar</span><button class="btn sm ghost" data-g="cancelar" data-v="${p.id}">Encerrar</button></div>
         <b class="ms-pl">${esc(p.label)}</b><span class="ms-pper">${esc([p.per, p.alt].filter(Boolean).join(' ou '))}${p.dif ? ` · precisa de ${p.dif}` : ''}</span>
         <div class="ms-resp">${quem.map((c) => { const x = rs.find((y) => y.character_id === c.id);
           if (!x) return `<div class="ms-r esp"><img src="${esc(ctx.picChar(c))}" alt=""><span>${esc(c.data.nome)}</span><i>rolando…</i></div>`;
@@ -202,12 +215,8 @@ export function criarMesa(ctx) {
     const t = A.tokens().find((x) => x.kind === 'pc' && x.owner === uid());
     return (t && ctx.charById(t.character_id)) || S.chars.find((c) => c.owner === uid() && c.status === 'aprovado') || null;
   }
-  function pedidoPara(c) {
-    const p = S.pedido; if (!p?.id || !c) return null;
-    if (p.quem?.length && !p.quem.includes(c.id)) return null;
-    if (Date.now() - p.em > 40 * 60e3) return null;
-    return p;
-  }
+  const pedidosPara = (c) => (c ? (S.pedidos || []).filter((p) => (!p.quem?.length || p.quem.includes(c.id)) && Date.now() - p.em < 90 * 60e3) : []);
+  const pedidoPara = (c) => pedidosPara(c).at(-1) || null;
   const pavorDe = (c) => S.noite?.grupo?.[c.id]?.pavor || 0;
   function maoDe(c, per) {
     const at = R.atrib(c.data), attr = ATR[per] || R.PERICIA_ATRIB[per];
@@ -223,17 +232,18 @@ export function criarMesa(ctx) {
   function dockHtml(lateral) {
     if (isGM() && desktop()) return '';
     const c = meuChar(); if (!c || c.owner !== uid()) return lateral ? '<p class="ms-dica">Seu personagem ainda não foi aprovado pelo mestre.</p>' : '';
-    const p = pedidoPara(c);
     let h = lateral ? fichaMini(c) : '';
     const aberto = lateral || U.dk;
-    if (p) {
+    const meus = pedidosPara(c), ultimo = meus.at(-1);
+    for (const p of meus) {
       const feito = S.rolls.find((r) => r.character_id === c.id && r.detail?.pedido === p.id);
+      if (feito && p !== ultimo) continue;
       if (feito) h += `<div class="dk-card feito"><span class="lbl">${esc(p.label)}</span><p>Você tirou <b>${feito.total}</b>${p.dif ? (feito.total >= p.dif ? `, contra ${p.dif}: segurou o medo.` : `, contra ${p.dif}: ganhou 1 Pavor (um dado a menos em tudo até o amanhecer).`) : '. O mestre conta o que acontece.'}</p></div>`;
       else {
         const ops = [p.per, p.alt].filter(Boolean).map((per) => ({ per, ...maoDe(c, per) }));
         const top = Math.max(...ops.map((o) => o.forca));
         h += `<div class="dk-card pede"><span class="lbl">O mestre pede</span><b class="dk-t">${esc(p.label)}</b>${p.dif ? `<p class="dk-nota" style="margin:-6px 0 10px">Precisa tirar ${p.dif} ou mais.</p>` : ''}
-          <div class="dk-bts">${ops.map((o) => `<button class="btn primary ${ops.length === 1 || o.forca === top ? 'melhor' : ''}" data-dk="rolar" data-per="${esc(o.per)}" data-ped="1"><span>Rolar ${esc(o.per)}</span><small>${o.txt}</small></button>`).join('')}</div>
+          <div class="dk-bts">${ops.map((o) => `<button class="btn primary ${ops.length === 1 || o.forca === top ? 'melhor' : ''}" data-dk="rolar" data-per="${esc(o.per)}" data-ped="${p.id}"><span>Rolar ${esc(o.per)}</span><small>${o.txt}</small></button>`).join('')}</div>
           ${pavorDe(c) ? `<p class="dk-nota">Pavor ${pavorDe(c)}: um dado a menos por Pavor.</p>` : ''}</div>`;
       }
     }
@@ -267,9 +277,9 @@ export function criarMesa(ctx) {
     </div>`;
   }
 
-  async function rolarComo(c, per, doPedido) {
+  async function rolarComo(c, per, pedId) {
     const attr = ATR[per] || R.PERICIA_ATRIB[per], pericia = ATR[per] ? '' : per;
-    const p = doPedido ? pedidoPara(c) : null;
+    const p = pedId ? (S.pedidos || []).find((x) => x.id === pedId) || null : null;
     const ajuste = -pavorDe(c);
     const dif = p?.dif || 0;
     const res = R.rolar(c.data, { attr, pericia, ajuste, dif });
@@ -296,14 +306,15 @@ export function criarMesa(ctx) {
     while (mesa.children.length >= 6) mesa.firstChild.remove();
     const c = ctx.charById(r.character_id), d = r.detail || {};
     const dados = d.dados?.length ? d.dados : [r.total];
-    const dano = d.tipo === 'dano';
+    const dano = d.tipo === 'dano', ataque = d.tipo === 'ataque';
+    const pic = c ? ctx.picChar(c) : r.img, quem = c?.data?.nome || r.nome || 'Alguém';
     let fi = dados.indexOf(d.fica); if (d.vazia) fi = dados.indexOf(Math.min(...dados));
-    const f = dano ? 'dano' : d.dif ? (d.marcante ? 'f3' : d.passou ? 'f2' : 'f0') : 'f' + faixaDe(r.total);
+    const f = ataque ? (d.ruim ? 'dano ataque' : 'f2 ataque') : dano ? 'dano' : d.dif ? (d.marcante ? 'f3' : d.passou ? 'f2' : 'f0') : 'f' + faixaDe(r.total);
     const card = document.createElement('div');
     card.className = `dd-card ${f}`;
-    card.innerHTML = `<div class="dd-quem">${c ? `<img src="${esc(ctx.picChar(c))}" alt="">` : ''}<div><b>${esc(c?.data?.nome || 'Alguém')}</b><span>${esc(r.label)}</span></div></div>
+    card.innerHTML = `<div class="dd-quem">${pic ? `<img src="${esc(pic)}" alt="">` : ''}<div><b>${esc(quem)}</b><span>${esc(r.label)}</span></div></div>
       <div class="dd-dados">${dados.map((x, i) => `<span class="dd-d ${dano ? 'cubo' : ''} ${!dano && i === fi ? 'fica' : ''} ${!dano && x === 20 ? 'vinte' : ''}" style="--i:${i};--rx:${(Math.random() * 2 - 1).toFixed(2)}" data-v="${x}">${dano ? `<b>?</b>` : dieSvg('?')}</span>`).join('')}</div>
-      <div class="dd-total"><strong>${r.total}</strong><small>${dano ? 'de dano' : d.dif ? `contra ${d.dif}: ${d.passou ? 'passou' : /Pavor/.test(r.label) ? 'falhou, +1 Pavor' : 'falhou'}` : `${d.vazia ? 'mão vazia: ficou o pior' : dados.length > 1 ? 'ficou o maior' : ''}${d.bonus ? ` · ${d.fica} + ${d.bonus}` : ''}`}</small>${d.marcante ? '<em>Saiu um 20!</em>' : d.desastre ? '<em>Tudo 1</em>' : ''}</div>`;
+      <div class="dd-total"><strong>${r.total}</strong><small>${ataque ? esc(d.resultado || '') : dano ? 'de dano' : d.dif ? `contra ${d.dif}: ${d.passou ? 'passou' : /Pavor/.test(r.label) ? 'falhou, +1 Pavor' : 'falhou'}` : `${d.vazia ? 'mão vazia: ficou o pior' : dados.length > 1 ? 'ficou o maior' : ''}${d.bonus ? ` · ${d.fica} + ${d.bonus}` : ''}`}</small>${d.marcante ? '<em>Saiu um 20!</em>' : d.desastre ? '<em>Tudo 1</em>' : ''}</div>`;
     mesa.appendChild(card);
     mesa.classList.toggle('muitos', mesa.children.length > 2);
     const ds = [...card.querySelectorAll('.dd-d')], max = dano ? 6 : 20;
@@ -406,15 +417,17 @@ export function criarMesa(ctx) {
       if (a === 'aba') { U.aba = v; if (v === 'rolagens') U.novas = 0; pintarPainel(); return true; }
       if (a === 'video') { tocarVideo(); return true; }
       if (a === 'fase') { t.disabled = true; await virar(); return true; }
+      if (a === 'circ') { ctx.garantirNoite(); const f = S.noite.circulo ?? 14, v = +t.dataset.v; S.noite.circulo = v === 0 ? 0 : Math.max(0, f + v); ctx.logNoite(v === 0 ? 'O círculo abriu uma brecha.' : `Força do círculo: ${S.noite.circulo}.`); await ctx.salvarNoite(); pintarPainel(); return true; }
       if (a === 'tela-preta') { await A.esconderCena(); pintarTopo(); toast('Os jogadores estão sem cena.'); return true; }
     }
     if (a === 'abrir') { U.dk = !U.dk; pintarDock(); return true; }
     if (a === 'fechar') { U.dk = false; pintarDock(); return true; }
-    if (a === 'rolar') { const c = meuChar(); if (!c) return true; t.disabled = true; await rolarComo(c, t.dataset.per, !!t.dataset.ped); return true; }
+    if (a === 'rolar') { const c = meuChar(); if (!c) return true; t.disabled = true; await rolarComo(c, t.dataset.per, t.dataset.ped || null); return true; }
     return true;
   }
   async function onChange(t) {
     if (G.change(t)) return true;
+    if (t.matches('[data-ms-forca]')) { ctx.garantirNoite(); S.noite.circulo = Math.max(0, Math.min(40, +t.value || 0)); ctx.logNoite(`Círculo consertado com força ${S.noite.circulo}.`); await ctx.salvarNoite(); pintarPainel(); toast(`Força do círculo: ${S.noite.circulo}.`); return true; }
     if (t.dataset.msEst) { ctx.garantirNoite(); S.noite.retrato = { ...(S.noite.retrato || {}), [t.dataset.msEst]: t.value }; await ctx.salvarNoite(); pintarPainel(); MAPA.redraw(); return true; }
     return false;
   }
@@ -427,7 +440,7 @@ export function criarMesa(ctx) {
   }
   // o Pavor da virada: quem falha ganha 1 Pavor, anotado pelo app do mestre
   function aplicarPavor(r) {
-    const p = S.pedido; if (!p?.pavor || r.detail?.pedido !== p.id || r.detail?.passou !== false) return;
+    const p = (S.pedidos || []).find((x) => x.id === r.detail?.pedido); if (!p?.pavor || r.detail?.passou !== false) return;
     ctx.garantirNoite(); const n = S.noite; n.pavorVisto ||= [];
     if (n.pavorVisto.includes(r.id)) return;
     n.pavorVisto.push(r.id); n.pavorVisto = n.pavorVisto.slice(-60);
@@ -442,9 +455,9 @@ export function criarMesa(ctx) {
     pintarDock();
     animar(r);
   }
-  function onPedido(v) { S.pedido = v; repintar(); if (!isGM() && v?.id && pedidoPara(meuChar()) && noMapa()) toast('O mestre pediu uma rolagem.'); }
+  function onPedido(v) { const antes = new Set((S.pedidos || []).map((x) => x.id)); S.pedidos = v?.lista || (v?.id ? [v] : []); repintar(); if (!isGM() && noMapa() && pedidosPara(meuChar()).some((x) => !antes.has(x.id))) toast('O mestre pediu uma rolagem.'); }
   function onGuia(v) { if (JSON.stringify(v) === JSON.stringify(G.estado())) return; S.guia = v; G.setEstado(v); pintarGuia(); pintarPainel(); }
   function onNoite() { repintar(); }
 
-  return { pedirPavor, viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };
+  return { animar, pedirPavor, viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };
 }
