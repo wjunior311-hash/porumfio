@@ -13,7 +13,7 @@ export const CLASSES = {
   Arcanista: { pv0: 8, pv: 2, pm: 6, chave: 'INT', magias: 'cada',
     niveis: tabela('arcanista', { 1: ['caminho do arcanista', 'magias (1º círculo)'], 5: ['magias (2º círculo)'], 9: ['magias (3º círculo)'], 13: ['magias (4º círculo)'], 17: ['magias (5º círculo)'] }) },
   Bárbaro: { pv0: 24, pv: 6, pm: 3, chave: null, magias: null,
-    niveis: tabela('bárbaro', { 1: ['fúria +2'], 2: ['instinto selvagem +1'], 3: ['redução de dano 2'], 5: ['fúria +3'], 6: ['redução de dano 4'], 8: ['instinto selvagem +2'], 9: ['redução de dano 6'], 10: ['fúria +4'], 12: ['redução de dano 8'], 14: ['instinto selvagem +3'], 15: ['fúria +5', 'redução de dano 10'], 20: ['fúria +6', 'fúria titânica'] }) },
+    niveis: tabela('bárbaro', { 1: ['fúria +2'], 3: ['instinto selvagem +1'], 5: ['redução de dano 2'], 6: ['fúria +3'], 8: ['redução de dano 4'], 9: ['instinto selvagem +2'], 11: ['fúria +4', 'redução de dano 6'], 14: ['redução de dano 8'], 15: ['instinto selvagem +3'], 16: ['fúria +5'], 17: ['redução de dano 10'], 20: ['fúria titânica'] }) },
   Bardo: { pv0: 12, pv: 3, pm: 4, chave: 'CAR', magias: 'par',
     niveis: tabela('bardo', { 1: ['inspiração +1', 'magias (1º círculo)'], 2: ['eclético'], 5: ['inspiração +2'], 6: ['magias (2º círculo)'], 9: ['inspiração +3'], 10: ['magias (3º círculo)'], 13: ['inspiração +4'], 14: ['magias (4º círculo)'], 17: ['inspiração +5'] }) },
   Bucaneiro: { pv0: 16, pv: 4, pm: 3, chave: null, magias: null,
@@ -83,32 +83,60 @@ export function aplicarNivel(ficha, g) {
 }
 
 // ----- pré-requisitos -----
+// Devolve o que falta (bloqueia) e o que o app não sabe conferir sozinho (avisos para o mestre).
 const ATR = { for: 'FOR', des: 'DES', con: 'CON', int: 'INT', sab: 'SAB', car: 'CAR' };
+const sem = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 export function checarPreRequisitos(pre, ficha, nivelNovo) {
-  if (!pre) return { ok: true, falta: [] };
-  const falta = [];
-  const nomes = (ficha.powers || []).map((p) => p[0].toLowerCase().replace(/\s*\(x\d+\)$/, ''));
-  const caminho = ((ficha.powers || []).find((p) => p[0] === 'Caminho do Arcanista') || [, ''])[1].toLowerCase();
-  pre.split(/,\s*/).forEach((parte) => {
+  if (!pre) return { ok: true, falta: [], avisos: [] };
+  const falta = [], avisos = [];
+  const nomes = (ficha.powers || []).map((p) => sem(p[0].replace(/\s*\(x\d+\)$/, '')));
+  const caminho = sem(((ficha.powers || []).find((p) => p[0] === 'Caminho do Arcanista') || [, ''])[1]);
+  const cls = CLASSES[ficha.className];
+  const conjura = !!(cls && cls.magias) || nomes.some((n) => /magias?/.test(n));
+  const circulo = cls && cls.magias ? (cls.magias === 'cada' ? [1, 5, 9, 13, 17] : [1, 6, 10, 14]).filter((n) => nivelNovo >= n).length : (conjura ? 1 : 0);
+  const partes = pre.replace(/(\d)°/g, '$1º').split(/,\s*(?![^()]*\))/);
+  partes.forEach((parte) => {
     const p = parte.trim(); if (!p) return;
     let m;
-    if ((m = p.match(/^(\d+)º nível de/i))) { if (nivelNovo < +m[1]) falta.push(`nível ${m[1]}`); return; }
-    if ((m = p.match(/^(For|Des|Con|Int|Sab|Car)\s+(-?\d+)/i))) {
+    if ((m = p.match(/^devoto de (.+)$/i))) {
+      if (/divindade|deus maior/i.test(m[1])) { if (!ficha.deity) falta.push('ser devoto de um deus'); else avisos.push(p); return; }
+      const deuses = m[1].split(/\s+ou\s+/i).map(sem);
+      if (!deuses.includes(sem(ficha.deity))) falta.push(p); return;
+    }
+    if ((m = p.match(/^raça:\s*(.+)$/i))) {
+      const racas = m[1].split(/\s+ou\s+/i).map((r) => sem(r.replace(/\(.*\)/, '')));
+      if (racas.includes('varias')) { avisos.push('raça com arma natural ou habilidade certa'); return; }
+      if (!racas.some((r) => sem(ficha.race).startsWith(r) || r.startsWith(sem(ficha.race)))) falta.push('ser ' + m[1]); return;
+    }
+    if ((m = p.match(/^(\d+)º nível de personagem/i))) { if (nivelNovo < +m[1]) falta.push(`nível ${m[1]}`); return; }
+    if ((m = p.match(/^(\d+)º nível de ([A-Za-zÀ-ÿ-]+)/i))) {
+      if (sem(m[2]) !== sem(ficha.className)) falta.push(p); else if (nivelNovo < +m[1]) falta.push(`nível ${m[1]}`); return;
+    }
+    if ((m = p.match(/^(For|Des|Con|Int|Sab|Car)\s+(-?\d+)$/i))) {
       const v = Number(ficha.attrs?.[ATR[m[1].toLowerCase()]]) || 0;
       if (v < +m[2]) falta.push(`${m[1]} ${m[2]}`); return;
     }
     if ((m = p.match(/^treinado em (.+)$/i))) {
       m[1].split(/\s+e\s+/).forEach((sk) => {
-        const nome = sk.replace(/\s*\(.*\)/, '').trim();
-        if (!(ficha.trained || []).some((t) => t.toLowerCase() === nome.toLowerCase())) falta.push(`treinado em ${sk.trim()}`);
+        const ops = sk.split(/\s+ou\s+/).map((x) => sem(x.replace(/\s*\(.*\)/, '')));
+        if (!ops.some((o) => (ficha.trained || []).some((t) => sem(t) === o))) falta.push(`treinado em ${sk.trim()}`);
       });
       return;
     }
-    const opcoes = p.split(/\s+ou\s+/i).map((x) => x.trim().toLowerCase());
+    if (/^(lançar magias|habilidade de classe magias)/i.test(p)) {
+      const c = p.match(/(\d)º círculo/);
+      if (!conjura) falta.push('lançar magias');
+      else if (c && circulo < +c[1]) falta.push(`magias de ${c[1]}º círculo`);
+      else if (/divinas/i.test(p) && !['Clérigo', 'Druida', 'Paladino'].includes(ficha.className)) avisos.push(p);
+      return;
+    }
+    // termos em minúscula (proficiência, possuir asas, poderes da Tormenta...): o app não confere sozinho
+    if (/^[a-zà-ú]/.test(p)) { avisos.push(p); return; }
+    const opcoes = p.split(/\s+ou\s+/i).map((x) => sem(x.replace(/\s*\(.*\)/, '')));
     const tem = opcoes.some((o) => nomes.includes(o) || (['bruxo', 'mago', 'feiticeiro'].includes(o) && caminho.includes(o)));
     if (!tem) falta.push(p);
   });
-  return { ok: !falta.length, falta };
+  return { ok: !falta.length, falta, avisos };
 }
 
 // ----- estilo e recomendações -----

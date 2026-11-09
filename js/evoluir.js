@@ -6,7 +6,8 @@ const NOME_ESTILO = { ataque: 'dano', defesa: 'defesa', mobilidade: 'movimento',
 export function installEvoluir(ctx) {
   const { S, ui, sb, esc, num, toast, render, actions, forms, patch } = ctx;
   ui.evo = ui.evo || {};
-  const st = (cid) => (ui.evo[cid] ||= { escolha: null, outro: { nome: '', desc: '' }, magia: { nome: '', meta: '', desc: '' }, todos: false, abertos: {} });
+  const st = (cid) => (ui.evo[cid] ||= { escolha: null, outro: { nome: '', desc: '' }, magia: { nome: '', meta: '', desc: '' }, todos: false, abertos: {}, geral: null });
+  const TIPOS_GERAIS = ['Combate', 'Destino', 'Magia', 'Concedido', 'Raça', 'Tormenta', 'Grupo'];
 
   async function carregarPoderes() {
     if (S.classPowers) return;
@@ -15,17 +16,18 @@ export function installEvoluir(ctx) {
     render();
   }
 
-  function opcoes(cid) {
+  function opcoes(cid, tipo) {
     const d = S.chars[cid].data, g = ganhosDoNivel(d);
+    const alvo = tipo ? 'Geral: ' + tipo : d.className;
     const tenho = new Set((d.powers || []).map((p) => p[0].replace(/\s*\(x\d+\)$/, '').toLowerCase()));
     const prof = perfil(d);
-    return (S.classPowers || []).filter((p) => p.class === d.className).map((p) => {
+    return (S.classPowers || []).filter((p) => p.class === alvo).map((p) => {
       const pre = checarPreRequisitos(p.prereq, d, g.para);
       const repetivel = /pode escolher (este poder )?(várias|outras) vezes|escolher novamente/i.test(p.description);
       const ja = tenho.has(p.name.toLowerCase()) && !repetivel;
       const tags = tagsDe(p.name + ' ' + p.description);
       const combina = tags.filter((t) => prof.top.includes(t));
-      return { ...p, pre, ja, tags, combina, ok: pre.ok && !ja };
+      return { ...p, key: (tipo ? 'G|' : 'C|') + p.name, pre, ja, tags, combina, ok: pre.ok && !ja };
     });
   }
 
@@ -41,7 +43,7 @@ export function installEvoluir(ctx) {
     const pericias = g.meio || g.treinoMais
       ? `<div class="row" style="justify-content:space-between"><span>Perícias</span><span class="disp" style="color:var(--gold)">+${g.meio} em todas${g.treinoMais ? `, +${g.meio + g.treinoMais} nas treinadas` : ''}</span></div>` : '';
     const cardPoder = (o, destaque) => {
-      const sel = s.escolha === o.name, aberto = s.abertos[o.name] || destaque;
+      const sel = s.escolha === o.key, aberto = s.abertos[o.key] || destaque;
       const motivo = !o.ok ? (o.ja ? 'Você já tem' : 'Falta: ' + o.pre.falta.join(', ')) : '';
       return `<div class="pick${sel ? ' pick-on' : ''}${o.ok ? '' : ' off'}">
         <div class="row" style="justify-content:space-between;gap:8px">
@@ -50,11 +52,12 @@ export function installEvoluir(ctx) {
         </div>
         ${destaque && o.combina.length ? `<span class="small" style="color:#f0d38a">Puxa para ${o.combina.map((t) => NOME_ESTILO[t]).join(' e ')}, como o resto da sua ficha.</span>` : ''}
         ${motivo ? `<span class="small" style="color:#f0b9a0">${esc(motivo)}</span>` : ''}
+        ${o.ok && o.pre.avisos?.length ? `<span class="small" style="color:#f0d38a">Confira com o mestre: ${esc(o.pre.avisos.join(', '))}</span>` : ''}
         ${aberto ? `<span class="small" style="color:#c9bfcc;line-height:1.45">${esc(o.description)}</span>` : ''}
         <div class="row" style="gap:8px">
-          ${destaque ? '' : `<button class="link" data-act="evoAbrir" data-c="${cid}" data-n="${esc(o.name)}">${aberto ? 'Fechar' : 'Ler'}</button>`}
+          ${destaque ? '' : `<button class="link" data-act="evoAbrir" data-c="${cid}" data-n="${esc(o.key)}">${aberto ? 'Fechar' : 'Ler'}</button>`}
           <span style="flex:1"></span>
-          ${o.ok ? `<button class="${sel ? 'use' : 'ghost'}" data-act="evoEscolher" data-c="${cid}" data-n="${esc(o.name)}">${sel ? 'Escolhido' : 'Escolher'}</button>` : ''}
+          ${o.ok ? `<button class="${sel ? 'use' : 'ghost'}" data-act="evoEscolher" data-c="${cid}" data-n="${esc(o.key)}">${sel ? 'Escolhido' : 'Escolher'}</button>` : ''}
         </div></div>`;
     };
     const podeConfirmar = (!g.ganhaPoder || s.escolha) && true;
@@ -84,9 +87,20 @@ export function installEvoluir(ctx) {
           ${falta.length ? `<div class="card" style="background:#20283a;border-color:#2f3b55;color:#dbe2ff;font-size:14px;line-height:1.45"><b>Sente falta disso?</b> ${falta.map(esc).join(' ')}</div>` : ''}
           <button class="ghost" style="height:44px" data-act="evoTodos" data-c="${cid}">${s.todos ? 'Esconder a lista toda' : `Ver todos os poderes de ${esc(d.className.toLowerCase())} (${ops.length})`}</button>
           ${s.todos ? outros.sort((a, b) => (b.ok - a.ok) || a.name.localeCompare(b.name, 'pt')).map((o) => cardPoder(o, false)).join('') : ''}
+          <h2 class="lbl" style="margin:10px 2px 0">Ou troque por um poder geral</h2>
+          <p class="small muted" style="margin:0 2px">Toda vez que ganha um poder de classe, você pode escolher um poder geral no lugar.</p>
+          <div class="row" style="flex-wrap:wrap;gap:6px">${TIPOS_GERAIS.map((t) => {
+            const n = opcoes(cid, t).filter((o) => o.ok).length;
+            return `<button class="${s.geral === t ? 'use' : 'ghost'}" style="height:36px;padding:0 12px" data-act="evoGeral" data-c="${cid}" data-n="${t}">${t} · ${n}</button>`;
+          }).join('')}</div>
+          ${s.geral ? (() => {
+            const lista = opcoes(cid, s.geral).filter((o) => o.ok || !['Concedido', 'Raça'].includes(s.geral))
+              .sort((a, b) => (b.ok - a.ok) || (b.combina.length - a.combina.length) || a.name.localeCompare(b.name, 'pt'));
+            return lista.map((o) => cardPoder(o, false)).join('') || '<p class="small muted" style="margin:0 2px">Nenhum disponível para você neste grupo.</p>';
+          })() : ''}
           <div class="pick${s.escolha === '__outro' ? ' pick-on' : ''}">
             <span style="font-weight:700">Outro poder</span>
-            <span class="small muted">Poder geral, de origem ou da sua divindade, no lugar do poder de classe.</span>
+            <span class="small muted">Um poder de origem ou de outro livro que não está no app.</span>
             <label class="sr" for="evo-on">Nome do poder</label><input class="field" id="evo-on" placeholder="Nome do poder" value="${esc(s.outro.nome)}" data-in="evoOutroNome" data-c="${cid}">
             <label class="sr" for="evo-od">O que ele faz</label><textarea class="field" id="evo-od" style="min-height:70px" placeholder="O que ele faz" data-in="evoOutroDesc" data-c="${cid}">${esc(s.outro.desc)}</textarea>
             <div class="row"><span style="flex:1"></span><button class="${s.escolha === '__outro' ? 'use' : 'ghost'}" data-act="evoEscolher" data-c="${cid}" data-n="__outro">${s.escolha === '__outro' ? 'Escolhido' : 'Escolher este'}</button></div>
@@ -109,6 +123,7 @@ export function installEvoluir(ctx) {
   Object.assign(actions, {
     evoEscolher(el) { st(el.dataset.c).escolha = el.dataset.n; render(); },
     evoAbrir(el) { const s = st(el.dataset.c); s.abertos[el.dataset.n] = !s.abertos[el.dataset.n]; render(); },
+    evoGeral(el) { const s = st(el.dataset.c); s.geral = s.geral === el.dataset.n ? null : el.dataset.n; render(); },
     evoTodos(el) { const s = st(el.dataset.c); s.todos = !s.todos; render(); },
     async liberarNivel(el) { const c = S.chars[el.dataset.c]; await patch(c.id, { levelUp: !c.data.levelUp }); toast(c.data.levelUp ? `${c.name} pode subir de nível.` : 'Subida de nível cancelada.'); },
     async evoConfirmar(el) {
@@ -119,7 +134,8 @@ export function installEvoluir(ctx) {
           if (!s.outro.nome.trim()) return toast('Escreva o nome do poder.');
           poder = [s.outro.nome.trim(), s.outro.desc.trim()];
         } else {
-          const o = (S.classPowers || []).find((p) => p.class === d.className && p.name === s.escolha);
+          const [tipo, ...resto] = String(s.escolha || '').split('|'), nome = resto.join('|');
+          const o = (S.classPowers || []).find((p) => p.name === nome && (tipo === 'G' ? p.class.startsWith('Geral: ') : p.class === d.className));
           if (!o) return toast('Escolha um poder.');
           poder = [o.name, o.description];
         }

@@ -691,7 +691,7 @@ function castState(m) {
     title = m.name; base = inf.pm || 0; summary = inf.quando;
     opts = (inf.extras || []).map((x, i) => {
       let max = x.repetivel ? 9 : 1, bloqueio = '';
-      if (x.aCadaNiveis) { max = Math.floor(lvl / x.aCadaNiveis); if (!max) bloqueio = `Libera no nível ${x.aCadaNiveis}`; }
+      if (x.aCadaNiveis) { const d0 = x.desde || 0; max = Math.floor((lvl - d0) / x.aCadaNiveis); if (!max) bloqueio = `Libera no nível ${x.aCadaNiveis + d0}`; }
       if (x.limite) max = Math.max(0, num(d.attrs?.[x.limite]));
       return { id: i, pm: x.pm, texto: x.texto, bloqueio, max };
     });
