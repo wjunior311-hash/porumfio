@@ -2,14 +2,15 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
-import { criarMapa } from './mapa.js?v=21';
+import { criarMapa } from './mapa.js?v=22';
+import { criarMesa } from './mesa.js?v=1';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_J0n__8-3G6Tf6rnz4Xu_7A_uLIbfKbJ';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
 
-const S = { session: null, me: null, chars: [], members: [], invites: [], notes: {}, rolls: [], noite: null, mesa: {}, ready: false };
+const S = { session: null, me: null, chars: [], members: [], invites: [], notes: {}, rolls: [], noite: null, mesa: {}, pedido: null, guia: null, video: null, ready: false };
 const ui = { invite: null, inviteErr: '', loginErr: '', busy: false, saved: '' };
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -30,7 +31,17 @@ const canEdit = (c) => c && (c.owner === S.session?.user.id || isGM());
 // a criação fica aberta até o mestre aprovar; depois, a ficha muda só pelos marcos
 const canEditCreation = (c) => c && (isGM() || (c.owner === S.session?.user.id && c.status !== 'aprovado'));
 
-const MAPA = criarMapa({ sb, S, isGM: () => isGM(), esc, toast, picOf: (p) => picOf(p), picChar: (c) => picChar(c), estCls: (c) => estCls(c), charById: (id) => charById(id), rerender: () => rerender() });
+const MAPA = criarMapa({ sb, S, isGM: () => isGM(), esc, toast, picOf: (p) => picOf(p), picChar: (c) => picChar(c), estCls: (c) => estCls(c), charById: (id) => charById(id), rerender: () => rerender(),
+  onCenas: () => MESA?.pintarTopo(), onSel: () => {} });
+let MESA = null;
+function criarAMesa() {
+  MESA = criarMesa({ sb, S, esc, toast, isGM: () => isGM(), MAPA, route: () => route(), go: (p) => go(p), rerender: () => rerender(),
+    charById: (id) => charById(id), picChar: (c) => picChar(c), estCls: (c) => estCls(c), estadoDe: (c) => estadoDe(c), ESTADOS,
+    trackerDe: (c) => trackerDe(c), garantirNoite: () => { S.noite ||= novaNoite(); }, virarFase: () => virarFase(), salvarNoite: () => salvarNoite(),
+    registrar: (c, l, r, d) => registrar(c, l, r, d) });
+}
+// repinta a tela certa: a mesa do mestre se repinta por partes, o resto recarrega
+function rr() { if (route().name === 'mapa' && MESA) { MESA.repintar(); MAPA.redraw(); } else rerender(); }
 
 // ---------- rotas ----------
 function route() {
@@ -52,9 +63,10 @@ async function loadAll() {
   ]);
   S.chars = (chars.data || []).map((c) => ({ ...c, data: R.norm(c.data || {}) }));
   S.members = members.data || [];
-  const nt = await sb.from('breu_state').select('*').in('key', ['noite', 'mesa']);
+  const nt = await sb.from('breu_state').select('*').in('key', ['noite', 'mesa', 'pedido', 'guia', 'video']);
   const est = Object.fromEntries((nt.data || []).map((r) => [r.key, r.value]));
-  S.noite = est.noite || null; S.mesa = est.mesa || {};
+  S.noite = est.noite || null; S.mesa = est.mesa || {}; S.pedido = est.pedido || null; S.guia = est.guia || null; S.video = est.video || null;
+  if (S.video?.id) S.videoVisto = S.video.id; // um vídeo que já passou não volta a tocar ao abrir o app
   const rl = await sb.from('breu_rolls').select('*').order('created_at', { ascending: false }).limit(30);
   S.rolls = rl.data || [];
   if (isGM()) {
@@ -87,15 +99,19 @@ function subscribe() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_state' }, (p) => {
       if (p.new?.key === 'cena') { MAPA.onAtiva(p.new.value); return; }
       if (p.new?.key === 'mesa') { S.mesa = p.new.value || {}; return; }
+      if (p.new?.key === 'pedido') { MESA.onPedido(p.new.value); return; }
+      if (p.new?.key === 'guia') { MESA.onGuia(p.new.value); return; }
+      if (p.new?.key === 'video') { MESA.onVideo(p.new.value); return; }
       if (p.new?.key !== 'noite') return;
       if (noiteSalvando) return;
       S.noite = p.new.value; if (['', 'noite'].includes(route().name)) rerender();
-      else if (route().name === 'ficha') { const c = charById(route().arg), im = document.querySelector('.sheet-head .pic img'); if (c && im) im.src = picChar(c); } else if (route().name === 'mapa') MAPA.redraw();
+      else if (route().name === 'ficha') { const c = charById(route().arg), im = document.querySelector('.sheet-head .pic img'); if (c && im) im.src = picChar(c); } else if (route().name === 'mapa') { MAPA.redraw(); MESA.onNoite(); }
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'breu_rolls' }, (p) => {
       if (S.rolls.some((r) => r.id === p.new.id)) return;
-      S.rolls.unshift(p.new); S.rolls = S.rolls.slice(0, 30);
+      S.rolls.unshift(p.new); S.rolls = S.rolls.slice(0, 40);
       if (route().name === '') rerender();
+      MESA.onRoll(p.new);
     })
     .subscribe();
 }
@@ -122,7 +138,9 @@ function render() {
   const app = $('#app');
   let html = '';
   app.classList.toggle('wide', r.name === 'admin');
-  app.classList.toggle('mapa', r.name === 'mapa');
+  const gmMesa = r.name === 'mapa' && S.me && MESA?.desktop();
+  app.classList.toggle('mapa', r.name === 'mapa' && !gmMesa);
+  app.classList.toggle('mesa-gm', !!gmMesa);
   if (r.name === 'convite') html = viewInvite(r.arg);
   else if (!S.session) html = viewLogin();
   else if (!S.me) html = viewNoMember();
@@ -132,16 +150,16 @@ function render() {
   else if (r.name === 'admin' && isAdmin()) html = viewAdmin();
   else if (r.name === 'prontos') html = viewProntos();
   else if (r.name === 'noite' && isGM()) html = viewNoite();
-  else if (r.name === 'mapa') html = top() + MAPA.view();
+  else if (r.name === 'mapa') html = gmMesa ? MESA.viewGM() : top() + MAPA.view() + MESA.dockWrap();
   else if (r.name === '') html = viewMesa();
   else { location.replace('#/'); return; }
   app.innerHTML = html;
-  if (r.name === 'mapa' && S.me) MAPA.mount(); else MAPA.unmount();
+  if (r.name === 'mapa' && S.me) { MAPA.mount(); MESA.mount(); } else MAPA.unmount();
 }
 
 function top(extra = '') {
   return `<header class="top"><a href="#/" aria-label="Início"><img src="img/logo-horizontal.webp" alt="Breu"></a>
-    <div class="acts">${extra}<a class="btn sm ghost" href="#/mapa">Mapa</a>${isGM() ? '<a class="btn sm ghost" href="#/noite">Mestre</a>' : ''}${isAdmin() ? '<a class="btn sm ghost" href="#/admin">Convites</a>' : ''}<button class="btn sm ghost" data-act="logout">Sair</button></div></header>`;
+    <div class="acts">${extra}<a class="btn sm ghost" href="#/mapa">${isGM() ? 'Mesa' : 'Mapa'}</a>${isGM() ? '<a class="btn sm ghost" href="#/noite">Montar noite</a>' : ''}${isAdmin() ? '<a class="btn sm ghost" href="#/admin">Convites</a>' : ''}<button class="btn sm ghost" data-act="logout">Sair</button></div></header>`;
 }
 
 // ---------- entrar ----------
@@ -362,7 +380,7 @@ async function virarFase() {
     const chegam = (n.fases[prox] || []).map((id) => bestOf(id).nome);
     logNoite(`${f.n}. Pavor: ${res.join(', ') || 'ninguém'}.${chegam.length ? ' Chegam: ' + chegam.join(', ') + '.' : ''}`);
   }
-  await salvarNoite(); rerender();
+  await salvarNoite(); rr();
   toast(prox === 4 ? 'Aurora!' : `${f.n}: Pavor rolado para todos.`);
 }
 
@@ -717,8 +735,9 @@ function viewRoller(c) {
 }
 async function registrar(c, label, res, detail) {
   const { data, error } = await sb.from('breu_rolls').insert({ character_id: c.id, user_id: S.session.user.id, label, total: res.total, detail }).select().single();
-  if (!error && data && !S.rolls.some((r) => r.id === data.id)) { S.rolls.unshift(data); S.rolls = S.rolls.slice(0, 30); }
+  if (!error && data && !S.rolls.some((r) => r.id === data.id)) { S.rolls.unshift(data); S.rolls = S.rolls.slice(0, 40); }
   if (error) toast('Rolou, mas não consegui mostrar para a mesa.');
+  return data || null;
 }
 
 // ---------- evoluir ----------
@@ -786,6 +805,7 @@ function viewAdmin() {
 // ---------- eventos ----------
 document.addEventListener('click', async (e) => {
   if (route().name === 'mapa' && e.target.closest('[data-mp]')) { await MAPA.click(e); return; }
+  if (MESA && await MESA.click(e)) return;
   const t = e.target.closest('[data-dia],[data-po],[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-ret],[data-livre],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
@@ -839,6 +859,13 @@ document.addEventListener('click', async (e) => {
   if (ui.roller && t.dataset.roAdj) { ui.roller.ajuste = Math.max(-5, Math.min(4, ui.roller.ajuste + +t.dataset.roAdj)); ui.roller.res = null; rerender(); return; }
   if (ui.roller && t.dataset.roDif) { const n = +t.dataset.roDif; ui.roller.dif = ui.roller.dif === n ? 0 : n; ui.roller.res = null; rerender(); return; }
   if (t.dataset.livre) { const c = charById(route().arg); if (!c || c.owner !== S.session?.user.id && !isGM()) return; c.data.periciaLivre = t.dataset.v; await saveNow(c); rerender(); toast('Perícia livre escolhida.'); return; }
+  if (route().name === 'mapa' && isGM() && (t.dataset.trk || t.dataset.panico)) {
+    S.noite ||= novaNoite(); const n = S.noite;
+    if (t.dataset.trk) { const [id, k, dlt] = t.dataset.trk.split(':'); const c = charById(id), tr = trackerDe(c), b = R.barras(c.data);
+      const max = { sangue: b.sangue, prumo: b.prumo, brasa: b.brasa, pavor: 9 }[k]; tr[k] = Math.max(0, Math.min(max, tr[k] + +dlt)); }
+    if (t.dataset.panico) { const c = charById(t.dataset.panico), r = M.d(20), l = M.tabela(M.PANICO, r); logNoite(`${c.data.nome} entrou em pânico (${r}): ${l[2]}`); toast(`${c.data.nome}: ${l[2]}`); }
+    salvarNoite(); rr(); return;
+  }
   if (route().name === 'noite' && S.noite) {
     const n = S.noite;
     if (t.dataset.mesaMarca) {
@@ -1006,6 +1033,7 @@ document.addEventListener('input', (e) => {
 document.addEventListener('change', async (e) => {
   const t = e.target;
   if (route().name === 'mapa' && await MAPA.onChange(t)) return;
+  if (route().name === 'mapa' && MESA && await MESA.onChange(t)) return;
   if (t.dataset.ntAdd != null && t.value && S.noite) { S.noite.fases[+t.dataset.ntAdd].push(t.value); salvarNoite(); rerender(); return; }
   if (t.id === 'ro-per' && ui.roller) { ui.roller.pericia = t.value; if (t.value) ui.roller.attr = R.PERICIA_ATRIB[t.value] || ui.roller.attr; ui.roller.res = null; rerender(); return; }
   if (t.id === 'mc-mot') { $('#mc-out').style.display = t.value ? 'none' : 'block'; return; }
@@ -1020,6 +1048,7 @@ document.addEventListener('change', async (e) => {
 document.addEventListener('submit', async (e) => {
   const f = e.target, kind = f.dataset.form;
   if (f.dataset.mpform) { e.preventDefault(); await MAPA.onSubmit(f); return; }
+  if (f.dataset.msForm) { e.preventDefault(); await MESA.onSubmit(f); return; }
   if (!kind) return;
   e.preventDefault();
   if (kind === 'login') {
@@ -1049,10 +1078,15 @@ document.addEventListener('submit', async (e) => {
   }
 });
 
+// o mestre que estica ou encolhe a janela troca de tela
+let largo = window.innerWidth >= 1100;
+window.addEventListener('resize', () => { const l = window.innerWidth >= 1100; if (l !== largo) { largo = l; if (route().name === 'mapa' && isGM()) render(); } });
+
 window.addEventListener('hashchange', () => { ui.saved = ''; ui.evo = null; ui.roller = null; render(); window.scrollTo(0, 0); });
 
 // ---------- início ----------
 async function boot() {
+  criarAMesa();
   const { data: { session } } = await sb.auth.getSession();
   S.session = session;
   if (session) { await loadAll(); if (S.me) subscribe(); }

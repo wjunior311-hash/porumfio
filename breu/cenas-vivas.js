@@ -1106,7 +1106,6 @@ function cenaVelorio() {
       desenharCaatinga(plantas, t, L, true); desenharCaatinga(plantas, t, L, false);
       penumbra(L, [sala, quarto, riscador, cozinha], .32);
       feixes.forEach(f => feixe(f, L, t));
-      redeD(redeRosario, t);
       velas.forEach(([x, y], k) => chamaD(x, y, t, k));
       brasaD(fogaoP.x + fogaoP.w / 2, fogaoP.y + fogaoP.h - 6, fogaoP.w * .6, 10, t, false);
       vapor(vaporCafe, fogaoP.x + fogaoP.w * .3, fogaoP.y + fogaoP.h * .4, t, dt, L);
@@ -1302,7 +1301,7 @@ function cenaZuleide() {
       desenharCaatinga(plantas, t, L, true); desenharCaatinga(plantas, t, L, false);
       penumbra(L, [sala, cozinha], .34); penumbra(L, [alpendre], .14);
       feixes.forEach(f => feixe(f, L, t));
-      redeD(redeZ, t);
+
       esteios.forEach(([x, y]) => esteioD(x, y, L));
       cortina(t);
       chamaD(vela.x, vela.y, t, 1);

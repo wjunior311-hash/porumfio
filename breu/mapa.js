@@ -1,7 +1,7 @@
 // Mapa compartilhado da mesa: cena, peças, escuro, círculos e movimento limitado por rodada.
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
-import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=16';
+import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=17';
 
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
 const VENTOS = [[0.15, 'Vento calmo'], [0.45, 'Vento médio'], [0.85, 'Vento forte']];
@@ -12,7 +12,10 @@ const semAcento = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, 
 const fotoNpc = (nome) => { const e = ELENCO.find(([n]) => semAcento(n) === semAcento(nome)); return e && !e[2] ? `img/tok/${e[1]}.webp` : null; };
 // quem tem uma forma verdadeira para revelar no meio da noite
 const FORMA = { celeste: 'img/tok/celeste-rasgada.webp', zeca: 'img/tok/zeca-rasgado.webp' };
-const formaDe = (nome) => FORMA[semAcento(nome)] || null;
+// a forma só aparece quando a imagem existe de verdade
+const formaOk = {};
+Object.values(FORMA).forEach((src) => { const im = new Image(); im.onload = () => { formaOk[src] = true; }; im.src = src; });
+const formaDe = (nome) => { const f = FORMA[semAcento(nome)]; return f && formaOk[f] ? f : null; };
 // peça do personagem: recorte de rosto em fundo claro, quando existe
 const TOK_PJ = ['tiao', 'flecha', 'inacio', 'damiao', 'priya', 'kaeleen'];
 const tokDe = (src) => { const m = /img\/pj\/([a-z]+)\.webp$/.exec(src || ''); return m && TOK_PJ.includes(m[1]) ? `img/tok/${m[1]}.webp` : src; };
@@ -48,7 +51,7 @@ export function criarMapa(ctx) {
     ]);
     MP.cenas = cs.data || [];
     MP.ativa = st.data?.value?.ativa || null;
-    if (!MP.ver || !MP.cenas.some((c) => c.id === MP.ver) || !isGM()) MP.ver = isGM() ? (MP.ver && MP.cenas.some((c) => c.id === MP.ver) ? MP.ver : MP.ativa || MP.cenas.at(-1)?.id || null) : MP.ativa;
+    if (!MP.ver || !MP.cenas.some((c) => c.id === MP.ver) || !isGM()) MP.ver = isGM() ? (MP.ver && MP.cenas.some((c) => c.id === MP.ver) ? MP.ver : MP.ativa || MP.cenas.find((c) => c.img === 'viva:estrada')?.id || MP.cenas.at(-1)?.id || null) : MP.ativa;
     await loadTokens();
     MP.loaded = true;
   }
@@ -89,11 +92,12 @@ export function criarMapa(ctx) {
   async function onAtiva(v) {
     MP.ativa = v?.ativa || null;
     if (!isGM()) { MP.ver = MP.ativa; await loadTokens(); refresh(); }
-    else paintBar();
+    else { paintBar(); ctx.onCenas?.(); }
   }
 
   // ---------- visão ----------
   function view() {
+    MP.mesa = false;
     if (!MP.loaded) { load().then(() => ctx.rerender()); return `<p class="muted">Abrindo o mapa…</p>`; }
     const c = cena();
     const gm = isGM();
@@ -107,16 +111,21 @@ export function criarMapa(ctx) {
         <div class="mp-rod"><span class="lbl">Rodada</span><b data-mp-rodada>${c.rodada}</b></div>
       </div>
       <div class="mp-bar" data-mpbar>${barHtml()}</div>
-      <div class="mp-wrap"><div class="mp-stage ${isGM() && MP.tool !== 'mover' ? 'pintando' : ''}" data-mpstage style="width:${MP.zoom * 100}%">
+      ${stageHtml()}
+      <div class="mp-side" data-mpside>${sideHtml()}</div>
+      ${gm ? `<details class="mp-more"><summary>Cenas</summary>${listaCenas()}${formNovaCena(false)}</details>` : ''}
+    </div>`;
+  }
+
+  function stageHtml() {
+    const c = cena(); if (!c) return '';
+    return `<div class="mp-wrap"><div class="mp-stage ${isGM() && MP.tool !== 'mover' ? 'pintando' : ''}" data-mpstage style="width:${MP.zoom * 100}%">
         ${vivaId(c) ? `<canvas class="mp-bg mp-viva" data-mpviva aria-hidden="true"></canvas>` : c.img ? `<img class="mp-bg" src="${esc(c.img)}" alt="" draggable="false">` : `<div class="mp-bg mp-blank"></div>`}
         <svg class="mp-svg" data-mpsvg></svg>
         <div class="mp-toks" data-mptoks></div>
         <canvas class="mp-fog" data-mpfog></canvas>
         <div class="mp-ring" data-mpring hidden></div>
-      </div></div>
-      <div class="mp-side" data-mpside>${sideHtml()}</div>
-      ${gm ? `<details class="mp-more"><summary>Cenas</summary>${listaCenas()}${formNovaCena(false)}</details>` : ''}
-    </div>`;
+      </div></div>`;
   }
 
   function barHtml() {
@@ -135,13 +144,20 @@ export function criarMapa(ctx) {
       ${zoom}${somBtn()}
       ${vivaId(c) ? `<select class="field sm" data-mphora aria-label="Hora da cena">${HORAS.map(([v, n]) => `<option value="${v}" ${String(c.fog?.hora ?? '') === String(v) ? 'selected' : ''}>${n}</option>`).join('')}</select><select class="field sm" data-mpvento aria-label="Vento">${VENTOS.map(([v, n]) => `<option value="${v}" ${(c.fog?.vento ?? 0.45) === v ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
       <button class="btn sm" data-mp="fog">${fogOn ? 'Tirar o escuro' : 'Pôr o escuro'}</button>
-      ${MP.ativa === c.id ? `<span class="mp-on">Os jogadores estão vendo</span><button class="btn sm" data-mp="esconderCena">Tirar dos jogadores</button>` : `<button class="btn sm" data-mp="mostrar">Mostrar aos jogadores</button>`}`;
+      ${MP.mesa ? '' : MP.ativa === c.id ? `<span class="mp-on">Os jogadores estão vendo</span><button class="btn sm" data-mp="esconderCena">Tirar dos jogadores</button>` : `<button class="btn sm" data-mp="mostrar">Mostrar aos jogadores</button>`}`;
   }
 
   const somBtn = () => (vivaId(cena()) ? `<button class="btn sm ${viva?.somLigado() ? 'primary' : ''}" data-mp="som">${viva?.somLigado() ? 'Som ligado' : 'Ligar o som'}</button>` : '');
   const meusChars = () => S.chars.filter((ch) => ch.owner === uid() && ch.status === 'aprovado');
 
   function sideHtml() {
+    if (MP.mesa) return selHtml() || `<p class="ms-dica">Clique numa peça no mapa para mexer nela: Sangue, nome, esconder, tirar.</p>`;
+    const c = cena(); if (!c) return '';
+    const sel = selHtml();
+    if (!isGM()) return sel || `<p class="small muted">Arraste o seu personagem. Ele anda até o limite de passos da rodada; na próxima rodada, o limite volta.</p>`;
+    return sel + addHtml();
+  }
+  function selHtml() {
     const c = cena(); if (!c) return '';
     const t = MP.tokens.find((x) => x.id === MP.sel);
     let sel = '';
@@ -162,14 +178,16 @@ export function criarMapa(ctx) {
           <div class="mp-row">${t.kind !== 'pc' ? `<button class="btn sm" data-mp="visivel">${t.visivel ? 'Esconder dos jogadores' : 'Revelar aos jogadores'}</button>` : ''}<button class="btn sm ghost" data-mp="apagar">Tirar da cena</button></div></div>`;
       }
     }
-    if (!isGM()) return sel || `<p class="small muted">Arraste o seu personagem. Ele anda até o limite de passos da rodada; na próxima rodada, o limite volta.</p>`;
+    return sel;
+  }
+  function addHtml() {
+    if (!cena()) return '';
     const naCena = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id));
     const faltam = S.chars.filter((ch) => ch.status === 'aprovado' && !naCena.has(ch.id));
-    return `${sel}
-      <div class="mp-add">
+    return `<div class="mp-add">
         ${faltam.length ? `<button class="btn sm" data-mp="grupo">Colocar o grupo (${faltam.length})</button>` : ''}
         <select class="field sm" data-mpbest><option value="">+ Assombro (entra escondido)</option>${['Cinza', 'Raiz', 'Osso', 'Sopro', 'Lodo', 'Velho'].map((f) => `<optgroup label="${f}">${M.BESTIARIO.filter((b) => (f === 'Velho' ? b.grau === 'Velho' : b.familia === f && b.grau !== 'Velho')).map((b) => `<option value="${b.id}">${esc(b.nome)} · ${b.grau}</option>`).join('')}</optgroup>`).join('')}</select>
-        <div class="mp-elenco">${ELENCO.filter(([n]) => !MP.tokens.some((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(n))).map(([n, k, sem]) => `<button class="btn sm" data-mp="elenco" data-v="${esc(n)}" title="${sem ? 'Ainda sem retrato' : ''}">${sem ? '' : `<img src="img/npc/${k}.webp" alt="">`}${esc(n)}</button>`).join('')}</div>
+        <div class="mp-elenco">${ELENCO.filter(([n]) => !MP.tokens.some((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(n))).map(([n, k, sem]) => `<button class="btn sm" data-mp="elenco" data-v="${esc(n)}" title="${sem ? 'Ainda sem retrato' : ''}">${sem ? '' : `<img src="img/tok/${k}.webp" alt="">`}${esc(n)}</button>`).join('')}</div>
         <form class="mp-npc" data-mpform="npc"><input class="field sm" name="nome" placeholder="+ Pessoa (nome)" maxlength="40"><button class="btn sm">Pôr</button></form>
         <div class="seg">${RAIOS.map((r) => `<button data-mp="circ" data-v="${r.r}">Círculo ${r.n.toLowerCase()}</button>`).join('')}</div>
       </div>`;
@@ -203,17 +221,22 @@ export function criarMapa(ctx) {
     viva?.destruir(); viva = null;
     const cvv = el.querySelector('[data-mpviva]');
     if (cvv) { viva = criarCenaViva(cvv, vivaId(cena())); viva.setHora(horaCena(cena()), true); viva.setVento(cena().fog?.vento ?? 0.45); }
-    const size = () => { W = stage.clientWidth; H = W * cena().aspecto; stage.style.height = H + 'px'; drawFog(); draw(); };
+    MP.mesa = el.classList.contains('mesa');
+    const wrap0 = el.querySelector('.mp-wrap');
+    const size = () => {
+      if (MP.mesa) { const a = cena().aspecto, w = Math.min(wrap0.clientWidth, wrap0.clientHeight / a) * MP.zoom; stage.style.width = Math.floor(w) + 'px'; }
+      W = stage.clientWidth; H = W * cena().aspecto; stage.style.height = H + 'px'; drawFog(); draw();
+    };
     if (img && !img.complete) img.addEventListener('load', size, { once: true });
     size();
     const meu = !isGM() && meuPc(), wrap = el.querySelector('.mp-wrap');
     if (meu && wrap.scrollWidth > wrap.clientWidth) { wrap.scrollLeft = meu.x * W - wrap.clientWidth / 2; wrap.scrollTop = meu.y * H - wrap.clientHeight / 2; }
-    new ResizeObserver(() => { if (stage.clientWidth !== W) size(); }).observe(stage);
+    new ResizeObserver(() => { if (stage.clientWidth !== W || MP.mesa) size(); }).observe(MP.mesa ? wrap0 : stage);
     stage.addEventListener('pointerdown', onDown);
   }
   function refresh() { ctx.rerender(); }
   function paintBar() { const b = el?.querySelector('[data-mpbar]'); if (b) b.innerHTML = barHtml(); const r = el?.querySelector('[data-mp-rodada]'); if (r && cena()) r.textContent = cena().rodada; }
-  function paintSide() { const s = el?.querySelector('[data-mpside]'); if (s) s.innerHTML = sideHtml(); }
+  function paintSide() { const s = el?.querySelector('[data-mpside]'); if (s) s.innerHTML = sideHtml(); const a = el?.querySelector('[data-mpadd]'); if (a) a.innerHTML = addHtml(); ctx.onSel?.(); }
 
   function revelado(x, y) {
     const c = cena(); if (!c || c.fog?.on === false) return true;
@@ -353,13 +376,9 @@ export function criarMapa(ctx) {
     const a = t.dataset.mp, v = t.dataset.v, c = cena();
     const sel = MP.tokens.find((x) => x.id === MP.sel);
     if (a === 'zoom') { MP.zoom = +v; refresh(); return; }
+    if (a === 'mostrarId') { await mostrarCena(v); return; }
     if (a === 'som') { viva?.som(); paintBar(); return; }
-    if (a === 'elenco') {
-      const x = 0.42 + Math.random() * 0.16, y = 0.42 + Math.random() * 0.16;
-      const { error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'npc', nome: v, img: fotoNpc(v), x, y, ax: x, ay: y, visivel: true });
-      if (error) toast('Não consegui pôr a pessoa.'); else { await loadTokens(); draw(); paintSide(); }
-      return true;
-    }
+    if (a === 'elenco') { await porNpc(v); return true; }
     if (a === 'vivas') {
       const faltam = Object.entries(CENAS_VIVAS).filter(([k]) => !MP.cenas.some((x) => x.img === 'viva:' + k));
       const rows = faltam.map(([k, d]) => ({ nome: d.nome, img: 'viva:' + k, aspecto: ASPECTO_VIVO, largura: d.largura, fog: { on: false, revela: [] } }));
@@ -376,11 +395,7 @@ export function criarMapa(ctx) {
       if (error) { toast('Não consegui tirar a cena.'); return; }
       MP.ativa = null; toast('Os jogadores não veem mais esta cena.'); paintBar(); return;
     }
-    if (a === 'mostrar') {
-      const { error } = await sb.from('breu_state').upsert({ key: 'cena', value: { ativa: c.id }, updated_at: new Date().toISOString() });
-      if (error) { toast('Não consegui mostrar a cena.'); return; }
-      MP.ativa = c.id; toast('Os jogadores agora veem esta cena.'); paintBar(); return;
-    }
+    if (a === 'mostrar') { await mostrarCena(c.id); return; }
     if (a === 'fog') {
       c.fog = { ...(c.fog || {}), on: c.fog?.on === false, revela: c.fog?.revela || [] };
       if (c.fog.on === false) MP.tool = 'mover';
@@ -393,14 +408,7 @@ export function criarMapa(ctx) {
       await sb.from('breu_cenas').update({ rodada: c.rodada }).eq('id', c.id);
       t.disabled = false; draw(); toast(`Rodada ${c.rodada}.`); return;
     }
-    if (a === 'grupo') {
-      const naCena = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id));
-      const faltam = S.chars.filter((ch) => ch.status === 'aprovado' && !naCena.has(ch.id));
-      const rows = faltam.map((ch, i) => { const x = 0.36 + (i % 4) * 0.09, y = 0.55 + Math.floor(i / 4) * 0.12; return { cena_id: c.id, kind: 'pc', character_id: ch.id, owner: ch.owner, nome: ch.data.nome || 'Sem nome', x, y, ax: x, ay: y, passos: S.mesa?.passos || 6 }; });
-      const { error } = await sb.from('breu_tokens').insert(rows);
-      if (error) toast('Não consegui colocar o grupo.'); else { await loadTokens(); draw(); paintSide(); }
-      return;
-    }
+    if (a === 'grupo') { await porGrupo(); return; }
     if (a === 'entrar') {
       const ch = charById(v); if (!ch) return;
       const { error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'pc', character_id: ch.id, owner: uid(), nome: ch.data.nome || 'Sem nome', x: 0.5, y: 0.55 });
@@ -442,15 +450,7 @@ export function criarMapa(ctx) {
 
   async function onChange(t) {
     const c = cena();
-    if (t.matches('[data-mpbest]') && t.value) {
-      const b = M.BESTIARIO.find((x) => x.id === t.value); t.value = '';
-      const n = MP.tokens.filter((x) => x.data?.best === b.id).length;
-      const sel = MP.tokens.find((x) => x.id === MP.sel);
-      const x = sel ? Math.min(0.97, sel.x + 0.05) : 0.5, y = sel ? sel.y : 0.3;
-      const { error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'assombro', nome: b.nome + (n ? ' ' + (n + 1) : ''), img: `img/ass/${b.id}.webp`, x, y, ax: x, ay: y, passos: 6, visivel: false, data: { best: b.id, sangue: b.sangue, max: b.sangue } });
-      if (error) toast('Não consegui pôr o Assombro.'); else { await loadTokens(); draw(); }
-      return true;
-    }
+    if (t.matches('[data-mpbest]') && t.value) { const id = t.value; t.value = ''; await porAssombro(id); return true; }
     if (t.matches('[data-mphora]') || t.matches('[data-mpvento]')) {
       const fog = { ...(c.fog || {}) };
       if (t.matches('[data-mphora]')) fog.hora = t.value === '' ? null : +t.value; else fog.vento = +t.value;
@@ -496,6 +496,91 @@ export function criarMapa(ctx) {
     return false;
   }
 
+  // ---------- o que o guia do mestre aperta ----------
+  // procura um lugar vazio perto de (cx, cy), longe das outras peças
+  function lugarLivre(cx, cy, raio, extra = []) {
+    const a = cena()?.aspecto || 0.667, ocup = [...MP.tokens.filter((t) => t.kind !== 'circulo').map((t) => [t.x, t.y]), ...extra];
+    let best = { x: cx, y: cy }, bd = -1;
+    for (let i = 0; i < 80; i++) {
+      const ang = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * raio;
+      const x = Math.max(0.06, Math.min(0.94, cx + Math.cos(ang) * r)), y = Math.max(0.08, Math.min(0.92, cy + (Math.sin(ang) * r) / a));
+      const d = ocup.length ? Math.min(...ocup.map(([ox, oy]) => Math.hypot(x - ox, (y - oy) * a))) - Math.hypot(x - cx, (y - cy) * a) * 0.15 : 1 - Math.hypot(x - cx, y - cy);
+      if (d > bd) { bd = d; best = { x, y }; }
+    }
+    return best;
+  }
+  const cenaDe = (key) => MP.cenas.find((c) => c.img === 'viva:' + key) || null;
+  async function garantirCena(key) {
+    let c = cenaDe(key); if (c) return c;
+    const d = CENAS_VIVAS[key]; if (!d) return null;
+    const { data, error } = await sb.from('breu_cenas').insert({ nome: d.nome, img: 'viva:' + key, aspecto: ASPECTO_VIVO, largura: d.largura, fog: { on: false, revela: [] } }).select().single();
+    if (error) { toast('Não consegui criar o cenário.'); return null; }
+    if (!MP.cenas.some((x) => x.id === data.id)) MP.cenas.push(data);
+    return data;
+  }
+  async function verCena(id) { if (MP.ver === id) return; MP.ver = id; MP.sel = null; await loadTokens(); refresh(); }
+  async function mostrarCena(id) {
+    const { error } = await sb.from('breu_state').upsert({ key: 'cena', value: { ativa: id }, updated_at: new Date().toISOString() });
+    if (error) { toast('Não consegui mostrar a cena.'); return false; }
+    MP.ativa = id;
+    if (MP.ver !== id) await verCena(id); else { paintBar(); ctx.onCenas?.(); }
+    toast('Os jogadores agora veem: ' + (MP.cenas.find((c) => c.id === id)?.nome || 'a cena') + '.');
+    return true;
+  }
+  async function esconderCena() {
+    await sb.from('breu_state').upsert({ key: 'cena', value: { ativa: null }, updated_at: new Date().toISOString() });
+    MP.ativa = null; paintBar(); ctx.onCenas?.();
+  }
+  async function porGrupo() {
+    const c = cena(); if (!c) return;
+    const naCena = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id));
+    const faltam = S.chars.filter((ch) => ch.status === 'aprovado' && !naCena.has(ch.id));
+    if (!faltam.length) { toast('O grupo já está na cena.'); return; }
+    // o grupo entra junto, perto do centro de baixo
+    const usados = [];
+    const rows = faltam.map((ch) => { const { x, y } = lugarLivre(0.5, 0.62, 0.12, usados); usados.push([x, y]); return { cena_id: c.id, kind: 'pc', character_id: ch.id, owner: ch.owner, nome: ch.data.nome || 'Sem nome', x, y, ax: x, ay: y, passos: S.mesa?.passos || 6 }; });
+    const { error } = await sb.from('breu_tokens').insert(rows);
+    if (error) toast('Não consegui colocar o grupo.'); else { await loadTokens(); draw(); paintSide(); toast('O grupo entrou na cena.'); }
+  }
+  async function porNpc(nome) {
+    const c = cena(); if (!c) return;
+    const ja = MP.tokens.find((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(nome));
+    if (ja) { MP.sel = ja.id; draw(); paintSide(); toast(nome + ' já está no mapa: selecionei a peça.'); return; }
+    const { x, y } = lugarLivre(0.5, 0.42, 0.26);
+    const { error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'npc', nome, img: fotoNpc(nome), x, y, ax: x, ay: y, visivel: true });
+    if (error) toast('Não consegui pôr a pessoa.'); else { await loadTokens(); draw(); paintSide(); toast(nome + ' entrou no mapa. Os jogadores veem ??.'); }
+  }
+  async function porAssombro(id) {
+    const c = cena(); if (!c) return;
+    const b = M.BESTIARIO.find((x) => x.id === id); if (!b) return;
+    const n = MP.tokens.filter((x) => x.data?.best === b.id).length;
+    const sel = MP.tokens.find((x) => x.id === MP.sel);
+    // sem peça escolhida, entra na borda do mapa, fora da vila
+    const ang = Math.random() * Math.PI * 2, x = sel ? Math.min(0.97, sel.x + 0.05) : 0.5 + Math.cos(ang) * 0.44, y = sel ? sel.y : 0.5 + Math.sin(ang) * 0.42;
+    const { error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'assombro', nome: b.nome + (n ? ' ' + (n + 1) : ''), img: `img/ass/${b.id}.webp`, x, y, ax: x, ay: y, passos: 6, visivel: false, data: { best: b.id, sangue: b.sangue, max: b.sangue } });
+    if (error) toast('Não consegui pôr o Assombro.'); else { await loadTokens(); draw(); paintSide(); toast(b.nome + ' está no mapa, escondido. Arraste e revele quando aparecer.'); }
+  }
+  async function revelarAssombro(id) {
+    const t = MP.tokens.find((x) => x.kind === 'assombro' && x.data?.best === id && !x.visivel);
+    if (!t) { toast('Não há ' + (M.BESTIARIO.find((b) => b.id === id)?.nome || 'Assombro') + ' escondido nesta cena. Ponha um primeiro.'); return; }
+    t.visivel = true; await sb.from('breu_tokens').update({ visivel: true }).eq('id', t.id);
+    enviar('reload', {}); MP.sel = t.id; draw(); paintSide(); toast(t.nome + ' apareceu para os jogadores.');
+  }
+  async function trocarForma(nome) {
+    const t = MP.tokens.find((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(nome));
+    const alt = formaDe(nome);
+    if (!t || !alt) { toast(t ? 'A imagem da forma verdadeira ainda não chegou.' : nome + ' não está nesta cena.'); return; }
+    t.img = t.img === alt ? fotoNpc(t.nome) : alt;
+    await sb.from('breu_tokens').update({ img: t.img }).eq('id', t.id); enviar('reload', {}); MP.sel = t.id; draw(); paintSide();
+  }
+  const api = {
+    setMesa: (v) => { MP.mesa = v; }, cenas: () => MP.cenas, ativa: () => MP.ativa, ver: () => MP.ver, cena, cenaDe, garantirCena, verCena, mostrarCena, esconderCena,
+    porGrupo, porNpc, porAssombro, revelarAssombro, trocarForma, formaDe, tokens: () => MP.tokens,
+    temNpc: (nome) => MP.tokens.some((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(nome)),
+    grupoFalta: () => { const na = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id)); return S.chars.filter((ch) => ch.status === 'aprovado' && !na.has(ch.id)).length; },
+    stageHtml, barHtml, sideHtml, addHtml, listaCenas, formNovaCena, paintBar, paintSide, loaded: () => MP.loaded,
+  };
+
   async function delCena(id) {
     if (!confirm('Apagar esta cena e tudo o que está nela?')) return;
     const { error } = await sb.from('breu_cenas').delete().eq('id', id);
@@ -506,7 +591,7 @@ export function criarMapa(ctx) {
   }
 
   return {
-    view, mount, redraw: () => { draw(); syncViva(); }, onCena, onToken, onAtiva, onChange, onSubmit, load,
+    view, mount, redraw: () => { draw(); syncViva(); }, onCena, onToken, onAtiva, onChange, onSubmit, load, api,
     unmount() { el = null; viva?.destruir(); viva = null; },
     async click(e) {
       const t = e.target.closest('[data-mp]'); if (!t) return false;
