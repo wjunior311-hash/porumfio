@@ -2,8 +2,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
-import { criarMapa } from './mapa.js?v=25';
-import { criarMesa } from './mesa.js?v=5';
+import { criarMapa } from './mapa.js?v=26';
+import { criarMesa } from './mesa.js?v=6';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -1096,12 +1096,12 @@ async function boot() {
   criarAMesa();
   const { data: { session } } = await sb.auth.getSession();
   S.session = session;
-  if (session) { await loadAll(); if (S.me) subscribe(); }
+  if (session) { await loadAll(); if (S.me) { subscribe(); MESA.baixarVideo(); } }
   S.ready = true;
   render();
   sb.auth.onAuthStateChange(async (event, sess) => {
     if (event === 'SIGNED_IN' && (!S.session || S.session.user.id !== sess?.user.id)) {
-      S.session = sess; await loadAll(); if (S.me) subscribe(); render();
+      S.session = sess; await loadAll(); if (S.me) { subscribe(); MESA.baixarVideo(); } render();
     } else if (event === 'SIGNED_OUT') {
       S.session = null; S.me = null; S.chars = []; render();
     } else if (sess) S.session = sess;

@@ -1618,6 +1618,8 @@ export function criarCenaViva(canvas, id) {
   function quadro(agora) {
     if (!vivo) return;
     ctx = canvas.getContext('2d');
+    // enquanto o vídeo de abertura toca, o cenário para de desenhar e deixa o computador livre
+    if (document.body.classList.contains('vendo-video')) { ultimo = agora; requestAnimationFrame(quadro); return; }
     const dt = Math.min(0.05, (agora - ultimo) / 1000); ultimo = agora;
     const t = (agora - t0) / 1000;
     hora += (alvo - hora) * Math.min(1, dt * 0.6);

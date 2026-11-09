@@ -2,7 +2,7 @@
 // o pedido de rolagem, os dados que rolam no meio do mapa e o vídeo de abertura.
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
-import { CENAS_VIVAS } from './cenas-vivas.js?v=18';
+import { CENAS_VIVAS } from './cenas-vivas.js?v=19';
 import { criarGuia, faixaDe } from './guia.js?v=3';
 import { ROLA, FX_C } from './guia-dados.js?v=1';
 
@@ -358,11 +358,24 @@ export function criarMesa(ctx) {
 
   // ---------- o vídeo de abertura ----------
   let video = null, preVideo = null;
-  function preCarregarVideo() {
-    if (preVideo) return;
-    preVideo = document.createElement('video'); preVideo.preload = 'auto'; preVideo.muted = true; preVideo.src = VIDEO;
-    preVideo.style.display = 'none'; document.body.appendChild(preVideo);
+  // o vídeo inteiro é baixado antes, para tocar sem travar; quem abre o app já começa a baixar
+  let videoUrl = null, baixando = null, progresso = 0;
+  function baixarVideo() {
+    baixando ||= (async () => {
+      try {
+        const r = await fetch(VIDEO, { cache: 'force-cache' });
+        const total = +r.headers.get('content-length') || 0, partes = [];
+        const leitor = r.body.getReader(); let n = 0;
+        for (;;) { const { done, value } = await leitor.read(); if (done) break; partes.push(value); n += value.length; if (total) { progresso = n / total; mostrarProgresso(); } }
+        videoUrl = URL.createObjectURL(new Blob(partes, { type: 'video/mp4' }));
+      } catch { videoUrl = VIDEO; }
+      progresso = 1; mostrarProgresso();
+      return videoUrl;
+    })();
+    return baixando;
   }
+  function mostrarProgresso() { const b = video?.querySelector('.vd-carrega i'); if (b) b.style.width = Math.round(progresso * 100) + '%'; }
+  const preCarregarVideo = () => setTimeout(baixarVideo, 1500);
   async function tocarVideo() {
     const v = { id: uuid(), em: Date.now(), acao: 'tocar' };
     S.video = v;
@@ -380,14 +393,23 @@ export function criarMesa(ctx) {
     S.videoVisto = v.id;
     fecharVideo();
     video = document.createElement('div'); video.className = 'vd'; video.setAttribute('role', 'dialog'); video.setAttribute('aria-label', 'Abertura');
-    video.innerHTML = `<video playsinline preload="auto" src="${VIDEO}"></video>
+    video.innerHTML = `<video playsinline preload="auto"></video>
+      <div class="vd-carrega" ${videoUrl ? 'hidden' : ''}><span>Carregando a abertura…</span><b><i style="width:${Math.round(progresso * 100)}%"></i></b></div>
       <button class="vd-som" hidden>Toque para ligar o som</button>
       <div class="vd-ui">${isGM() ? '<button class="btn sm" data-vd="pular">Pular e abrir a estrada</button>' : ''}</div>`;
     document.body.appendChild(video);
     const el = video.querySelector('video'), somB = video.querySelector('.vd-som');
-    const atraso = (Date.now() - v.em) / 1000;
-    if (atraso > 3 && atraso < 70) el.addEventListener('loadedmetadata', () => { el.currentTime = atraso; }, { once: true });
-    el.play().catch(() => { el.muted = true; el.play().catch(() => {}); somB.hidden = false; });
+    document.body.classList.add('vendo-video');
+    const caixa = video;
+    baixarVideo().then((url) => {
+      if (video !== caixa) return;
+      caixa.querySelector('.vd-carrega').hidden = true;
+      el.src = url;
+      // quem chegou atrasado (mais de 8 s) pula para onde os outros estão
+      const atraso = (Date.now() - v.em) / 1000;
+      if (atraso > 8 && atraso < 70) el.addEventListener('loadedmetadata', () => { el.currentTime = atraso; }, { once: true });
+      el.play().catch(() => { el.muted = true; el.play().catch(() => {}); somB.hidden = false; });
+    });
     somB.addEventListener('click', () => { el.muted = false; somB.hidden = true; el.play(); });
     el.addEventListener('ended', () => fimVideo());
     video.querySelector('[data-vd="pular"]')?.addEventListener('click', async () => {
@@ -395,7 +417,7 @@ export function criarMesa(ctx) {
       fimVideo();
     });
   }
-  function fecharVideo() { if (video) { video.querySelector('video')?.pause(); video.remove(); video = null; } }
+  function fecharVideo() { document.body.classList.remove('vendo-video'); if (video) { video.querySelector('video')?.pause(); video.remove(); video = null; } }
   async function fimVideo() {
     fecharVideo();
     if (isGM()) {
@@ -459,5 +481,5 @@ export function criarMesa(ctx) {
   function onGuia(v) { if (JSON.stringify(v) === JSON.stringify(G.estado())) return; S.guia = v; G.setEstado(v); pintarGuia(); pintarPainel(); }
   function onNoite() { repintar(); }
 
-  return { animar, pedirPavor, viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };
+  return { baixarVideo: preCarregarVideo, animar, pedirPavor, viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };
 }

@@ -423,3 +423,6 @@ button.ms-link { background: none; border: 0; }
 .ms-cr span { color: var(--osso3); font-size: 12px; }
 .dd-card.ataque .dd-total small { color: var(--claro); font-size: 14px; }
 .dd-card.ataque.dano .dd-total small { color: #f1a594; }
+.vd-carrega { position: absolute; inset: auto 0 45% 0; display: grid; justify-items: center; gap: 12px; color: var(--osso2); font-family: var(--label); letter-spacing: .12em; text-transform: uppercase; font-size: 13px; }
+.vd-carrega b { width: min(320px, 70vw); height: 3px; background: var(--line2); border-radius: 2px; overflow: hidden; }
+.vd-carrega i { display: block; height: 100%; background: var(--brasa2); transition: width .2s; }
