@@ -9,7 +9,13 @@ const VENTOS = [[0.15, 'Vento calmo'], [0.45, 'Vento médio'], [0.85, 'Vento for
 // o elenco da one-shot: quem tem retrato entra no mapa com ele
 const ELENCO = [['Celeste', 'celeste'], ['Zeca', 'zeca'], ['Brás', 'bras'], ['Rosário', 'rosario'], ['Bento', 'bento'], ['Dona Lindalva', 'lindalva'], ['Dona Zuleide', 'zuleide', 1], ['Seu Orlando', 'orlando', 1], ['Joana', 'joana', 1], ['Dona Firmina', 'firmina', 1]];
 const semAcento = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/^(dona|seu) /, '').trim();
-const fotoNpc = (nome) => { const e = ELENCO.find(([n]) => semAcento(n) === semAcento(nome)); return e && !e[2] ? `img/npc/${e[1]}.webp` : null; };
+const fotoNpc = (nome) => { const e = ELENCO.find(([n]) => semAcento(n) === semAcento(nome)); return e && !e[2] ? `img/tok/${e[1]}.webp` : null; };
+// quem tem uma forma verdadeira para revelar no meio da noite
+const FORMA = { celeste: 'img/tok/celeste-rasgada.webp', zeca: 'img/tok/zeca-rasgado.webp' };
+const formaDe = (nome) => FORMA[semAcento(nome)] || null;
+// peça do personagem: recorte de rosto em fundo claro, quando existe
+const TOK_PJ = ['tiao', 'flecha', 'inacio', 'damiao', 'priya', 'kaeleen'];
+const tokDe = (src) => { const m = /img\/pj\/([a-z]+)\.webp$/.exec(src || ''); return m && TOK_PJ.includes(m[1]) ? `img/tok/${m[1]}.webp` : src; };
 const RAIOS = [{ n: 'Pequeno', r: 1 }, { n: 'Médio', r: 3 }, { n: 'Grande', r: 6 }];
 
 export function criarMapa(ctx) {
@@ -151,6 +157,7 @@ export function criarMapa(ctx) {
         sel = `<div class="mp-sel"><b>${esc(t.nome)}</b>${b ? `<span class="small muted"> · ${b.grau} de ${b.familia} · ${b.sentido} · Defesa ${b.defesa} · ${b.atq} · ${b.dano}</span>` : ''}
           ${t.kind !== 'pc' ? `<div class="mp-row"><span>Sangue</span><button class="btn sm" data-mp="sangue" data-v="-5">−5</button><button class="btn sm" data-mp="sangue" data-v="-1">−1</button><b>${d.sangue ?? '–'}${d.max ? ' / ' + d.max : ''}</b><button class="btn sm" data-mp="sangue" data-v="1">+1</button></div>` : ''}
           <div class="mp-row"><span>Passos por rodada</span><button class="btn sm" data-mp="passos" data-v="-1">−</button><b>${t.passos}</b><button class="btn sm" data-mp="passos" data-v="1">+</button></div>
+          ${t.kind === 'npc' && formaDe(t.nome) ? `<div class="mp-row"><span>Forma</span><b>${t.img === formaDe(t.nome) ? 'verdadeira' : 'disfarçada'}</b><button class="btn sm ${t.img === formaDe(t.nome) ? '' : 'primary'}" data-mp="forma">${t.img === formaDe(t.nome) ? 'Voltar ao disfarce' : 'Revelar a forma verdadeira'}</button></div>` : ''}
           ${t.kind === 'npc' || t.kind === 'assombro' ? `<div class="mp-row"><span>Nome para os jogadores</span><b>${d.nomeVisto ? esc(t.nome) : '??'}</b><button class="btn sm ${d.nomeVisto ? '' : 'primary'}" data-mp="nome">${d.nomeVisto ? 'Esconder o nome' : 'Revelar o nome'}</button></div>` : ''}
           <div class="mp-row">${t.kind !== 'pc' ? `<button class="btn sm" data-mp="visivel">${t.visivel ? 'Esconder dos jogadores' : 'Revelar aos jogadores'}</button>` : ''}<button class="btn sm ghost" data-mp="apagar">Tirar da cena</button></div></div>`;
       }
@@ -243,7 +250,7 @@ export function criarMapa(ctx) {
     }).join('');
     const pecas = vis.filter((t) => t.kind !== 'circulo').map((t) => {
       const ch = t.character_id ? charById(t.character_id) : null;
-      const src = t.img || (ch ? picChar(ch) : '');
+      const src = t.img || (ch ? tokDe(picChar(ch)) : '');
       const d = t.data || {};
       const ferido = d.max && d.sangue != null && d.sangue <= d.max / 2;
       return `<div class="mp-tok k-${t.kind} ${ch ? estCls(ch) : ''} ${MP.sel === t.id ? 'sel' : ''} ${t.visivel ? '' : 'oculto'} ${t.owner === uid() ? 'meu' : ''} ${podeMover(t) ? 'mov' : ''} ${ferido ? 'ferido' : ''}" data-tok="${t.id}" style="width:${sz}px;height:${sz}px;left:${t.x * W}px;top:${t.y * H}px">
@@ -415,6 +422,7 @@ export function criarMapa(ctx) {
     if (a === 'forca') { d.forca = Math.max(0, (d.forca || 0) + +v); }
     else if (a === 'raio') { d.raio = +v; }
     else if (a === 'sangue') { d.sangue = Math.max(0, Math.min(d.max || 999, (d.sangue ?? d.max ?? 0) + +v)); }
+    else if (a === 'forma') { const alt = formaDe(sel.nome); if (!alt) return; sel.img = sel.img === alt ? fotoNpc(sel.nome) : alt; await sb.from('breu_tokens').update({ img: sel.img }).eq('id', sel.id); enviar('reload', {}); draw(); paintSide(); return; }
     else if (a === 'nome') { d.nomeVisto = !d.nomeVisto; sel.data = d; await sb.from('breu_tokens').update({ data: d }).eq('id', sel.id); enviar('reload', {}); draw(); paintSide(); return; }
     else if (a === 'passos') { const p = Math.max(0, sel.passos + +v); sel.passos = p; await sb.from('breu_tokens').update({ passos: p }).eq('id', sel.id); draw(); paintSide(); return; }
     else if (a === 'visivel') {

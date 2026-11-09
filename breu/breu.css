@@ -385,3 +385,6 @@ details.prontos summary { cursor: pointer; font-family: var(--label); letter-spa
 .mp-tok.k-assombro .nm { top: 128%; }
 .mp-tok.k-assombro.sel { outline: 0; }
 .mp-tok.k-assombro.sel img { filter: drop-shadow(0 0 6px rgba(240,120,60,.95)) contrast(1.15) brightness(1.1); }
+/* peças com recorte de rosto em fundo claro */
+.mp-tok.k-pc, .mp-tok.k-npc { background: #efe8da; }
+.mp-tok.k-pc img[src*="/tok/"], .mp-tok.k-npc img[src*="/tok/"] { object-position: 50% 50%; }
