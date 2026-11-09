@@ -2,7 +2,7 @@
 // o pedido de rolagem, os dados que rolam no meio do mapa e o vídeo de abertura.
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
-import { CENAS_VIVAS } from './cenas-vivas.js?v=17';
+import { CENAS_VIVAS } from './cenas-vivas.js?v=18';
 import { criarGuia, faixaDe } from './guia.js?v=1';
 import { ROLA, FX_C } from './guia-dados.js?v=1';
 
