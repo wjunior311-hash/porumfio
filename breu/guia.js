@@ -1,5 +1,5 @@
 // O guia da mesa, dentro do app: o mestre segue a sessão por aqui e aperta os botões que mexem no mapa.
-import { GENTE, VISTO, ROLA, FX_C, PISTAS, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=7';
+import { GENTE, VISTO, ROLA, FX_C, PISTAS, PISTA_ONDE, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=8';
 
 export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {} };
 // o que o grupo conseguiu durante o dia; muda o conserto, o corpo e a noite
@@ -107,7 +107,27 @@ export function criarGuia(ctx) {
       ${p.acoes ? `<div class="g-acoes">${p.acoes.map(acaoBtn).join('')}</div>` : ''}
       ${p.pergunte ? `<p class="g-pperg"><span>Pergunte</span>${p.pergunte}</p>` : ''}
       ${p.leia ? leiaHtml(p.leia) : ''}
+      ${p.ganchos ? ganchosHtml(p.ganchos) : ''}
       ${p.rola ? rolaHtml(p.rola) : ''}</li>`).join('')}</ol></section>`;
+  }
+
+  const nomePista = (k) => PISTAS.find((p) => p[0] === k)[1];
+  function ganchosHtml(gs) {
+    return `<div class="g-ganchos">${gs.map((g, i) => `<div class="g-gancho">
+      <div class="g-gq"><span class="g-gn">${i + 1}</span>${esc(g.q)}</div>
+      <div class="g-leia"><p>${esc(g.leia)}</p></div>
+      ${g.regra ? `<p class="g-gregra"><b>Importante:</b> ${esc(g.regra)}</p>` : ''}
+      <div class="g-gpe">${g.ps.length ? `<span class="g-gps">Pista lá: ${g.ps.map((k) => `<span class="${E.pistas.includes(k) ? 'on' : ''}">${E.pistas.includes(k) ? '✓ ' : ''}${esc(nomePista(k))}</span>`).join('')}</span>` : '<span class="g-gps">Sem pista, mas ajuda na noite</span>'}
+      <button class="g-acao forte" data-g="ir" data-v="${g.ir}">Alguém topou: abrir ${esc(g.leva)} →</button></div></div>`).join('')}</div>`;
+  }
+
+  function pistasHtml() {
+    const n = E.pistas.length;
+    const falta = PISTAS.filter(([k]) => !E.pistas.includes(k));
+    return `<section class="g-bloco"><h3 class="g-rot">As pistas: ${n} de ${PISTAS.length}</h3><div class="g-pistas">
+      <p class="g-nota">${n >= 3 ? 'Com isso eles já podem desconfiar da bordadeira. Se alguém mostrar uma pista ao homem tatuado, ele confirma.' : 'Com 3 pistas eles já conseguem desconfiar da bordadeira. Se falta muito, releia o pedido da vila que leva até o lugar.'}</p>
+      <ul>${PISTAS.map(([k, t]) => { const tem = E.pistas.includes(k), [l, ln] = PISTA_ONDE[k]; return `<li class="${tem ? 'on' : ''}"><span>${tem ? '✓' : '·'} ${esc(t)}</span>${tem ? '' : `<button class="g-mini" data-g="ir" data-v="${l}">está em: ${esc(ln)} →</button>`}</li>`; }).join('')}</ul>
+      ${falta.length ? '' : '<p class="g-nota">Acharam todas.</p>'}</div></section>`;
   }
 
 // ---------------- a noite, montada pelo estado ----------------
@@ -295,6 +315,7 @@ function mapaHtml() {
       if (m.hub) h += mapaHtml();
       if (m.leia) h += `<section class="g-bloco"><h3 class="g-rot">Leia ao entrarem</h3>${leiaHtml(m.leia)}</section>`;
       if (m.passos) h += passosHtml(m.passos, m.lugar ? 'Se acontecer' : 'Faça nesta ordem');
+      if (m.hub) h += pistasHtml();
       if (m.recursos) h += `<section class="g-bloco"><h3 class="g-rot">Marque o que conseguiram aqui</h3>${recBotoes(m.recursos)}</section>`;
       if (m.quem) h += `<section class="g-bloco"><h3 class="g-rot">Quem está aqui</h3><p class="g-nota">Clique numa pessoa para ver o que ela responde.</p>${genteHtml(m.quem)}</section>`;
       if (m.opcoes) h += `<section class="g-bloco"><h3 class="g-rot">${m.hub ? 'Também dá para fazer' : 'O que eles podem fazer'}</h3>${opcoesHtml(m.opcoes, E.aqui)}</section>`;

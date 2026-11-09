@@ -520,3 +520,17 @@ div.g-rec b { font-family: var(--display); color: var(--claro); }
 .fx-forma i { width: min(60vw, 420px); aspect-ratio: .95; border-radius: 0; background-position: center top; -webkit-mask: radial-gradient(ellipse 50% 55% at 50% 45%, #000 60%, transparent 100%); mask: radial-gradient(ellipse 50% 55% at 50% 45%, #000 60%, transparent 100%); filter: drop-shadow(0 0 50px rgba(200,30,20,.7)); animation: fx-rasga 3.6s ease-out forwards; }
 @keyframes fx-rasga { 0% { clip-path: polygon(48% 0, 52% 0, 51% 100%, 49% 100%); } 25% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); } }
 .fx-forma span { color: #ff8a70; }
+
+/* pedidos da vila (ganchos) e pistas */
+.g-ganchos { display: grid; gap: 12px; margin-top: 8px; }
+.g-gancho { border: 1px solid var(--linha); border-radius: 10px; padding: 10px 12px; background: var(--taipa); display: grid; gap: 8px; }
+.g-gq { font-weight: 700; font-size: 14.5px; display: flex; gap: 8px; align-items: center; }
+.g-gn { width: 22px; height: 22px; border-radius: 50%; background: var(--brasa); color: #1a120c; display: inline-grid; place-items: center; font-size: 12.5px; flex: none; }
+.g-gregra { margin: 0; font-size: 14px; background: var(--taipa2); border-left: 3px solid var(--brasa); padding: 6px 10px; border-radius: 4px; }
+.g-gpe { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.g-gps { font-size: 13px; color: var(--cinza); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.g-gps span { border: 1px solid var(--linha); border-radius: 6px; padding: 2px 8px; color: var(--claro); }
+.g-gps span.on { border-color: var(--mato); color: #c7dbb0; }
+.g-pistas ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.g-pistas li { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 10px; border: 1px solid var(--linha); border-radius: 8px; font-size: 14.5px; }
+.g-pistas li.on { border-color: var(--mato); color: #c7dbb0; }

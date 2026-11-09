@@ -165,6 +165,8 @@ export const FX = ['Menos de 10', '10 a 14', '15 a 19', '20 ou mais'];
 export const FX_C = ['< 10', '10+', '15+', '20+'];
 
 // ---------------- pistas ----------------
+// onde cada pista está: [lugar, nome do lugar]
+export const PISTA_ONDE = { ferida: ['velorio', 'A casa do velório'], fios: ['velorio', 'A casa do velório'], linha: ['trecho', 'O trecho apagado'], pegadas: ['trecho', 'O trecho apagado'], sombra: ['celeste', 'A bordadeira na sombra'], caderno: ['zuleide', 'A casa de Dona Zuleide'] };
 export const PISTAS = [
   ['ferida', 'A ferida na nuca'], ['linha', 'A linha esfregada'], ['fios', 'Os fios debaixo das unhas'],
   ['sombra', 'Celeste foge do sol'], ['pegadas', 'As pegadas pequenas'], ['caderno', 'O caderno e o frasco'],
@@ -232,8 +234,15 @@ export const MOMENTOS = {
     passos: [
       { f: 'Leia', leia: [['', 'O sol já está na altura dos telhados. Vocês têm o resto da tarde e o entardecer, e nada mais. Tem um círculo aberto, um morto que ninguém quer queimar e uma vila inteira olhando para vocês como se vocês soubessem o que fazer.']] },
       { f: 'Explique o tempo', d: 'Diga: "Sobram duas partes do dia, a Tarde e o Entardecer. Em cada uma, cada um faz uma coisa grande: consertar o círculo, preparar o corpo, buscar cal no mocó, convencer a família, investigar. Conversar, comprar e olhar não gastam tempo."' },
-      { f: 'Mostre o que dá para fazer', d: '<b>Consertar o círculo</b> (no trecho, Traços) · <b>Preparar o corpo</b> (no velório, Ervas e Cura) · <b>Convencer a família</b> (no velório, Lábia ou Presença) · <b>Buscar cal e lenha no mocó</b> (fora da vila, Atletismo) · <b>Investigar</b> (onde quiserem: Percepção, Saberes, Sobrevivência) · <b>Fazer a vila confiar</b> (Presença) · <b>Mutirão das trancas</b> (na oficina, sem dado). Cada uma é uma parte do dia.' },
-      { f: 'Vá em roda e pergunte a cada um', pergunte: '"O que você faz nesta Tarde?"', d: 'Anote na aba <b>A história</b>, à direita, em <b>Tarefas da tarde</b>. Ninguém faz tudo: é esse o ponto.' },
+      { f: 'Leia os pedidos da vila, um depois do outro', d: 'Os jogadores não sabem o que existe para fazer. <b>Quem conta é a vila:</b> cada pessoa chega com um problema e pede ajuda a um personagem. Leia todos, em sequência, sem esperar resposta. Cada pedido leva a um lugar onde tem pista. Quando alguém topar um, clique no botão daquele pedido.', ganchos: [
+        { q: 'Rosário pede a quem sabe riscar (Tião, Inácio ou Kaeleen)', leia: 'A moça de lenço segura o braço de quem sabe riscar, os olhos ainda vermelhos: "Meu pai não errava traço. Não errava. Vem olhar aquela linha comigo antes de tentar fechar. Por favor. Tem alguma coisa errada ali."', ir: 'trecho', leva: 'O trecho apagado', ps: ['linha', 'pegadas'] },
+        { q: 'Dona Firmina pede a quem cuida de gente (Inácio é o melhor)', leia: 'A parteira, a mais velha da vila, chega perto devagar e fala baixo: "Minhas mãos não firmam mais, meu filho. Alguém tem que lavar e vestir o Antero antes do sol ir embora, senão ele não descansa. Você sabe fazer isso, não sabe?"', ir: 'velorio', leva: 'A casa do velório', ps: ['ferida', 'fios'] },
+        { q: 'Bento pede a quem é rápido (Flecha e Damião)', leia: 'O rapaz da cal olha para o saco vazio: "Sem cal nova não p-pega. Tem cal e lenha guardada no mocó, fora da vila, no pé da serrota. Mas é longe. Tem que ir e voltar antes do entardecer."', ir: 'moco', leva: 'O mocó da serrota', ps: [] },
+        { q: 'A velhinha do pouso chama todo mundo', leia: 'Da porta de uma casa pequena, uma velhinha de cabelo branco acena com as duas mãos e grita alto demais: "Visita! Entra, entra! Tem café passado agora! Faz tanto tempo que ninguém vem me ver!"', ir: 'zuleide', leva: 'A casa de Dona Zuleide', ps: ['caderno'] },
+        { q: 'A bordadeira oferece chá', leia: 'Debaixo do alpendre, bem na sombra, a bordadeira levanta a caneca: "Quem quer um chá? Sentem aqui comigo, aqui no fresco." Ela tem uma trouxa no colo e não larga dela nem para servir. Quando o sol chega no pé dela, ela arrasta o banquinho para trás.', ir: 'celeste', leva: 'A bordadeira na sombra', ps: ['sombra'], regra: 'Daqui até a noite, toda vez que você falar dela, diga onde ela está: sempre na sombra. Se alguém oferecer para segurar a trouxa, ela recusa rápido demais: "Não, não, deixa comigo."' },
+        { q: 'A ferreira briga com o homem tatuado', leia: 'Do outro lado do pátio, a ferreira larga o martelo e vai batendo o pé até a carroça do homem de cabeça raspada: "Foi você, não foi? Chegou ontem e meu mestre amanheceu morto!" Ele não responde. A vila começa a juntar em volta.', ir: 'bras', leva: 'A carroça do homem tatuado', ps: [] },
+      ] },
+      { f: 'Agora vá em roda e pergunte a cada um', pergunte: '"O que você faz nesta Tarde?"', d: 'Podem aceitar um pedido, ou fazer outra coisa que quiserem (o mapa acima mostra todos os lugares). Anote na aba <b>A história</b>, à direita, em <b>Tarefas da tarde</b>. Ninguém faz tudo: é esse o ponto.' },
       { f: 'Resolva um de cada vez', d: 'Clique no mapa onde aquele personagem foi. Cada lugar tem o que ler, o que pedir de dado e o que ele acha. Depois volte ao mapa e passe para o próximo.' },
       { f: 'Quando todos fizeram a Tarde, vá para o Entardecer', d: 'É o botão no fim desta página.' },
     ],
