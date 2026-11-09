@@ -930,20 +930,35 @@ function chamaD(x, y, t, k, grande) {
   ctx.fillStyle = 'rgba(255,255,230,.95)'; ctx.beginPath(); ctx.arc(x, y - 3 * s, 1.1 * s, 0, 7); ctx.fill();
 }
 function redeD(r, t) {
-  const { x1, y1, x2, y2, larg, cor, faixa } = r, dx = x2 - x1, dy = y2 - y1, Lr = Math.hypot(dx, dy), nx = -dy / Lr, ny = dx / Lr;
-  const s = Math.sin(t * 1.1 + r.f) * (3 + rajada(t) * 4) * (r.balanca ?? 1), mx = (x1 + x2) / 2 + nx * s, my = (y1 + y2) / 2 + ny * s;
-  const a1 = [x1 + dx * .16, y1 + dy * .16], a2 = [x2 - dx * .16, y2 - dy * .16];
-  ctx.fillStyle = 'rgba(30,16,6,.22)'; ctx.beginPath(); ctx.ellipse(mx + 10, my + 14, Lr * .34, larg * .9, Math.atan2(dy, dx), 0, 7); ctx.fill();
-  ctx.strokeStyle = 'rgba(220,200,160,.85)'; ctx.lineWidth = 1;
-  for (const k of [-1, -.5, 0, .5, 1]) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(a1[0] + nx * larg * .5 * k, a1[1] + ny * larg * .5 * k); ctx.moveTo(x2, y2); ctx.lineTo(a2[0] + nx * larg * .5 * k, a2[1] + ny * larg * .5 * k); ctx.stroke(); }
-  const corpo = () => { ctx.beginPath(); ctx.moveTo(a1[0], a1[1]); ctx.quadraticCurveTo(mx + nx * larg * 1.25, my + ny * larg * 1.25, a2[0], a2[1]); ctx.quadraticCurveTo(mx - nx * larg * 1.25, my - ny * larg * 1.25, a1[0], a1[1]); ctx.closePath(); };
+  // rede de dormir vista de cima: punhos amarrados nos armadores, pano largo afundado no meio, varanda de franja nas bordas
+  const { x1, y1, x2, y2, larg, cor, faixa } = r, dx = x2 - x1, dy = y2 - y1, Lr = Math.hypot(dx, dy), ux = dx / Lr, uy = dy / Lr, nx = -uy, ny = ux;
+  const s = Math.sin(t * 1.1 + r.f) * (2.5 + rajada(t) * 3) * (r.balanca ?? 1);
+  const P = (u, v) => [x1 + dx * u + nx * (v + s * Math.sin(u * Math.PI)), y1 + dy * u + ny * (v + s * Math.sin(u * Math.PI))];
+  const w = larg * 1.5, a0 = .2, a1 = .8;
+  const meia = (u) => { const k = (u - a0) / (a1 - a0); return w * Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, k))), .45); };
+  const borda = (lado) => { const pts = []; for (let i = 0; i <= 24; i++) { const u = a0 + (a1 - a0) * i / 24; pts.push(P(u, lado * meia(u))); } return pts; };
+  const e = borda(1), d = borda(-1);
+  // sombra no chão
+  ctx.fillStyle = 'rgba(30,16,6,.28)'; ctx.beginPath(); ctx.ellipse((x1 + x2) / 2 + 8 + nx * s, (y1 + y2) / 2 + 12 + ny * s, Lr * .32, w * .95, Math.atan2(dy, dx), 0, 7); ctx.fill();
+  // punhos: cordinhas do armador até a ponta do pano
+  ctx.strokeStyle = 'rgba(214,196,150,.9)'; ctx.lineWidth = .8;
+  for (let k = -3; k <= 3; k++) { const [ax, ay] = P(a0 + .015, k * w * .1), [bx, by] = P(a1 - .015, k * w * .1); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(ax, ay); ctx.moveTo(x2, y2); ctx.lineTo(bx, by); ctx.stroke(); }
+  // varanda: franja saindo das duas bordas
+  ctx.strokeStyle = r.franja || 'rgba(235,222,190,.85)'; ctx.lineWidth = 1;
+  [[e, 1], [d, -1]].forEach(([pts, lado]) => pts.forEach(([px, py], i) => { if (i < 3 || i > 21) return; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + nx * lado * 6 + ux * 1.5, py + ny * lado * 6 + uy * 1.5); ctx.stroke(); }));
+  // o pano
+  const corpo = () => { ctx.beginPath(); e.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); for (let i = d.length - 1; i >= 0; i--) ctx.lineTo(d[i][0], d[i][1]); ctx.closePath(); };
   ctx.fillStyle = cor; corpo(); ctx.fill();
   ctx.save(); corpo(); ctx.clip();
-  (faixa || []).forEach((c, k) => { ctx.strokeStyle = c; ctx.lineWidth = 4; const o = (k - (faixa.length - 1) / 2) * 8; ctx.beginPath(); ctx.moveTo(a1[0] + nx * o, a1[1] + ny * o); ctx.quadraticCurveTo(mx + nx * o * 1.4, my + ny * o * 1.4, a2[0] + nx * o, a2[1] + ny * o); ctx.stroke(); });
-  const gr = ctx.createLinearGradient(mx + nx * larg, my + ny * larg, mx - nx * larg, my - ny * larg); gr.addColorStop(0, 'rgba(255,240,210,.18)'); gr.addColorStop(.5, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(20,10,4,.35)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+  (faixa || []).forEach((c, k) => { const o = (k - (faixa.length - 1) / 2) * w * .32; ctx.strokeStyle = c; ctx.lineWidth = w * .12; ctx.beginPath(); for (let i = 0; i <= 24; i++) { const u = a0 + (a1 - a0) * i / 24, [px, py] = P(u, o * meia(u) / w); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke(); });
+  // dobras do tecido e o fundo afundado (mais escuro no meio)
+  ctx.strokeStyle = 'rgba(40,20,8,.18)'; ctx.lineWidth = 1;
+  for (let k = 1; k < 9; k++) { const u = a0 + (a1 - a0) * k / 9; const [ax, ay] = P(u, meia(u)), [bx, by] = P(u, -meia(u)); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo((ax + bx) / 2 + ux * 4, (ay + by) / 2 + uy * 4, bx, by); ctx.stroke(); }
+  const [mx, my] = P(.5, 0); const g = ctx.createRadialGradient(mx, my, 2, mx, my, Lr * .32); g.addColorStop(0, 'rgba(20,10,4,.28)'); g.addColorStop(1, 'rgba(255,240,210,.08)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   ctx.restore();
-  ctx.strokeStyle = 'rgba(40,24,12,.6)'; ctx.lineWidth = 1; corpo(); ctx.stroke();
-  [[x1, y1], [x2, y2]].forEach(([x, y]) => { ctx.fillStyle = '#2a1c12'; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); });
+  ctx.strokeStyle = 'rgba(40,24,12,.55)'; ctx.lineWidth = 1; corpo(); ctx.stroke();
+  // armadores na parede
+  [[x1, y1], [x2, y2]].forEach(([x, y]) => { ctx.fillStyle = '#2a1c12'; ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7); ctx.fill(); ctx.fillStyle = '#6a5a48'; ctx.beginPath(); ctx.arc(x, y, 2, 0, 7); ctx.fill(); });
 }
 // a luz do dia entrando por portas e janelas; some quando escurece
 function feixe(f, L, t) {
@@ -993,7 +1008,7 @@ function cenaVelorio() {
     [XQ, Y0, T, YM - Y0],                                                                         // quarto | riscador
   ];
   const corpo = { x: 520, y: 505 }, velas = [[350, 430], [690, 430], [350, 580], [690, 580], [812, 200]];
-  const redeRosario = { x1: XM + T, y1: 400, x2: XQ, y2: 300, larg: 24, cor: '#d9b45a', faixa: ['#a8402c', '#2f6d4a'], f: 1.7, balanca: .8 };
+  const redeRosario = { x1: XM + T, y1: 400, x2: XQ, y2: 300, larg: 22, cor: '#d9b45a', faixa: ['#a8402c', '#2f6d4a', '#a8402c'], f: 1.7, balanca: .8 };
   const fogaoP = { x: 980, y: Y1 - T - 74, w: 190, h: 70 };
   const feixes = [
     { x: X0 + T, y: Y0 + 405, w: 92, dx: 1, dy: 0, len: 300, desvio: 0, k: .1 },        // porta da frente
