@@ -1,5 +1,5 @@
 // O guia da mesa, dentro do app: o mestre segue a sessão por aqui e aperta os botões que mexem no mapa.
-import { GENTE, VISTO, ROLA, FX_C, PISTAS, ATOS, MOMENTOS as M } from './guia-dados.js?v=3';
+import { GENTE, VISTO, ROLA, FX_C, PISTAS, ATOS, RESOLVER, MOMENTOS as M } from './guia-dados.js?v=4';
 
 export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {} };
 export const faixaDe = (total) => (total < 10 ? 0 : total < 15 ? 1 : total < 20 ? 2 : 3);
@@ -222,6 +222,10 @@ function mapaHtml() {
 }
 
   const GAVETAS = {
+  resolver: () => `<h2>Travei: como resolver</h2><p class="g-cinza">Para quando um jogador faz algo que não está no guia.</p>
+    ${RESOLVER.passos.map(([t, d], i) => `<h4>${i + 1}. ${t}</h4><p>${d}</p>`).join('')}
+    <h4>Qual perícia usar</h4><table class="g-tab"><tbody>${RESOLVER.pericias.map(([q, p]) => `<tr><td>${q}</td><td><b>${p}</b></td></tr>`).join('')}</tbody></table>
+    <h4>Para pedir a rolagem</h4><p>Na aba <b>Rolagens</b>, à direita, aperte <b>+ Pedir outra rolagem</b>, escolha a perícia e quem rola.</p>`,
   segredo: () => `<h2>O segredo</h2><p style="color:var(--cinza)">Só para o mestre.</p>
     <div class="g-mestre"><p><b>Quem matou o riscador foi Celeste.</b> Ela é uma Rasgada da Ferida Aberta, disfarçada de bordadeira. Chegou ontem pedindo abrigo para o Dia Curto, com o "sobrinho" Zeca.</p></div>
     <h4>O que aconteceu</h4><ul><li>Antero passou a semana refazendo o círculo. Faltava um trecho, do lado da estrada.</li><li>Ao raiar do dia, ele saiu para fechar. Celeste foi atrás, levando café.</li><li>Com ele ajoelhado riscando, ela o golpeou na nuca com a tesoura de bordar e esfregou o traço com a mão, em meia-lua.</li><li>Voltou antes de alguém acordar. A vila achou que "a noite pegou ele no fim da madrugada".</li></ul>
@@ -254,7 +258,7 @@ function mapaHtml() {
   // ---------- o momento atual ----------
   function html() {
     const m = M[E.aqui] || M.inicio;
-    let h = `<div class="g-top"><button class="g-mini segredo" data-g="gaveta" data-v="segredo">O segredo</button><button class="g-mini" data-g="gaveta" data-v="gente">Pessoas</button><button class="g-mini" data-g="gaveta" data-v="dados">Dados</button><button class="g-mini" data-g="gaveta" data-v="conduzir">Como conduzir</button></div>
+    let h = `<div class="g-top"><button class="g-mini segredo" data-g="gaveta" data-v="segredo">O segredo</button><button class="g-mini" data-g="gaveta" data-v="gente">Pessoas</button><button class="g-mini" data-g="gaveta" data-v="dados">Dados</button><button class="g-mini" data-g="gaveta" data-v="conduzir">Como conduzir</button><button class="g-mini travei" data-g="gaveta" data-v="resolver">Travei: como resolver</button></div>
       <nav class="g-atos">${ATOS.map(([id, a, n], i) => `<button class="g-ato ${m.ato === i ? 'on' : ''} ${m.ato > i ? 'feito' : ''}" data-g="ir" data-v="${id}"><b>${a}</b><span>${n}</span></button>`).join('')}</nav>`;
     h += m.lugar ? `<div class="g-migalha"><button data-g="ir" data-v="patio">← Mapa da vila</button></div>` : '';
     h += `<h2 class="g-titulo">${esc(m.titulo)}</h2>`;
@@ -266,7 +270,7 @@ function mapaHtml() {
       if (m.hub) h += mapaHtml();
       if (m.leia) h += `<section class="g-bloco"><h3 class="g-rot">Leia ao entrarem</h3>${leiaHtml(m.leia)}</section>`;
       if (m.passos) h += passosHtml(m.passos, m.lugar ? 'Se acontecer' : 'Faça nesta ordem');
-      if (m.quem) h += `<section class="g-bloco"><h3 class="g-rot">Quem está aqui</h3>${genteHtml(m.quem)}</section>`;
+      if (m.quem) h += `<section class="g-bloco"><h3 class="g-rot">Quem está aqui</h3><p class="g-nota">Clique numa pessoa para ver o que ela responde.</p>${genteHtml(m.quem)}</section>`;
       if (m.opcoes) h += `<section class="g-bloco"><h3 class="g-rot">${m.hub ? 'Também dá para fazer' : 'O que eles podem fazer'}</h3>${opcoesHtml(m.opcoes, E.aqui)}</section>`;
       if (m.vila) h += `<section class="g-bloco"><h3 class="g-rot">A vila não espera</h3><div class="g-trava"><p>Se a mesa parar, faça uma destas coisas acontecer:</p><ul>${m.vila.map((v) => `<li>${v}</li>`).join('')}</ul></div></section>`;
       if (m.mestre) h += `<section class="g-bloco"><h3 class="g-rot">Só para você</h3><div class="g-mestre">${m.mestre.map((p) => `<p>${p}</p>`).join('')}</div></section>`;
@@ -311,9 +315,12 @@ function mapaHtml() {
       <h4>Como os jogadores veem (sem o nome)</h4><p class="g-fala">${VISTO[id][1]}</p>
       <p class="g-cinza">Os jogadores não sabem o nome. Diga só se perguntarem, e então aperte <b>Revelar o nome</b> na peça.</p>
       <div class="g-acoes">${acaoBtn(['npc', g.nome])}</div>
-      <h4>Quem é</h4><p>${g.como}</p><h4>O que quer</h4><p>${g.quer}</p><h4>Como fala</h4><p>${g.fala}</p>
-      <h4>Falas prontas</h4>${g.falas.map((f) => `<p class="g-fala">${f}</p>`).join('')}
-      <h4>O que só você sabe</h4><div class="g-mestre"><p>${g.segredo}</p></div>`);
+      <h4>O que quer</h4><p>${g.quer}</p><h4>Como fala</h4><p>${g.fala}</p>
+      ${g.conversa ? `<h4>Se perguntarem…</h4>${g.conversa.dica ? `<p class="g-cinza">${g.conversa.dica}</p>` : ''}
+        <div class="g-conversa">${g.conversa.linhas.map(([q, r]) => `<details><summary>${q}</summary><p>${r}</p></details>`).join('')}</div>
+        ${g.conversa.rola ? `<h4>Para arrancar mais dela, peça uma rolagem</h4>${rolaHtml(g.conversa.rola)}` : ''}` : `<h4>Falas prontas</h4>${g.falas.map((f) => `<p class="g-fala">${f}</p>`).join('')}`}
+      <h4>O que só você sabe</h4><div class="g-mestre"><p>${g.segredo}</p></div>
+      <h4>Quem é</h4><p>${g.como}</p>`);
   }
 
   // ---------- cliques ----------
@@ -324,7 +331,7 @@ function mapaHtml() {
     if (g === 'fecha') { fecha(); return true; }
     if (g === 'ir') { fecha(); mudar({ aqui: v }); ctx.repintar(true); return true; }
     if (g === 'abre') { abertos.has(v) ? abertos.delete(v) : abertos.add(v); ctx.repintar(); return true; }
-    if (g === 'npc') { npcGaveta(v); return true; }
+    if (g === 'npc') { if (GENTE[v]) npcGaveta(v); return true; }
     if (g === 'gaveta') { gaveta(v === 'dados' ? dadosTabela() : GAVETAS[v]()); if (v === 'gente') { /* chips dentro da gaveta */ } return true; }
     if (g === 'pista') { mudar({ pistas: E.pistas.includes(v) ? E.pistas.filter((x) => x !== v) : [...E.pistas, v] }); ctx.repintar(); return true; }
     if (g === 'set') { const k = t.dataset.k; mudar({ [k]: E[k] === v && v ? '' : v }); ctx.repintar(); return true; }

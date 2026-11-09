@@ -3,8 +3,8 @@
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=19';
-import { criarGuia, faixaDe } from './guia.js?v=5';
-import { ROLA, FX_C } from './guia-dados.js?v=3';
+import { criarGuia, faixaDe } from './guia.js?v=6';
+import { ROLA, FX_C } from './guia-dados.js?v=4';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
 const ATN = Object.fromEntries(R.ATRIBUTOS.map((a) => [a.k, a.n]));
@@ -119,7 +119,7 @@ export function criarMesa(ctx) {
     const cs = [...A.cenas()].sort((a, b) => ordem(a) - ordem(b));
     const falta = ORDEM_CENAS.filter((k) => !A.cenaDe(k));
     return cs.map((c) => `<div class="ms-cena ${c.id === A.ver() ? 'ver' : ''} ${c.id === A.ativa() ? 'ar' : ''}">
-        <button class="ms-cn" data-mp="ver" data-v="${c.id}" title="${esc(c.nome)}: ver aqui, sem mostrar">${esc(CURTO[c.img?.slice(5)] || c.nome)}</button>
+        <button class="ms-cn" data-mp="ver" data-v="${c.id}" title="${esc(c.nome)}: ver aqui, sem mostrar">${esc(CURTO[c.img?.slice(5)] || c.nome)}${A.separados().filter((x) => x.cena === c.id).map((x) => `<span class="ms-sep" title="${esc(x.ch.data.nome)} está aqui, sozinho">${esc(x.ch.data.nome.split(' ')[0])}</span>`).join('')}</button>
         ${c.id === A.ativa() ? '<span class="ms-ar">no ar</span>' : `<button class="ms-mostrar" data-mp="mostrarId" data-v="${c.id}" title="Mostrar aos jogadores" aria-label="Mostrar ${esc(c.nome)} aos jogadores">▶</button>`}</div>`).join('')
       + (falta.length && cs.length ? `<button class="ms-cena ms-mais" data-mp="vivas" title="Criar os cenários que faltam">+ ${falta.length}</button>` : '')
       + (A.ativa() ? `<button class="ms-preta" data-ms="tela-preta" title="Os jogadores ficam sem cena">Tela preta</button>` : '');

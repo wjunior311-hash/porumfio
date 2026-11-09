@@ -15,6 +15,83 @@ export const GENTE = {
 
 
 // como os jogadores veem cada um, antes de saber o nome
+// ---------------- o que cada pessoa responde quando os jogadores puxam conversa ----------------
+// cada linha: [o que perguntam, o que a pessoa diz]. "rola": a rolagem para quem quiser arrancar mais.
+const CONVERSA = {
+  celeste: { rola: 'conversaCeleste', dica: 'Ela é gentil o tempo todo e sempre devolve uma pergunta pessoal. Nunca mente de um jeito que dê para provar na hora: ela muda de assunto, oferece chá, elogia.', linhas: [
+    ['Quem é você? De onde veio?', '"Bordadeira. Ando de vila em vila costurando enxoval e mortalha, que é o que nunca falta. Cheguei ontem, pela estrada da serra. A Dona Zuleide me deu pouso, Deus a abençoe."'],
+    ['O que aconteceu com o riscador?', '"Coitado. Dizem que foi a noite que levou ele, ajoelhado em cima da linha. Eu não vi. Quando gritaram, eu estava aqui, no meu bordado."'],
+    ['Você viu ele hoje de manhã?', '"Vi, sim. Acordei cedinho e levei um café pra ele, que riscava desde o escuro. Estava bem, coitado. Agradeceu." (É verdade. Ela só não conta o resto.)'],
+    ['E a caneca do café?', 'Ela para a agulha um instante. "Deixei com ele, ué." Quem estiver olhando de perto, peça Percepção: 15 ou mais vê a mão dela apertar a tesoura.'],
+    ['E o moço dos baldes?', '"Meu sobrinho. Ele não fala muito, a cabeça dele não é boa desde uma noite ruim. Eu cuido dele. Ele faz o que eu peço, é um anjo."'],
+    ['Por que a manga comprida, o chapéu?', '"Pele fina, meu filho. O sol me queima à toa. Quer um chá? É de cidreira."'],
+    ['O que fazer com o corpo?', '"Eu velaria até o fim, de porta aberta pra ele achar o caminho. Ninguém devia ser queimado longe de quem ama." (Ela está empurrando a vila para deixar o corpo ali.)'],
+    ['Falar da Ferida Aberta, de Rasgados, de marcas', 'Ela sorri e diz que não sabe do que estão falando. Mas para de costurar, e só volta quando a pessoa vai embora.'],
+    ['Ela pergunta de volta', 'Use a ficha do jogador. Para Priya: "E a sua irmã, você ainda escuta ela?" Para Inácio: "Seu filho… você nunca achou o corpo, não foi?" Para Damião: "Quem você deixou pra trás?" Ela está procurando quem está desesperado.']] },
+  zeca: { rola: 'zecaConversa', dica: 'Frases curtas, olhar parado. Ele não mente: ele não lembra. Tudo que sabe passa pela "tia".', linhas: [
+    ['Qual o seu nome?', '"Zeca." Ele demora, como se precisasse conferir. "A tia que chama assim."'],
+    ['De onde você é?', '"Daqui não." Aperta a testa. "A tia diz que antes não foi bom pra mim. Que é melhor não lembrar."'],
+    ['O que você faz aí na cerca?', '"Guardando o lugar." Se perguntarem que lugar: ele olha para o trecho apagado e não responde.'],
+    ['Por que manga comprida?', 'Ele puxa a manga para baixo, rápido. "A tia mandou."'],
+    ['Falar de Damião, de Tião, do poço, da comunidade', 'Ele para. "Conheço vocês?" Peça a rolagem de trazer ele de volta: é aqui que dá para tentar.'],
+    ['Ele assobia', 'Duas notas, sempre as mesmas. Era o sinal dos mensageiros da comunidade de Tião.']] },
+  bras: { rola: 'bras', dica: 'Educado, calado, cansado. Ele espera ser acusado. Quem tratar ele como gente ganha um aliado.', linhas: [
+    ['O que você é?', '"Pozeiro. Moo a noite e vendo em potinho. Tenho licença, o selo está aqui." Mostra a plaqueta antes que peçam.'],
+    ['O que é esse pó?', '"Depende do pó. Esse aqui acende sem fogo, esse espanta bicho miúdo, esse aqui… é melhor não." Só explica tudo para quem ganhar a confiança dele.'],
+    ['Por que a vila te olha assim?', '"Por causa da pele." Mostra os riscos na cabeça. "Quem tem marca demais, dizem que já é meio da noite. Eu cheguei e o riscador morreu. Pra eles, basta."'],
+    ['Você viu alguma coisa hoje?', '"Cheguei pouco antes de vocês. Vi o povo correndo, só isso. Mas aquele trecho ali…" olha para o trecho apagado "…não foi bicho que apagou, não."'],
+    ['Perguntar da bordadeira', 'Ele olha para ela de longe e fica um tempo calado. "Manga comprida nesse sol." Só isso, até confiar no grupo.']] },
+  lindalva: { rola: 'familia', dica: 'Fala pouco, firme, sem chorar na frente dos outros. Tudo nela é proteger o marido até o fim.', linhas: [
+    ['Sentimos muito', '"Obrigada." E volta a olhar para o corpo.'],
+    ['Como ele morreu?', '"Saiu antes do sol pra riscar, como fazia todo dia de Dia Curto. Acharam ele na linha, ajoelhado." Ela aperta a vela. "Quarenta anos sem errar um traço."'],
+    ['Queimar o corpo', '"Ninguém vai queimar o meu marido." Para mudar isso é a rolagem de convencer a família, e é uma parte do dia.'],
+    ['Alguém disse alguma coisa a você?', 'Ela hesita. "A moça da costura disse que ele pode voltar. Que é pra deixar a porta aberta." Só conta isso se confiar no grupo (15 ou mais em convencer a família, ou se alguém rezou com ela).']] },
+  rosario: { dica: 'Rápida, irritada, atropela. Pergunta mais do que responde. Por baixo da raiva, está com medo.', linhas: [
+    ['O que aconteceu?', '"Meu pai morreu na linha hoje cedo, e o círculo ficou aberto. Pronto, é isso. Vocês sabem riscar ou não?"'],
+    ['Você acha que foi a noite?', 'Ela trava. "Meu pai não errava traço. Não errava." Se insistirem com jeito, conta do pincel quebrado que achou perto do trecho e escondeu debaixo da cama.'],
+    ['Queimar o corpo', '"Nem pensar. Vocês chegam agora e já querem queimar meu pai?"'],
+    ['Oferecer ajuda de verdade', 'Ela respira fundo pela primeira vez. "Então fecha aquele círculo. É só isso que eu peço." Passa a confiar em quem consertar o trecho.']] },
+  bento: { dica: 'Gagueja quando falam de traço, fala bem de qualquer outra coisa. Acha que a culpa é dele.', linhas: [
+    ['Por que a linha não pega?', '"Eu f-faço igual ele fazia. Igual. Mas a terra parece que n-não quer." (A linha foi apagada com a Ferida Aberta: Traços 15 no trecho descobre.)'],
+    ['Falar de outra coisa (a vila, a mãe, a cal)', 'Ele para de gaguejar e fala bem. Conta que o mestre guardava um caderno de lições na casa dele.'],
+    ['Você viu alguém de manhã?', '"A b-bordadeira. Indo pro trecho, com uma caneca de café. Achei que era pro mestre." Ele não acha isso estranho, até alguém mostrar que é.'],
+    ['Pedir ajuda no conserto', 'Ele aceita na hora. Bento ajudando dá +1 dado no conserto.']] },
+  zuleide: { dica: 'Quase surda: fala alto, repete, e só ouve quem fala alto e devagar. Está feliz com visita.', linhas: [
+    ['Qualquer pergunta, falada baixo', '"Hein? O quê?" Ela sorri e oferece café.'],
+    ['Perguntar da hóspede, falando alto', '"A moça? Um amor! Saiu cedinho levando café pro riscador. Tão prestativa!"'],
+    ['E o sobrinho?', '"Dorme no alpendre, coitado. A tia não deixa ele entrar. Diz que ele tem o sono ruim."'],
+    ['Pedir para ver as coisas da moça', '"Tá ali no canto, a trouxa dela. Mas não mexe não, que é feio." Mexer sem ela ver é a rolagem de revistar.']] },
+  orlando: { dica: 'Justo, mas não dá nada de graça. Está com medo e não quer parecer covarde.', linhas: [
+    ['O que você tem pra vender?', 'Abra a lista de compras da venda.'],
+    ['Você vai ficar pra noite?', '"Tenho mulher e dois pequenos. Se esse círculo não fechar, eu levo eles pra estrada antes do sol cair." Se alguém prometer consertar o círculo, ele fica.'],
+    ['E a casa fechada?', '"Era da família do Tonho. Saíram do círculo numa noite. Não foram embora, não. Saíram." Ele tem a chave.']] },
+  joana: { dica: 'Direta, sem paciência, não para de bater ferro. Gostava do riscador como de um pai.', linhas: [
+    ['Você pode consertar minha arma?', '"Deixa aí. Hoje não é dia de cobrar."'],
+    ['O que você acha que aconteceu?', 'Ela aponta o martelo para a carroça do homem tatuado. "Chegou ontem e meu mestre morreu hoje. Precisa desenhar?"'],
+    ['Acalmar ela', 'É a rolagem de fazer a vila confiar. Se não for acalmada, ela briga com o homem tatuado no Entardecer.']] },
+  firmina: { dica: 'Devagar, perguntando sempre de onde a pessoa vem e quem é a mãe. Vê muito com o olho bom.', linhas: [
+    ['Responder de onde vem e quem é a mãe', 'Ela gosta. Quem responder com verdade pode perguntar o que quiser.'],
+    ['O que a senhora reparou hoje?', '"A moça da costura não fez nem um sinal diante do morto. Nem um. E o rapaz que ela chama de sobrinho não tem nada do rosto dela."'],
+    ['Pedir ervas ou reza', 'Ela vende ramo de arruda e guiné. Com Inácio, reza junto e conta tudo sem precisar de dado.']] },
+};
+Object.entries(CONVERSA).forEach(([k, v]) => { if (GENTE[k]) GENTE[k].conversa = v; });
+
+// ---------------- quando os jogadores inventam algo que não está no guia ----------------
+export const RESOLVER = {
+  passos: [
+    ['Precisa de dado?', 'Só se pode dar errado <b>e</b> errar importa. Conversar, comprar, olhar em volta, andar pela vila: diga sim e conte o que acontece. Guarde o dado para quando tem risco, pressa ou alguém do outro lado.'],
+    ['Qual perícia?', 'Pergunte a si mesmo "como ele está tentando?" e escolha na tabela abaixo. Na dúvida, deixe o jogador sugerir e aceite se fizer sentido.'],
+    ['O que o número dá', '<b>Menos de 10:</b> não consegue, ou consegue com um preço alto (perde tempo, alguém vê, se machuca, ganha 1 Pavor). <b>10 a 14:</b> consegue, com um custo pequeno. <b>15 a 19:</b> consegue. <b>20 ou mais:</b> consegue e ganha algo a mais (uma pista extra, tempo, um aliado).'],
+    ['Gasta tempo?', 'Na Tarde e no Entardecer, cada um faz <b>uma coisa grande</b> por parte do dia: consertar, preparar o corpo, ir ao mocó, convencer a família, investigar a fundo, mutirão. Conversa curta, compra e olhar não gastam.'],
+    ['A pista sempre aparece', 'Se o jogador procurou no lugar certo, ele acha a pista, mesmo tirando pouco. O dado decide quanto ele acha e quanto custa, nunca se a história anda.'],
+    ['Quando não souber a resposta', 'Use o que a pessoa <b>quer</b> (na ficha dela, em Pessoas). Responda como ela responderia para conseguir o que quer. E pode sempre dizer: "Ela olha pra você e muda de assunto."']],
+  pericias: [
+    ['Convencer, mentir, pechinchar', 'Lábia'], ['Impor respeito, acalmar uma multidão', 'Presença'], ['Cantar, contar história, animar', 'Canto'],
+    ['Notar algo, perceber uma mentira', 'Percepção'], ['Lembrar de Assombros, marcas, história', 'Saberes'], ['Ler ou consertar um traço', 'Traços'],
+    ['Cuidar de ferida, ver um corpo, ervas', 'Ervas e Cura'], ['Correr, carregar, forçar, escalar', 'Atletismo'], ['Pegar sem ser visto, se esconder', 'Furtividade'],
+    ['Rastrear, achar caminho, água, bicho', 'Sobrevivência'], ['Consertar objeto, fazer ferramenta', 'Ofícios'], ['Brigar', 'Luta'], ['Atirar, arremessar', 'Pontaria'], ['Aguentar o medo, a dor, a voz lá de fora', 'Firmeza']],
+};
+
 export const VISTO = {
   celeste: ['a bordadeira de chapéu', 'Uma mulher de uns quarenta anos, de chapéu de palha de aba larga e xale azul de franja, vestido claro de manga comprida. Sempre com um pano branco no colo, uma tesoura fina e comprida e linha vermelha. Sorri muito.'],
   zeca: ['o moço dos baldes', 'Um moço magro de chapéu de palha esfiapado, barba rala, camisa de remendos grande demais para ele. Carrega uma vara nos ombros com dois baldes de madeira. Olha sem ver.'],
@@ -120,6 +197,7 @@ export const MOMENTOS = {
     passos: [
       { f: 'Leia', leia: [['', 'O sol já está na altura dos telhados. Vocês têm o resto da tarde e o entardecer, e nada mais. Tem um círculo aberto, um morto que ninguém quer queimar e uma vila inteira olhando para vocês como se vocês soubessem o que fazer.']] },
       { f: 'Explique o tempo', d: 'Diga: "Sobram duas partes do dia, a Tarde e o Entardecer. Em cada uma, cada um faz uma coisa grande: consertar o círculo, preparar o corpo, buscar cal no mocó, convencer a família, investigar. Conversar, comprar e olhar não gastam tempo."' },
+      { f: 'Mostre o que dá para fazer', d: '<b>Consertar o círculo</b> (no trecho, Traços) · <b>Preparar o corpo</b> (no velório, Ervas e Cura) · <b>Convencer a família</b> (no velório, Lábia ou Presença) · <b>Buscar cal e lenha no mocó</b> (fora da vila, Atletismo) · <b>Investigar</b> (onde quiserem: Percepção, Saberes, Sobrevivência) · <b>Fazer a vila confiar</b> (Presença) · <b>Mutirão das trancas</b> (na oficina, sem dado). Cada uma é uma parte do dia.' },
       { f: 'Vá em roda e pergunte a cada um', pergunte: '"O que você faz nesta Tarde?"', d: 'Anote na aba <b>A história</b>, à direita, em <b>Tarefas da tarde</b>. Ninguém faz tudo: é esse o ponto.' },
       { f: 'Resolva um de cada vez', d: 'Clique no mapa onde aquele personagem foi. Cada lugar tem o que ler, o que pedir de dado e o que ele acha. Depois volte ao mapa e passe para o próximo.' },
       { f: 'Quando todos fizeram a Tarde, vá para o Entardecer', d: 'É o botão no fim desta página.' },
@@ -200,9 +278,20 @@ export const MOMENTOS = {
     mestre: ['É o lugar mais seguro da vila. É onde todo mundo se junta na noite.'],
     voltar: true },
   moco: { ato: 3, titulo: 'O mocó da serrota', lugar: true, app: 'O mocó da serrota', cena: 'moco',
-    leia: [['', 'Meia légua de caminho, subindo. O lajedo de pedra brilha de quente. A lavra de cal é branca de doer o olho. Debaixo da lenha empilhada, alguma coisa se mexe.']],
-    opcoes: [{ t: 'Buscar cal e lenha', rola: 'moco', s: '1 parte do dia, Atletismo 10' }],
-    mestre: ['Sem cal, o conserto sai com −2. Sem lenha, não dá para queimar o corpo.', 'Flecha é a única rápida o bastante para ir e voltar antes do Entardecer sem perder nada.'],
+    leia: [['', 'Meia légua de caminho, subindo pela trilha de pedra. O lajedo brilha de quente. A lavra de cal é branca de doer o olho, e o pó gruda na pele suada. Do lado, uma pilha de lenha seca que a vila junta para o inverno. Daqui de cima dá para ver a vila inteira, pequena, e o círculo com o buraco do lado da estrada.']],
+    passos: [
+      { f: 'Leve só quem vai', app: 'Clique na peça de quem vai ao mocó e use <b>Levar só ele para outra cena</b>, escolhendo O mocó da serrota. Só ele passa a ver o mocó. O resto do grupo continua na vila. Para juntar todo mundo de novo, aperte ▶ numa cena lá em cima.' },
+      { f: 'Diga quanto custa', d: 'Ir e voltar gasta <b>a parte do dia inteira</b> (a Tarde ou o Entardecer). Quem foi não faz outra coisa grande nessa parte.' },
+      { f: 'O que tem para trazer', d: '<b>1 saco de cal</b> é o bastante para o conserto do círculo (sem ele, o conserto tem −2). <b>1 feixe de lenha</b> por pessoa que carregar; para queimar o corpo, são precisos <b>2 feixes</b>. Uma pessoa sozinha traz o saco de cal <b>ou</b> 1 feixe; com 15 ou mais na rolagem, traz os dois.' },
+      { f: 'Peça a rolagem da viagem', rola: 'moco' },
+    ],
+    opcoes: [
+      { t: 'Mexer na pilha de lenha', nota: 'Peça <b>Percepção</b>. Debaixo da lenha tem uma cascavel. <b>10 ou mais:</b> vê a tempo e espanta com um pau. <b>Menos de 10:</b> a cobra pica: <b>−1d6 de Sangue</b> e, até alguém tratar (Ervas e Cura 10), um dado a menos em tudo que for de força.' },
+      { t: 'Olhar as marcas na pedra', nota: 'Peça <b>Sobrevivência</b> (ou Saberes). <b>Menos de 10:</b> arranhão de bicho. <b>10 a 14:</b> garras subindo a serrota, de ontem. <b>15 a 19:</b> uma fenda abriu aqui ontem à noite: a pedra ainda está quente por dentro, mesmo à sombra. <b>20 ou mais:</b> alguma coisa dorme debaixo do lajedo, e respira. Se alguém voltar aqui à noite, ela acorda.' },
+      { t: 'Olhar a vila lá de cima', nota: 'Sem dado. Dá para ver a bordadeira na sombra, o moço dos baldes parado na cerca e, para quem tirar 15 ou mais em Percepção, que o moço nunca sai do lugar, nem para beber água.' },
+      { t: 'Encher um pote de água na mina da pedra', nota: 'Sem dado. Água fresca: quem beber recupera <b>1 de Prumo</b>.' },
+    ],
+    mestre: ['Sem cal, o conserto sai com −2. Sem lenha, não dá para queimar o corpo.', 'Flecha é a mais rápida: com 15 ou mais, volta antes do fim da parte do dia e ainda faz uma coisa rápida na vila.', 'Assombro não age de dia. O perigo aqui é o caminho, a cobra e o tempo.'],
     voltar: true },
 
   entardecer: { ato: 3, titulo: 'Entardecer', tempo: 'a última parte do dia', app: 'A vila de luto',
