@@ -3,8 +3,8 @@
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=19';
-import { criarGuia, faixaDe } from './guia.js?v=4';
-import { ROLA, FX_C } from './guia-dados.js?v=2';
+import { criarGuia, faixaDe } from './guia.js?v=5';
+import { ROLA, FX_C } from './guia-dados.js?v=3';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
 const ATN = Object.fromEntries(R.ATRIBUTOS.map((a) => [a.k, a.n]));
