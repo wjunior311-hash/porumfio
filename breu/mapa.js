@@ -151,7 +151,7 @@ export function criarMapa(ctx) {
   const meusChars = () => S.chars.filter((ch) => ch.owner === uid() && ch.status === 'aprovado');
 
   function sideHtml() {
-    if (MP.mesa) return selHtml() || `<p class="ms-dica">Clique numa peça no mapa para mexer nela: Sangue, nome, esconder, tirar.</p>`;
+    if (MP.mesa) return selHtml() || (isGM() ? `<p class="ms-dica">Clique numa peça no mapa para mexer nela: Sangue, nome, esconder, tirar.</p>` : `<p class="ms-dica">Arraste o seu personagem. Ele anda até o limite de passos da rodada; na próxima rodada, o limite volta.</p>`);
     const c = cena(); if (!c) return '';
     const sel = selHtml();
     if (!isGM()) return sel || `<p class="small muted">Arraste o seu personagem. Ele anda até o limite de passos da rodada; na próxima rodada, o limite volta.</p>`;
@@ -217,6 +217,8 @@ export function criarMapa(ctx) {
     canal();
     if (!el) { el = null; return; }
     const stage = el.querySelector('[data-mpstage]');
+    MP.mesa = el.classList.contains('mesa');
+    if (!stage || !cena()) return;
     const img = el.querySelector('img.mp-bg');
     viva?.destruir(); viva = null;
     const cvv = el.querySelector('[data-mpviva]');

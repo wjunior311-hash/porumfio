@@ -2,8 +2,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
-import { criarMapa } from './mapa.js?v=23';
-import { criarMesa } from './mesa.js?v=2';
+import { criarMapa } from './mapa.js?v=24';
+import { criarMesa } from './mesa.js?v=3';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -139,8 +139,11 @@ function render() {
   let html = '';
   app.classList.toggle('wide', r.name === 'admin');
   const gmMesa = r.name === 'mapa' && S.me && MESA?.desktop();
-  app.classList.toggle('mapa', r.name === 'mapa' && !gmMesa);
-  app.classList.toggle('mesa-gm', !!gmMesa);
+  const jogMesa = r.name === 'mapa' && S.me && MESA?.jogDesktop();
+  app.classList.toggle('mapa', r.name === 'mapa' && !gmMesa && !jogMesa);
+  app.classList.toggle('mesa-gm', !!(gmMesa || jogMesa));
+  // no computador, as telas de leitura ficam mais largas
+  app.classList.toggle('largo', ['', 'ficha', 'noite', 'prontos'].includes(r.name));
   if (r.name === 'convite') html = viewInvite(r.arg);
   else if (!S.session) html = viewLogin();
   else if (!S.me) html = viewNoMember();
@@ -150,7 +153,7 @@ function render() {
   else if (r.name === 'admin' && isAdmin()) html = viewAdmin();
   else if (r.name === 'prontos') html = viewProntos();
   else if (r.name === 'noite' && isGM()) html = viewNoite();
-  else if (r.name === 'mapa') html = gmMesa ? MESA.viewGM() : top() + MAPA.view() + MESA.dockWrap();
+  else if (r.name === 'mapa') html = gmMesa ? MESA.viewGM() : jogMesa ? MESA.viewJogador() : top() + MAPA.view() + MESA.dockWrap();
   else if (r.name === '') html = viewMesa();
   else { location.replace('#/'); return; }
   app.innerHTML = html;
@@ -256,16 +259,19 @@ function viewMesa() {
   return `${top()}
     <section class="hero"><p class="lbl">Olá, ${esc(S.me.display_name)}</p><h1>A mesa</h1></section>
     ${faixaNoite()}
-    <a class="btn primary block mapa-cta" href="#/mapa">Abrir o mapa da mesa</a>
+    <a class="btn primary block mapa-cta" href="#/mapa">${isGM() ? 'Abrir a mesa do mestre' : 'Abrir o mapa da mesa'}</a>
+    <div class="home"><div class="h-a">
     <h2>${isGM() && meus.length > 1 ? 'Seus personagens' : 'Seu personagem'}</h2>
     ${meus.length ? `<div class="chars">${meus.map(charCard).join('')}</div>` : `<div class="empty"><p>Você ainda não tem personagem.</p><p class="small">A criação leva uns 20 minutos e salva sozinha: dá para parar e voltar depois.</p></div>`}
     ${podeCriar ? `<button class="btn primary block" style="margin-top:12px" data-act="novo">${meus.length ? 'Criar outro personagem' : 'Criar meu personagem'}</button>
       <a class="btn block" style="margin-top:8px" href="#/prontos">Ou escolher um personagem pronto</a>` : ''}
+    <h2>Antes de começar</h2>
+    <div class="box">Pense em quem você é antes de pensar em números: de onde veio, o que faz, qual noite te mudou e quem você quer proteger. As regras se encaixam depois.</div>
+    </div><div class="h-b">
     <h2>O grupo</h2>
     ${outros.length ? `<div class="chars">${outros.map(charCard).join('')}</div>` : `<p class="muted">Ninguém mais criou personagem ainda.</p>`}
     ${S.rolls.length ? `<h2>Rolagens da mesa</h2><div class="rolls">${S.rolls.slice(0, 12).map(rollRow).join('')}</div>` : ''}
-    <h2>Antes de começar</h2>
-    <div class="box">Pense em quem você é antes de pensar em números: de onde veio, o que faz, qual noite te mudou e quem você quer proteger. As regras se encaixam depois.</div>`;
+    </div></div>`;
 }
 
 // ---------- painel do mestre: a noite ----------
@@ -584,7 +590,7 @@ function sheetBody(p, c = null) {
   const of = R.oficioDe(p), or = R.origemDe(p), b = R.barras(p), at = R.atrib(p), dom = R.domDe(p), cam = R.caminhoDe(p);
   const ms = R.marcas(p), ess = R.essencias(p);
   const armas = of ? of.armas : [];
-  return `
+  return `<div class="ficha"><div class="f-a">
     <div class="sheet-head">
       <div class="pic ${c ? estCls(c) : ''}${p.pronto || p.retrato ? ' retrato' : ''}">${of ? `<img src="${c ? picChar(c) : picOf(p)}" alt="">` : ''}</div>
       <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, cam?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}${c && R.marcosGanhos(p) ? `<span class="chip" style="margin-top:8px;display:inline-block">${R.patamar(p).n}</span>` : ''}</div>
@@ -605,6 +611,7 @@ function sheetBody(p, c = null) {
     ${b.sombra ? `<p class="small" style="margin-top:8px">Sombra: <b style="color:var(--brasa2)">${b.sombra}</b> de 7.</p>` : ''}
     <h2>Perícias</h2>
     <div class="skills">${R.PERICIAS.map(([n]) => { const g = R.grauPericia(p, n); const tag = podeRolar(c) ? 'button' : 'div'; return `<${tag} class="${g ? 't' : ''}${podeRolar(c) ? ' rollable' : ''}" ${podeRolar(c) ? `data-roll-per="${esc(n)}"` : ''}><span>${n}${g > 1 ? ` <span class="dim small">${R.GRAUS[g]}</span>` : ''}</span>${g ? `<em>+${R.bonusPericia(g)}</em>` : '<span class="dim">+0</span>'}</${tag}>`; }).join('')}</div>
+    </div><div class="f-b">
     ${or ? `<h2>Origem</h2><div class="or-wrap"><img class="or-fig" src="img/or-${or.k}.webp" alt="" onerror="this.remove()"><dl class="kv"><div><dt>Costume da terra</dt><dd><b>${or.costume[0]}.</b> ${or.costume[1]}</dd></div><div><dt>Como é a gente de lá</dt><dd class="small">${or.visual}</dd></div></dl></div>` : ''}
     ${of ? `<h2>Ofício</h2><dl class="kv"><div><dt>Habilidade inicial</dt><dd><b>${of.hab[0]}.</b> ${of.hab[1]}</dd></div>
       ${cam ? cam.habs.map(([n, custo, d]) => `<div><dt>Caminho ${esc(cam.n)}</dt><dd><b>${n}.</b>${custo ? ` <span class="dim">(${custo})</span>` : ''} ${d}</dd></div>`).join('') : `<div><dt>Caminho</dt><dd class="dim">Escolhido no terceiro marco: ${of.caminhos.map((x) => x.n).join(' ou ')}.</dd></div>`}
@@ -645,7 +652,7 @@ function sheetBody(p, c = null) {
     ${p.protege ? `<div><dt>Quem protejo</dt><dd>${esc(p.protege)}</dd></div>` : ''}
       ${p.medo ? `<div><dt>Meu maior medo</dt><dd>${esc(p.medo)}</dd></div>` : ''}
     </dl>
-    ${c ? evoHistorico(p) : ''}`;
+    ${c ? evoHistorico(p) : ''}</div></div>`;
 }
 
 // faixa de evolução no topo da ficha
@@ -1079,8 +1086,9 @@ document.addEventListener('submit', async (e) => {
 });
 
 // o mestre que estica ou encolhe a janela troca de tela
-let largo = window.innerWidth >= 1100;
-window.addEventListener('resize', () => { const l = window.innerWidth >= 1100; if (l !== largo) { largo = l; if (route().name === 'mapa' && isGM()) render(); } });
+const formato = () => (window.innerWidth >= 1100 ? 2 : window.innerWidth >= 1000 ? 1 : 0);
+let largo = formato();
+window.addEventListener('resize', () => { const l = formato(); if (l !== largo) { largo = l; if (route().name === 'mapa') render(); } });
 
 window.addEventListener('hashchange', () => { ui.saved = ''; ui.evo = null; ui.roller = null; render(); window.scrollTo(0, 0); });
 

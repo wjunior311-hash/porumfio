@@ -369,3 +369,44 @@ svg text { font-family: var(--display); font-weight: 700; font-size: 26px; fill:
 /* no mapa do jogador, o aviso desce do topo para não cobrir o pedido */
 body:has(#app.mapa) .toast { bottom: auto; top: calc(var(--safe-t) + 12px); transform: translateX(-50%) translateY(-30px); z-index: 95; }
 body:has(#app.mapa) .toast.show { transform: translateX(-50%); }
+
+/* ---------- o jogador no computador: mapa grande e a ficha ao lado ---------- */
+.mesa.jog { grid-template-columns: minmax(0, 1fr) minmax(320px, 340px); }
+.jg-titulo { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+.jg-titulo b { font-family: var(--display); font-size: 22px; color: var(--claro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jg-rod { font-family: var(--label); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--osso3); margin-right: 8px; }
+.jg-rod b { font-family: var(--display); font-size: 20px; color: var(--claro); margin-left: 4px; }
+button.ms-link { background: none; border: 0; }
+.jg-painel { overflow-y: auto; }
+.dock.lateral { position: static; transform: none; width: auto; padding: 14px; gap: 12px; pointer-events: auto; }
+.dock.lateral .dk-folha { box-shadow: none; max-height: none; background: var(--page); }
+.dock.lateral .dk-grid { grid-template-columns: repeat(2, 1fr); }
+.dock.lateral .dk-card { box-shadow: none; backdrop-filter: none; }
+.jg-ficha { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: center; text-decoration: none; color: inherit; }
+.jg-ficha .ms-pic { width: 52px; height: 52px; }
+.jg-ficha b { font-family: var(--display); font-size: 22px; color: var(--claro); display: block; line-height: 1.1; }
+.jg-ficha small { color: var(--osso3); font-size: 13px; }
+.jg-ficha em { color: var(--brasa2); font-style: normal; }
+.jg-barras { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; }
+.jg-b { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; position: relative; overflow: hidden; display: grid; }
+.jg-b span { font-family: var(--label); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--osso3); }
+.jg-b b { font-family: var(--display); font-size: 22px; color: var(--claro); line-height: 1; }
+.jg-b b small { font-size: 12px; color: var(--osso3); }
+.jg-b i { position: absolute; left: 0; bottom: 0; height: 3px; width: calc(var(--p) * 100%); background: var(--osso2); }
+.jg-b.sangue i { background: #c2533f; } .jg-b.sangue b { color: #f1a594; }
+.jg-b.prumo i { background: #8fa8c8; } .jg-b.pavor b { color: var(--brasa2); } .jg-b.brasa i { background: var(--brasa2); }
+.jg-feed { display: grid; gap: 2px; }
+.jg-feed .lbl { margin-bottom: 4px; }
+
+/* ---------- telas de leitura mais largas no computador ---------- */
+@media (min-width: 1000px) {
+  #app.largo { max-width: 1120px; padding-left: 32px; padding-right: 32px; }
+  #app.largo .home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 0 44px; align-items: start; }
+  #app.largo .h-b .chars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  #app.largo .h-b .chars > * { margin: 0; }
+  #app.largo .mapa-cta { max-width: 420px; }
+  #app.largo .ficha { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 48px; align-items: start; }
+  #app.largo .ficha .f-b > h2:first-child { margin-top: 0; }
+  #app.largo .ficha .sheet-head { margin-bottom: 8px; }
+}
+@media (min-width: 1000px) { #app.largo .hero { text-align: left; } }

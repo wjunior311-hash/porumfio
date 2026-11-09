@@ -116,8 +116,8 @@ export function criarMesa(ctx) {
   }
   const ordem = (c) => { const k = c.img?.startsWith('viva:') ? c.img.slice(5) : ''; const i = ORDEM_CENAS.indexOf(k); return i < 0 ? 99 : i; };
 
-  function relogioHtml() {
-    const n = S.noite || {}, f = n.fase ?? -1, prox = f + 1;
+  function relogioHtml(soVer) {
+    const n = S.noite || {}, f = n.fase ?? -1, prox = soVer ? 9 : f + 1;
     return `<div class="ms-fases">${M.FASES.map((x, i) => `<span class="${i === f ? 'on' : i < f ? 'foi' : ''}" title="${esc(x.n)}"><img src="img/fase-${x.k}.webp" alt="">${i === f ? `<b>${esc(x.n)}</b>` : ''}</span>`).join('')}</div>
       ${prox <= 4 ? `<button class="btn sm ${f < 0 ? '' : 'primary'}" data-ms="fase" title="O app rola o Pavor de todos">${prox === 0 ? 'Começar a noite' : `→ ${esc(M.FASES[prox].n)}`}</button>` : ''}`;
   }
@@ -213,11 +213,18 @@ export function criarMesa(ctx) {
     const n = Math.min(5, (at[attr] || 1) - pavorDe(c)), b = ATR[per] ? 0 : R.bonusPericia(R.grauPericia(c.data, per));
     return { n, b, txt: `${n <= 0 ? '2d20 (fica o pior)' : n + 'd20'}${b ? '+' + b : ''}`, forca: (n <= 0 ? 0 : n * 10) + b * 2 };
   }
-  function dockHtml() {
+  function fichaMini(c) {
+    const b = R.barras(c.data), t = S.noite?.grupo?.[c.id] || { sangue: b.sangue, prumo: b.prumo, pavor: 0, brasa: b.brasa };
+    const barra = (k, n, max, lbl) => `<div class="jg-b ${k}"><span>${lbl}</span><b>${n}${max != null ? `<small>/${max}</small>` : ''}</b>${max ? `<i style="--p:${Math.max(0, Math.min(1, n / max))}"></i>` : ''}</div>`;
+    return `<a class="jg-ficha" href="#/ficha/${c.id}" title="Abrir a ficha"><span class="ms-pic ${ctx.estCls(c)}"><img src="${esc(ctx.picChar(c))}" alt=""></span><div><b>${esc(c.data.nome)}</b><small>Defesa ${b.defesa}${t.pavor ? ` · <em>Pavor ${t.pavor}</em>` : ''}</small></div></a>
+      <div class="jg-barras">${barra('sangue', t.sangue, b.sangue, 'Sangue')}${barra('prumo', t.prumo, b.prumo, 'Prumo')}${barra('pavor', t.pavor, null, 'Pavor')}${b.brasa ? barra('brasa', t.brasa, b.brasa, 'Brasa') : ''}</div>`;
+  }
+  function dockHtml(lateral) {
     if (isGM() && desktop()) return '';
-    const c = meuChar(); if (!c || c.owner !== uid()) return '';
+    const c = meuChar(); if (!c || c.owner !== uid()) return lateral ? '<p class="ms-dica">Seu personagem ainda não foi aprovado pelo mestre.</p>' : '';
     const p = pedidoPara(c);
-    let h = '';
+    let h = lateral ? fichaMini(c) : '';
+    const aberto = lateral || U.dk;
     if (p) {
       const feito = S.rolls.find((r) => r.character_id === c.id && r.detail?.pedido === p.id);
       if (feito) h += `<div class="dk-card feito"><span class="lbl">${esc(p.label)}</span><p>Você tirou <b>${feito.total}</b>. O mestre conta o que acontece.</p></div>`;
@@ -230,16 +237,34 @@ export function criarMesa(ctx) {
       }
     }
     const pers = [...Object.keys(ATR).map((n) => ({ n, a: true })), ...R.PERICIAS.map(([n]) => ({ n, g: R.grauPericia(c.data, n) }))];
-    h += `<div class="dk-livre ${U.dk ? 'aberto' : ''}">
-      ${U.dk ? `<div class="dk-folha"><div class="dk-fh"><b>Rolar como ${esc(c.data.nome)}</b><button class="btn sm ghost" data-dk="fechar">Fechar</button></div>
+    h += `<div class="dk-livre ${aberto ? 'aberto' : ''}">
+      ${aberto ? `<div class="dk-folha"><div class="dk-fh"><b>${lateral ? 'Rolar dados' : 'Rolar como ' + esc(c.data.nome)}</b>${lateral ? '' : '<button class="btn sm ghost" data-dk="fechar">Fechar</button>'}</div>
         <span class="lbl">Atributos</span><div class="dk-grid">${pers.filter((x) => x.a).map((x) => `<button data-dk="rolar" data-per="${x.n}"><b>${x.n}</b><small>${maoDe(c, x.n).txt}</small></button>`).join('')}</div>
         <span class="lbl">Perícias</span><div class="dk-grid">${pers.filter((x) => !x.a).sort((a, b) => b.g - a.g).map((x) => `<button class="${x.g ? 'treino' : ''}" data-dk="rolar" data-per="${x.n}"><b>${x.n}</b><small>${maoDe(c, x.n).txt}</small></button>`).join('')}</div>
         <p class="dk-nota">O mestre diz quando rolar e o que é preciso tirar. A rolagem aparece para a mesa toda.</p></div>` : ''}
-      <button class="dk-abre" data-dk="abrir" aria-expanded="${U.dk}">${dieSvg('?', 'dk-ic')}<span>Rolar dados</span></button></div>`;
+      ${lateral ? '' : `<button class="dk-abre" data-dk="abrir" aria-expanded="${U.dk}">${dieSvg('?', 'dk-ic')}<span>Rolar dados</span></button>`}</div>`;
+    if (lateral) h += `<div class="jg-feed"><span class="lbl">Rolagens da mesa</span>${S.rolls.slice(0, 8).map(linhaRoll).join('') || '<p class="ms-dica">Ninguém rolou ainda.</p>'}</div>`;
     return h;
   }
   const dockWrap = () => `<div class="dock" data-dock>${dockHtml()}</div>`;
-  function pintarDock() { const d = document.querySelector('[data-dock]'); if (d) d.innerHTML = dockHtml(); }
+  function pintarDock() { const d = document.querySelector('[data-dock]'); if (d) d.innerHTML = dockHtml(d.classList.contains('lateral')); const r = document.querySelector('.jog [data-ms-rel]'); if (r) r.innerHTML = relogioHtml(true); }
+
+  // ---------- a tela do jogador no computador: mapa grande e a ficha ao lado ----------
+  const jogDesktop = () => !isGM() && window.innerWidth >= 1000;
+  function viewJogador() {
+    A.setMesa(true);
+    if (!A.loaded()) return MAPA.view();
+    A.setMesa(true);
+    const c = A.cena();
+    return `<div class="mesa jog" data-mproot>
+      <header class="ms-top"><a class="ms-logo" href="#/" aria-label="Início"><img src="img/logo-horizontal.webp" alt="Breu"></a>
+        <div class="jg-titulo">${c ? `<span class="lbl">Cena</span><b>${esc(c.nome)}</b>` : ''}</div>
+        <div class="ms-rel" data-ms-rel>${relogioHtml(true)}</div>
+        <div class="ms-links">${c ? `<span class="jg-rod">Rodada <b data-mp-rodada>${c.rodada}</b></span>` : ''}<a class="ms-link" href="#/">Fichas</a><button class="ms-link" data-act="logout">Sair</button></div></header>
+      <section class="ms-centro">${c ? `<div class="mp-bar" data-mpbar>${A.barHtml()}</div>${A.stageHtml()}` : `<div class="ms-vazio"><h1>Aguardando o mestre</h1><p class="muted">Quando ele mostrar uma cena, ela aparece aqui sozinha.</p></div>`}</section>
+      <aside class="ms-painel jg-painel"><div class="dock lateral" data-dock>${dockHtml(true)}</div>${c ? `<div class="ms-sel mp-side" data-mpside>${A.sideHtml()}</div>` : ''}</aside>
+    </div>`;
+  }
 
   async function rolarComo(c, per, doPedido) {
     const attr = ATR[per] || R.PERICIA_ATRIB[per], pericia = ATR[per] ? '' : per;
@@ -407,5 +432,5 @@ export function criarMesa(ctx) {
   function onGuia(v) { if (JSON.stringify(v) === JSON.stringify(G.estado())) return; S.guia = v; G.setEstado(v); pintarGuia(); pintarPainel(); }
   function onNoite() { repintar(); }
 
-  return { viewGM, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };
+  return { viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };
 }
