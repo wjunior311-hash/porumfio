@@ -1,5 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { GRUPOS, infoPoder, lerMagia, CONDICOES, PERICIAS, circuloMaximo } from './regras.js';
+import { GRUPOS, infoPoder, lerMagia, CONDICOES, PERICIAS, circuloMaximo, EFEITOS, PV_TEMP } from './regras.js';
 import { installMesa } from './mesa.js';
 import { installNotas } from './notas.js';
 import { installBestiario } from './bestiario.js';
@@ -55,10 +55,25 @@ function rollDice(expr) {
   }
   return { total: total + mod, text: grupos.join(' + ') + (mod ? (mod > 0 ? ' + ' + mod : ' − ' + -mod) : '') };
 }
-function showRoll(r) { ui.roll = r; clearTimeout(showRoll.t); showRoll.t = setTimeout(() => { ui.roll = null; renderRoll(); }, 9000); renderRoll(); }
-function test(title, bonus, critOn = 20) {
+function showRoll(r, quem) {
+  ui.roll = r; clearTimeout(showRoll.t); showRoll.t = setTimeout(() => { ui.roll = null; renderRoll(); }, 9000); renderRoll();
+  // vai para o histórico da mesa (o mestre vê no celular dele)
+  const autor = quem || (S.me?.character_id && S.chars[S.me.character_id]?.name) || S.me?.display_name || '';
+  const item = { quem: autor, title: r.title, n: r.n, detail: r.detail, crit: !!r.crit, fumble: !!r.fumble, at: Date.now() };
+  guardarRolagem(item);
+  try { channel?.send({ type: 'broadcast', event: 'rolagem', payload: item }); } catch (e) { /* sem internet: fica só local */ }
+}
+function guardarRolagem(item) {
+  S.rolagens = [item, ...(S.rolagens || [])].slice(0, 60);
+  lsSet('pf-rolagens', JSON.stringify(S.rolagens));
+}
+// Efeitos ligados na ficha: somam nas rolagens até o fim da cena.
+function efeitos(d) { return Array.isArray(d.effects) ? d.effects : []; }
+function somaEf(d, k, filtro = () => true) { return efeitos(d).filter(filtro).reduce((a, e) => a + num(e[k]), 0); }
+function nomesEf(d, k, filtro = () => true) { return efeitos(d).filter((e) => num(e[k]) && filtro(e)).map((e) => `${fmt(num(e[k]))} ${e.nome}`).join(', '); }
+function test(title, bonus, critOn = 20, extra = '', quem) {
   const r = d20(), total = r + bonus, crit = r >= critOn, fumble = r === 1;
-  showRoll({ title, n: total, detail: `d20 [${r}] ${bonus >= 0 ? '+ ' + bonus : '− ' + -bonus}${crit ? ' · CRÍTICO!' : fumble ? ' · falha crítica' : ''}`, crit, fumble });
+  showRoll({ title, n: total, detail: `d20 [${r}] ${bonus >= 0 ? '+ ' + bonus : '− ' + -bonus}${extra ? ' (' + extra + ')' : ''}${crit ? ' · CRÍTICO!' : fumble ? ' · falha crítica' : ''}`, crit, fumble }, quem);
 }
 function renderRoll() {
   let el = $('#rollcard');
@@ -74,6 +89,7 @@ function renderRoll() {
 
 // ---------- dados ----------
 async function loadAll() {
+  try { S.rolagens = JSON.parse(localStorage.getItem('pf-rolagens') || '[]'); } catch (e) { S.rolagens = []; }
   const uid = S.session.user.id;
   const { data: me } = await sb.from('profiles').select('*').eq('user_id', uid).maybeSingle();
   S.me = me;
@@ -134,6 +150,12 @@ function subscribe() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'pets' }, (p) => { bichinho.onRealtime(p); if (route().name === 'bichinho') softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bestiary' }, (p) => { bestiario.onRealtime(p); softRender(); })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, (p) => { notas.onRealtime(p); if (route().name === 'notas') softRender(); })
+    .on('broadcast', { event: 'rolagem' }, ({ payload }) => {
+      if (!payload?.title) return;
+      guardarRolagem(payload);
+      if (isGM() && route().name !== 'mestre') toast(`${payload.quem}: ${payload.title} → ${payload.n}${payload.crit ? ' · CRÍTICO!' : ''}`);
+      if (['mestre', 'rolagens'].includes(route().name)) softRender();
+    })
     .subscribe();
 }
 
@@ -186,6 +208,7 @@ function render() {
   else if (r.name === 'bichinho') html = (r.arg ? bichinho.viewPet(r.arg) : bichinho.viewLista()) + nav(r.arg && r.arg === S.me.character_id ? 'ficha' : 'mais', r.arg);
   else if (r.name === 'mesa') html = r.arg === 'tv' ? mesa.viewMesa(true) : mesa.viewMesa(false) + nav('mesa');
   else if (r.name === 'mestre' && isGM()) html = viewGM() + nav('mestre');
+  else if (r.name === 'rolagens') html = viewRolagens();
   else if (r.name === 'admin' && isAdmin()) html = viewAdmin() + nav('mais');
   else if (r.name === 'mais') html = viewMore() + nav('mais');
   else {
@@ -323,7 +346,7 @@ async function doInstall() {
 
 // ---------- ficha ----------
 function sheetTabs(cid) {
-  const t = ['Resumo', 'Perícias', 'Habilidades'];
+  const t = ['Combate', 'Resumo', 'Perícias', 'Habilidades'];
   if ((S.spells[cid] || []).length) t.push('Magias');
   t.push('Mochila');
   return t;
@@ -335,7 +358,8 @@ function attackInfo(a) {
   const critOn = /\b(1[5-9])\b/.test(c) ? parseInt(c.match(/\b(1[5-9])\b/)[1], 10) : 20;
   const mult = (c.match(/x\d/) || ['x2'])[0];
   const dmg1 = String(dmg || '').split('/')[0].trim();
-  return { name, b, dmg: dmg1, critOn, line: [range && range !== '—' ? 'alcance ' + String(range).toLowerCase() : 'corpo a corpo', critOn < 20 ? 'crítico ' + critOn : 'crítico ' + mult.replace('x', '×'), String(type || '').toLowerCase()].filter(Boolean).join(' · ') };
+  const corpo = !/besta|arco|funda|azagaia|pistola|mosquete|dardo|zarabatana|rede|virote/i.test(name || '') && !/médio|longo/i.test(range || '');
+  return { name, b, dmg: dmg1, critOn, corpo, line: [range && range !== '—' ? 'alcance ' + String(range).toLowerCase() : 'corpo a corpo', critOn < 20 ? 'crítico ' + critOn : 'crítico ' + mult.replace('x', '×'), String(type || '').toLowerCase()].filter(Boolean).join(' · ') };
 }
 function skillVal(d, name) {
   const v = d.skills?.[name];
@@ -345,8 +369,8 @@ function skillVal(d, name) {
 function viewSheet(cid) {
   const c = S.chars[cid], d = c.data, edit = canEdit(cid), mine = S.me.character_id === cid;
   const tabs = sheetTabs(cid);
-  let tab = ui.tab[cid] || 'Resumo';
-  if (!tabs.includes(tab)) tab = 'Resumo';
+  let tab = ui.tab[cid] || 'Combate';
+  if (!tabs.includes(tab)) tab = 'Combate';
   const hp = num(d.hp), maxHp = Math.max(1, num(d.maxHp, 1)), mp = num(d.mp), maxMp = Math.max(0, num(d.maxMp));
   const ko = hp <= 0;
   const owner = S.members.find((m) => m.character_id === cid);
@@ -365,12 +389,12 @@ function viewSheet(cid) {
         <div class="small muted">${esc(d.race)} · ${esc(d.className)} ${esc(d.level)} · ${esc(d.origin)}</div>
         ${d.deity ? `<div class="small muted">Devoto de ${esc(d.deity)}</div>` : ''}
       </div>
-      <div class="defbox"><b>${esc(d.def)}</b><span>Defesa</span></div>
+      <div class="defbox"><b>${num(d.def) + somaEf(d, 'def')}</b><span>Defesa${somaEf(d, 'def') ? ' *' : ''}</span></div>
     </section>
     <section class="card vitals">
       <div class="vital">${minus('hp', 'PV')}
         <div class="mid"><div class="top"><span style="font-size:12px;font-weight:700;color:var(--red-l);letter-spacing:1px">PV${ko ? ' · CAÍDO' : ''}</span>
-          <button class="val" ${edit ? `data-act="vitalSet" data-c="${cid}" data-k="hp"` : 'disabled'} aria-label="Ajustar PV">${hp}<span> / ${maxHp}</span></button></div>
+          <button class="val" ${edit ? `data-act="vitalSet" data-c="${cid}" data-k="hp"` : 'disabled'} aria-label="Ajustar PV">${hp}<span> / ${maxHp}</span>${num(d.tempHp) ? `<span style="color:var(--gold)"> +${num(d.tempHp)} temp</span>` : ''}</button></div>
           <div class="track"><i style="width:${Math.max(0, Math.min(100, hp / maxHp * 100))}%;background:var(--red)"></i></div></div>
         ${plus('hp', 'PV')}</div>
       <div class="vital">${minus('mp', 'PM')}
@@ -380,6 +404,7 @@ function viewSheet(cid) {
         ${plus('mp', 'PM')}</div>
     </section>
     <nav class="tabs" aria-label="Partes da ficha">${tabs.map((t) => `<button class="tab ${t === tab ? 'on' : ''}" data-act="tab" data-c="${cid}" data-t="${t}">${t}</button>`).join('')}</nav>
+    ${tab === 'Combate' ? tabCombate(cid) : ''}
     ${tab === 'Resumo' ? tabSummary(cid) : ''}
     ${tab === 'Perícias' ? tabSkills(cid) : ''}
     ${tab === 'Habilidades' ? tabPowers(cid) : ''}
@@ -388,13 +413,69 @@ function viewSheet(cid) {
   </div>`;
 }
 
+function blocoEfeitos(cid) {
+  const d = S.chars[cid].data, edit = canEdit(cid), ef = efeitos(d);
+  const chips = ef.map((e) => {
+    const b = [e.atk && `${fmt(num(e.atk))} atq`, e.dano && `${fmt(num(e.dano))} dano`, e.def && `${fmt(num(e.def))} Def`, e.per && `${fmt(num(e.per))} perícias`].filter(Boolean).join(' · ');
+    return `<button class="cond" style="background:#2a2318;border-color:#6a5a30;color:#f0d38a" ${edit ? `data-act="efeitoOff" data-c="${cid}" data-id="${esc(e.id)}" aria-label="Desligar ${esc(e.nome)}"` : 'disabled'} title="${esc(e.nota || '')}">${esc(e.nome)}${b ? ' · ' + b : ''}${edit ? ' ×' : ''}</button>`;
+  }).join('');
+  const conds = (d.conditions || []).map((x) => `<button class="cond" ${edit ? `data-act="condOff" data-c="${cid}" data-v="${esc(x)}" aria-label="Tirar ${esc(x)}"` : 'disabled'}>${esc(x)}${edit ? ' ×' : ''}</button>`).join('');
+  return `<div class="row" style="flex-wrap:wrap;gap:6px">${chips}${conds}${!chips && !conds ? '<span class="small muted">Nenhum efeito ou condição agora</span>' : ''}</div>
+    ${edit ? `<div class="row" style="gap:6px;flex-wrap:wrap"><button class="addcond" data-act="efeitoNovo" data-c="${cid}">+ Efeito</button><button class="addcond" data-act="condAdd" data-c="${cid}">+ Condição</button>${ef.length || num(d.tempHp) ? `<span style="flex:1"></span><button class="addcond" data-act="fimCena" data-c="${cid}">Fim da cena</button>` : ''}</div>` : ''}`;
+}
+function tabCombate(cid) {
+  const c = S.chars[cid], d = c.data, edit = canEdit(cid);
+  const atks = (d.attacks || []).map((a, i) => {
+    const k = attackInfo(a), f = (e) => !e.corpo || k.corpo;
+    const ba = k.b + somaEf(d, 'atk', f), bd = somaEf(d, 'dano', f);
+    return `<div class="card" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px">
+      <div class="row" style="justify-content:space-between;gap:8px"><b>${esc(k.name)}</b><span class="small muted">${esc(k.line)}</span></div>
+      <div class="row" style="gap:8px"><button class="roll" style="flex:1;height:48px" data-act="attack" data-c="${cid}" data-i="${i}">Atacar ${fmt(ba)}</button>${k.dmg ? `<button class="ghost" style="flex:1;height:48px" data-act="damage" data-c="${cid}" data-i="${i}">Dano ${esc(k.dmg)}${bd ? ' ' + fmt(bd) : ''}</button>` : ''}</div></div>`;
+  }).join('');
+  const luta = (d.powers || []).filter(([n]) => { const inf = infoPoder(n); return inf.grupo === 'luta' && (inf.pm || inf.extras); }).map(([n]) => {
+    const inf = infoPoder(n), ligado = efeitos(d).some((e) => e.nome === n);
+    return `<div class="card row" style="gap:10px;padding:10px 12px"><div style="flex:1;min-width:0"><b>${esc(n)}</b>${ligado ? ' <span class="chip" style="background:var(--gold);color:#1d1720">LIGADO</span>' : ''}<div class="small muted" style="margin-top:2px">${esc(inf.quando)}</div></div>
+      ${powerCost(inf)}${edit ? `<button class="use" data-act="usePower" data-c="${cid}" data-n="${esc(n)}">Usar</button>` : ''}</div>`;
+  }).join('');
+  const mags = (S.spells[cid] || []).map((sp) => {
+    const m = lerMagia(sp, d);
+    return `<div class="card row" style="gap:10px;padding:10px 12px"><div style="flex:1;min-width:0"><b>${esc(sp.name)}</b><div class="small muted" style="margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.principal)}</div></div>
+      <span class="chip c-pm">${m.custoBase} PM${m.aprimoramentos.length ? '+' : ''}</span>${edit ? `<button class="use" data-act="cast" data-c="${cid}" data-s="${sp.id}">Lançar</button>` : ''}</div>`;
+  }).join('');
+  const per = somaEf(d, 'per');
+  const rapido = [['Fortitude', 'fort'], ['Reflexos', 'ref'], ['Vontade', 'will']].map(([n, k]) => {
+    const v = skillVal(d, n) ?? num(d[k]);
+    return `<button class="save" data-act="test" data-c="${cid}" data-title="${n}" data-b="${v}"><b>${fmt(v)}</b><span>${n}</span></button>`;
+  }).join('') + [['Iniciativa', 'init'], ['Percepção', 'per'], ['Intimidação', null]].map(([n, k]) => {
+    const v = skillVal(d, n) ?? (k ? num(d[k]) : null);
+    return v === null ? '' : `<button class="save" data-act="test" data-c="${cid}" data-title="${n}" data-b="${v}"><b>${fmt(v + per)}</b><span>${n}</span></button>`;
+  }).join('');
+  return `<h2 class="lbl">Efeitos e condições</h2>${blocoEfeitos(cid)}
+    ${atks ? `<h2 class="lbl" style="margin-top:6px">Ataques</h2>${atks}` : ''}
+    ${luta ? `<h2 class="lbl" style="margin-top:6px">Poderes de luta</h2>${luta}` : ''}
+    ${mags ? `<h2 class="lbl" style="margin-top:6px">Magias</h2>${mags}` : ''}
+    <h2 class="lbl" style="margin-top:6px">Testes rápidos <small>· toque para rolar</small></h2><div class="grid3">${rapido}</div>
+    <a class="link" href="#/rolagens" style="text-align:center">Ver as rolagens da mesa</a>`;
+}
+
+function viewRolagens() {
+  const lista = (S.rolagens || []).map((r) => {
+    const h = new Date(r.at); const hora = `${String(h.getHours()).padStart(2, '0')}:${String(h.getMinutes()).padStart(2, '0')}`;
+    return `<div class="card row" style="gap:10px;padding:10px 12px;${r.crit ? 'border-color:var(--gold)' : r.fumble ? 'border-color:var(--red)' : ''}">
+      <div class="disp" style="font-size:24px;font-weight:700;width:52px;text-align:center;color:${r.crit ? 'var(--gold)' : r.fumble ? 'var(--red-l)' : 'var(--txt)'}">${esc(r.n)}</div>
+      <div style="flex:1;min-width:0"><div><b>${esc(r.quem)}</b> · ${esc(r.title)}</div><div class="small muted">${esc(r.detail)}</div></div><span class="small muted">${hora}</span></div>`;
+  }).join('');
+  return `<header class="topbar"><a class="sm" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="javascript:history.back()" aria-label="Voltar">‹</a><div class="brand">ROLAGENS DA MESA</div><div style="width:38px"></div></header>
+    <div class="page"><p class="small muted" style="margin:0 2px">As últimas rolagens de todo mundo que está com o app aberto.</p>${lista || '<p class="muted">Ninguém rolou nada ainda.</p>'}</div>`;
+}
+
 function tabSummary(cid) {
   const d = S.chars[cid].data, edit = canEdit(cid);
   const at = d.attrs || {};
   const attrs = ['FOR', 'DES', 'CON', 'INT', 'SAB', 'CAR'].map((k) => `<div class="card attr"><small>${k}</small><b>${fmt(num(at[k]))}</b></div>`).join('');
   const saves = [['Fortitude', 'fort'], ['Reflexos', 'ref'], ['Vontade', 'will']].map(([n, k]) => {
     const v = skillVal(d, n) ?? num(d[k]);
-    return `<button class="save" data-act="test" data-title="${n}" data-b="${v}"><b>${fmt(v)}</b><span>${n}</span></button>`;
+    return `<button class="save" data-act="test" data-c="${cid}" data-title="${n}" data-b="${v}"><b>${fmt(v)}</b><span>${n}</span></button>`;
   }).join('');
   const conds = (d.conditions || []).map((x) => `<button class="cond" ${edit ? `data-act="condOff" data-c="${cid}" data-v="${esc(x)}" aria-label="Tirar ${esc(x)}"` : 'disabled'}>${esc(x)}${edit ? ' ×' : ''}</button>`).join('');
   const atks = (d.attacks || []).map((a, i) => {
@@ -406,8 +487,7 @@ function tabSummary(cid) {
   const armors = (d.items || []).filter((it) => /armadura|escudo|gibão|cota/i.test(it[0])).map((it) =>
     `<div class="card row" style="justify-content:space-between;align-items:flex-start"><div><div style="font-weight:700">${esc(it[0])}</div><div class="small muted" style="margin-top:2px">Vestida · já somada na Defesa</div></div><span class="chip c-def">${/escudo/i.test(it[0]) ? 'ESCUDO' : 'ARMADURA'}</span></div>`).join('');
   return `
-    <h2 class="lbl">Condições</h2>
-    <div class="row" style="flex-wrap:wrap;gap:6px">${conds || '<span class="small muted">Nenhuma no momento</span>'}${edit ? `<button class="addcond" data-act="condAdd" data-c="${cid}">+ Condição</button>` : ''}</div>
+    <h2 class="lbl">Efeitos e condições</h2>${blocoEfeitos(cid)}
     <h2 class="lbl" style="margin-top:6px">Atributos</h2><div class="grid3">${attrs}</div>
     <h2 class="lbl" style="margin-top:6px">Resistências <small>· toque para rolar</small></h2><div class="grid3">${saves}</div>
     <h2 class="lbl" style="margin-top:6px">Equipamentos</h2>${atks}${armors}
@@ -418,7 +498,7 @@ function tabSkills(cid) {
   const d = S.chars[cid].data, tr = d.trained || [];
   const rows = PERICIAS.map(([n, a]) => {
     const v = skillVal(d, n), t = tr.includes(n);
-    return `<button class="skill" ${v === null ? 'disabled' : `data-act="test" data-title="${n}" data-b="${v}"`}>
+    return `<button class="skill" ${v === null ? 'disabled' : `data-act="test" data-c="${cid}" data-title="${n}" data-b="${v}"`}>
       <span style="color:${t ? 'var(--gold)' : '#3a3044'}" aria-hidden="true">●</span><span style="flex:1">${n} <span class="small" style="color:var(--dim)">${a}</span>${t ? '<span class="sr"> (treinada)</span>' : ''}</span>
       <span class="v" style="color:${v === null ? 'var(--dim)' : 'var(--txt)'}">${v === null ? 'só treinado' : fmt(v)}</span></button>`;
   }).join('');
@@ -557,6 +637,10 @@ function viewGM() {
           : 'Para testar sem medo. Ao ligar, o app guarda como tudo está; ao desligar, volta tudo ao que era. Todo mundo vê um aviso enquanto estiver ligado.'}</p>
         <button class="${S.settings.ensaio?.active ? 'primary' : 'ghost'}" style="height:46px" data-act="${S.settings.ensaio?.active ? 'ensaioOff' : 'ensaioOn'}">${S.settings.ensaio?.active ? 'Desligar ensaio e voltar tudo' : 'Ligar ensaio'}</button>
       </div>
+      <div class="card" style="display:flex;flex-direction:column;gap:6px">
+        <div class="row" style="justify-content:space-between"><span class="lbl">Últimas rolagens</span><a class="link" href="#/rolagens">Ver todas</a></div>
+        ${(S.rolagens || []).slice(0, 5).map((r) => `<div class="row small" style="gap:8px"><b class="disp" style="width:34px;text-align:right;color:${r.crit ? 'var(--gold)' : r.fumble ? 'var(--red-l)' : 'var(--txt)'}">${esc(r.n)}</b><span style="flex:1"><b>${esc(r.quem)}</b> · ${esc(r.title)}</span></div>`).join('') || '<span class="small muted">Nada ainda. Quando alguém rolar, aparece aqui.</span>'}
+      </div>
       <div class="party">${S.order.map((id) => partyCard(id, true)).join('')}</div>
       ${bestiario.viewSection()}
       <label class="lbl" for="gmnote" style="margin-top:8px">Só para o mestre</label>
@@ -649,7 +733,22 @@ function renderModal() {
           <button class="roll" type="submit" name="mode" value="minus" style="height:48px">${m.k === 'hp' ? 'Dano' : 'Gastar'}</button>
           <button class="use" type="submit" name="mode" value="plus" style="height:48px">${m.k === 'hp' ? 'Cura' : 'Recuperar'}</button>
           <button class="ghost" type="submit" name="mode" value="set" style="height:48px">Definir</button>
-        </div></form>
+        </div>
+        ${m.k === 'hp' ? `<button class="ghost" type="submit" name="mode" value="temp" style="height:44px">Definir PV temporários${num(c.data.tempHp) ? ' (agora ' + num(c.data.tempHp) + ')' : ''}</button>
+        <p class="small muted" style="margin:0">No dano, os PV temporários são gastos primeiro.</p>` : ''}</form>
+      <button class="link" data-act="closeModal">Cancelar</button>`;
+  }
+  if (m.type === 'efeito') {
+    const c = S.chars[m.cid];
+    const campo = (n, l) => `<div><label class="flab" for="ef-${n}">${l}</label><input class="field" id="ef-${n}" name="${n}" type="number" inputmode="numeric" value="0"></div>`;
+    body = `<h2>Ligar um efeito em ${esc(c.name)}</h2>
+      <p class="small muted" style="margin:0">Fica valendo até você tocar em "Fim da cena". Os bônus já entram nas rolagens.</p>
+      <form class="form" data-form="efeito" data-c="${m.cid}">
+        <div><label class="flab" for="ef-nome">Nome</label><input class="field" id="ef-nome" name="nome" required autofocus placeholder="Ex.: Bênção da Fani"></div>
+        <div class="grid3">${campo('atk', 'Ataque')}${campo('dano', 'Dano')}${campo('def', 'Defesa')}</div>
+        ${campo('per', 'Testes de perícia')}
+        <label class="row" style="gap:8px"><input type="checkbox" class="chk" name="corpo"> Só corpo a corpo</label>
+        <button class="primary" type="submit">Ligar efeito</button></form>
       <button class="link" data-act="closeModal">Cancelar</button>`;
   }
   if (m.type === 'money') {
@@ -733,16 +832,34 @@ const actions = {
   installOff() { ui.installDismissed = true; lsSet('pf-install-off', '1'); render(); },
   tab(el) { ui.tab[el.dataset.c] = el.dataset.t; render(); },
   toggle(el) { ui.open[el.dataset.k] = !ui.open[el.dataset.k]; render(); },
-  test(el) { test(el.dataset.title, num(el.dataset.b)); },
-  attack(el) { const a = attackInfo(S.chars[el.dataset.c].data.attacks[+el.dataset.i]); test(a.name, a.b, a.critOn); },
-  damage(el) {
-    const a = attackInfo(S.chars[el.dataset.c].data.attacks[+el.dataset.i]);
-    const r = rollDice(a.dmg); if (!r) return toast('Não entendi o dano dessa arma.');
-    showRoll({ title: 'Dano: ' + a.name, n: r.total, detail: a.dmg + ' → ' + r.text });
+  test(el) {
+    const c = S.chars[el.dataset.c] || S.chars[S.me?.character_id];
+    const res = ['Fortitude', 'Reflexos', 'Vontade'].includes(el.dataset.title);
+    const per = c && !res ? somaEf(c.data, 'per') : 0;
+    test(el.dataset.title, num(el.dataset.b) + per, 20, per ? nomesEf(c.data, 'per') : '');
   },
+  attack(el) {
+    const d = S.chars[el.dataset.c].data, a = attackInfo(d.attacks[+el.dataset.i]);
+    const f = (e) => !e.corpo || a.corpo, b = somaEf(d, 'atk', f);
+    test(a.name, a.b + b, a.critOn, b ? nomesEf(d, 'atk', f) : '');
+  },
+  damage(el) {
+    const d = S.chars[el.dataset.c].data, a = attackInfo(d.attacks[+el.dataset.i]);
+    const f = (e) => !e.corpo || a.corpo, b = somaEf(d, 'dano', f);
+    const r = rollDice(a.dmg); if (!r) return toast('Não entendi o dano dessa arma.');
+    showRoll({ title: 'Dano: ' + a.name, n: r.total + b, detail: a.dmg + ' → ' + r.text + (b ? ` + ${b} (${nomesEf(d, 'dano', f)})` : '') });
+  },
+  efeitoOff(el) { const c = S.chars[el.dataset.c]; patch(c.id, { effects: efeitos(c.data).filter((e) => e.id !== el.dataset.id) }); },
+  fimCena(el) {
+    const c = S.chars[el.dataset.c];
+    if (!efeitos(c.data).length && !num(c.data.tempHp)) return toast('Nada para limpar.');
+    patch(c.id, { effects: [], tempHp: 0 }); toast('Fim da cena: efeitos e PV temporários zerados.');
+  },
+  efeitoNovo(el) { ui.modal = { type: 'efeito', cid: el.dataset.c }; renderModal(); },
   vital(el) {
-    const c = S.chars[el.dataset.c], k = el.dataset.k, max = num(c.data[k === 'hp' ? 'maxHp' : 'maxMp']);
-    const v = Math.min(max, Math.max(k === 'hp' ? -max : 0, num(c.data[k]) + num(el.dataset.d)));
+    const c = S.chars[el.dataset.c], k = el.dataset.k, max = num(c.data[k === 'hp' ? 'maxHp' : 'maxMp']), dlt = num(el.dataset.d);
+    if (k === 'hp' && dlt < 0 && num(c.data.tempHp) > 0) return patch(c.id, { tempHp: num(c.data.tempHp) - 1 });
+    const v = Math.min(max, Math.max(k === 'hp' ? -max : 0, num(c.data[k]) + dlt));
     patch(c.id, { [k]: v });
   },
   vitalSet(el) { ui.modal = { type: 'vital', cid: el.dataset.c, k: el.dataset.k }; renderModal(); },
@@ -764,15 +881,34 @@ const actions = {
   optDec(el) { const s = ui.modal.sel; const o = el.dataset.o; s[o] = Math.max(0, (s[o] || 0) - 1); renderModal(); },
   optToggle(el) { const s = ui.modal.sel; s[el.dataset.o] = el.checked ? 1 : 0; renderModal(); },
   confirmCast() {
-    const st = castState(ui.modal);
-    const cid = ui.modal.cid;
+    const m = ui.modal, st = castState(m);
+    const cid = m.cid, d = S.chars[cid].data;
     ui.modal = null; renderModal();
-    patch(cid, { mp: st.mp - st.total });
-    showRoll({ title: st.title, n: '−' + st.total, small: true, detail: `${st.total} PM gastos. Agora: ${st.mp - st.total} PM.` });
+    const mud = { mp: st.mp - st.total };
+    let extra = '';
+    const ef = EFEITOS[st.title];
+    if (ef) {
+      const mais = st.opts.reduce((a, o) => a + (st.sel[o.id] || 0), 0) * num(ef.porExtra);
+      const e = { id: 'e' + Date.now(), nome: st.title, corpo: !!ef.corpo, nota: ef.nota || '' };
+      ['atk', 'dano', 'per', 'def'].forEach((k) => { if (ef[k]) e[k] = ef[k] + mais; });
+      mud.effects = [...efeitos(d).filter((x) => x.nome !== st.title), e];
+      const lista = [e.atk && `${fmt(e.atk)} ataque`, e.dano && `${fmt(e.dano)} dano`, e.def && `${fmt(e.def)} Defesa`, e.per && `${fmt(e.per)} perícias`].filter(Boolean).join(', ');
+      extra = lista ? ` Ligado até o fim da cena: ${lista}.` : ' Ligado até o fim da cena.';
+    }
+    const pt = PV_TEMP[st.title];
+    if (pt) {
+      const mais = st.opts.filter((o) => /PV temporários/.test(o.texto)).reduce((a, o) => a + (st.sel[o.id] || 0), 0);
+      const qtd = parseInt(pt.dado, 10) + mais * parseInt(pt.extra, 10);
+      const r = rollDice(`${qtd}d${pt.dado.split('d')[1]}`);
+      mud.tempHp = Math.max(num(d.tempHp), r.total);
+      extra += ` PV temporários: ${r.total} ${r.text}.`;
+    }
+    patch(cid, mud);
+    showRoll({ title: st.title, n: '−' + st.total, small: true, detail: `${st.total} PM gastos. Agora: ${st.mp - st.total} PM.${extra}` });
   },
   async restAll() {
     if (!confirm('Recuperar todos os PV e PM do grupo e limpar as condições?')) return;
-    for (const id of S.order) { const d = S.chars[id].data; await patch(id, { hp: num(d.maxHp), mp: num(d.maxMp), conditions: [] }, true); }
+    for (const id of S.order) { const d = S.chars[id].data; await patch(id, { hp: num(d.maxHp), mp: num(d.maxMp), conditions: [], effects: [], tempHp: 0 }, true); }
     toast('Grupo descansado.');
   },
   initAll() {
@@ -844,11 +980,20 @@ const forms = {
   vital(f, sub) {
     const c = S.chars[f.dataset.c], k = f.dataset.k, n = Math.abs(num(f.n.value)), mode = sub?.value || 'minus';
     const max = num(c.data[k === 'hp' ? 'maxHp' : 'maxMp']);
-    let v = num(c.data[k]);
-    v = mode === 'minus' ? v - n : mode === 'plus' ? v + n : n;
-    v = Math.min(max, Math.max(k === 'hp' ? -max : 0, v));
     ui.modal = null; renderModal();
-    patch(c.id, { [k]: v });
+    if (k === 'hp' && mode === 'temp') return patch(c.id, { tempHp: n });
+    let v = num(c.data[k]), resto = n, tmp = num(c.data.tempHp);
+    if (k === 'hp' && mode === 'minus' && tmp > 0) { const usa = Math.min(tmp, resto); tmp -= usa; resto -= usa; }
+    v = mode === 'minus' ? v - resto : mode === 'plus' ? v + n : n;
+    v = Math.min(max, Math.max(k === 'hp' ? -max : 0, v));
+    patch(c.id, k === 'hp' && mode === 'minus' ? { hp: v, tempHp: tmp } : { [k]: v });
+  },
+  efeito(f) {
+    const c = S.chars[f.dataset.c], nome = f.nome.value.trim();
+    if (!nome) return toast('Dê um nome ao efeito.');
+    const e = { id: 'e' + Date.now(), nome, atk: num(f.atk.value), dano: num(f.dano.value), def: num(f.def.value), per: num(f.per.value), corpo: f.corpo.checked };
+    ui.modal = null; renderModal();
+    patch(c.id, { effects: [...efeitos(c.data), e] });
   },
   money(f, sub) {
     const c = S.chars[f.dataset.c], n = Math.abs(num(f.n.value)), mode = sub?.value || 'minus';

@@ -158,3 +158,20 @@ export const PERICIAS = [
   ['Nobreza', 'INT'], ['Ofício', 'INT'], ['Percepção', 'SAB'], ['Pilotagem', 'DES'], ['Pontaria', 'DES'],
   ['Reflexos', 'DES'], ['Religião', 'SAB'], ['Sobrevivência', 'SAB'], ['Vontade', 'SAB'],
 ];
+
+// Efeitos que ficam ligados até o fim da cena e já entram nas rolagens.
+// atk/dano: ataques (corpo: só corpo a corpo) · per: testes de perícia · def: Defesa · porExtra: +1 por PM a mais gasto.
+export const EFEITOS = {
+  'Fúria': { atk: 2, dano: 2, corpo: true, porExtra: 1, nota: 'Sem Furtividade nem magias. Acaba se a rodada passar sem atacar ou ser atacado.' },
+  'Fúria Divina': { atk: 2, dano: 2, corpo: true },
+  'Inspiração': { per: 1, porExtra: 1 },
+  'Bênção': { atk: 1, dano: 1 },
+  'Armadura Arcana': { def: 5 },
+  'Armadura de Allihanna': { def: 2 },
+  'Imagem Espelhada': { def: 6, nota: 'Perde 2 na Defesa a cada ataque que errar você.' },
+  'Concentração de Combate': { nota: 'Nos ataques, role dois d20 e use o melhor.' },
+  'Aspecto do Verão': { nota: 'Arma em chamas: +1d6 de fogo e 1 PM temporário por acerto.' },
+  'Presas Primordiais': { nota: 'Mordida sobe dois passos de dano.' },
+};
+// Magias e poderes que dão PV temporários na hora (dado rolado, +1 dado por aprimoramento que diz "aumenta os PV temporários").
+export const PV_TEMP = { 'Vitalidade Fantasma': { dado: '2d10', extra: '1d10' } };
