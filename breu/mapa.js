@@ -6,6 +6,10 @@ import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-v
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
 const VENTOS = [[0.15, 'Vento calmo'], [0.45, 'Vento médio'], [0.85, 'Vento forte']];
 
+// o elenco da one-shot: quem tem retrato entra no mapa com ele
+const ELENCO = [['Celeste', 'celeste'], ['Zeca', 'zeca'], ['Brás', 'bras'], ['Rosário', 'rosario'], ['Bento', 'bento'], ['Dona Lindalva', 'lindalva', 1], ['Dona Zuleide', 'zuleide', 1], ['Seu Orlando', 'orlando', 1], ['Joana', 'joana', 1], ['Dona Firmina', 'firmina', 1]];
+const semAcento = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/^(dona|seu) /, '').trim();
+const fotoNpc = (nome) => { const e = ELENCO.find(([n]) => semAcento(n) === semAcento(nome)); return e && !e[2] ? `img/npc/${e[1]}.webp` : null; };
 const RAIOS = [{ n: 'Pequeno', r: 1 }, { n: 'Médio', r: 3 }, { n: 'Grande', r: 6 }];
 
 export function criarMapa(ctx) {
@@ -154,6 +158,7 @@ export function criarMapa(ctx) {
       <div class="mp-add">
         ${faltam.length ? `<button class="btn sm" data-mp="grupo">Colocar o grupo (${faltam.length})</button>` : ''}
         <select class="field sm" data-mpbest><option value="">+ Assombro (entra escondido)</option>${['Cinza', 'Raiz', 'Osso', 'Sopro', 'Lodo', 'Velho'].map((f) => `<optgroup label="${f}">${M.BESTIARIO.filter((b) => (f === 'Velho' ? b.grau === 'Velho' : b.familia === f && b.grau !== 'Velho')).map((b) => `<option value="${b.id}">${esc(b.nome)} · ${b.grau}</option>`).join('')}</optgroup>`).join('')}</select>
+        <div class="mp-elenco">${ELENCO.filter(([n]) => !MP.tokens.some((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(n))).map(([n, k, sem]) => `<button class="btn sm" data-mp="elenco" data-v="${esc(n)}" title="${sem ? 'Ainda sem retrato' : ''}">${sem ? '' : `<img src="img/npc/${k}.webp" alt="">`}${esc(n)}</button>`).join('')}</div>
         <form class="mp-npc" data-mpform="npc"><input class="field sm" name="nome" placeholder="+ Pessoa (nome)" maxlength="40"><button class="btn sm">Pôr</button></form>
         <div class="seg">${RAIOS.map((r) => `<button data-mp="circ" data-v="${r.r}">Círculo ${r.n.toLowerCase()}</button>`).join('')}</div>
       </div>`;
@@ -338,6 +343,12 @@ export function criarMapa(ctx) {
     const sel = MP.tokens.find((x) => x.id === MP.sel);
     if (a === 'zoom') { MP.zoom = +v; refresh(); return; }
     if (a === 'som') { viva?.som(); paintBar(); return; }
+    if (a === 'elenco') {
+      const x = 0.42 + Math.random() * 0.16, y = 0.42 + Math.random() * 0.16;
+      const { error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'npc', nome: v, img: fotoNpc(v), x, y, ax: x, ay: y, visivel: true });
+      if (error) toast('Não consegui pôr a pessoa.'); else { await loadTokens(); draw(); paintSide(); }
+      return true;
+    }
     if (a === 'vivas') {
       const faltam = Object.entries(CENAS_VIVAS).filter(([k]) => !MP.cenas.some((x) => x.img === 'viva:' + k));
       const rows = faltam.map(([k, d]) => ({ nome: d.nome, img: 'viva:' + k, aspecto: ASPECTO_VIVO, largura: d.largura, fog: { on: false, revela: [] } }));
@@ -448,7 +459,7 @@ export function criarMapa(ctx) {
     const c = cena();
     if (k === 'npc') {
       const nome = f.nome.value.trim(); if (!nome) return true;
-      const { error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'npc', nome, x: 0.5, y: 0.5, ax: 0.5, ay: 0.5, visivel: true });
+      const { error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'npc', nome, img: fotoNpc(nome), x: 0.5, y: 0.5, ax: 0.5, ay: 0.5, visivel: true });
       if (error) toast('Não consegui pôr a pessoa.'); else { f.reset(); await loadTokens(); draw(); }
       return true;
     }

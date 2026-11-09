@@ -347,3 +347,5 @@ details.prontos summary { cursor: pointer; font-family: var(--label); letter-spa
 .mp-stage.pintando { touch-action: none; cursor: crosshair; }
 .ret-m { display: grid; gap: 4px; margin-top: 6px; }
 .ret-m .pill small { opacity: .7; font-size: .85em; }
+.mp-elenco { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.mp-elenco .btn img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; object-position: 50% 12%; margin-right: 6px; vertical-align: middle; }
