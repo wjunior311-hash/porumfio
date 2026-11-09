@@ -378,5 +378,5 @@ function mapaHtml() {
     tar[id][+t.dataset.k] = t.value; mudar({ tarefas: tar }); return true;
   }
 
-  return { html, estadoHtml, click, change, estado, setEstado, ir: (id) => mudar({ aqui: id }), faixaTexto: (rola, total) => ROLA[rola]?.f[faixaDe(total)] };
+  return { html, estadoHtml, click, change, estado, setEstado, ir: (id) => mudar({ aqui: id }), marcar: (k, v) => mudar({ [k]: v }), faixaTexto: (rola, total) => ROLA[rola]?.f[faixaDe(total)] };
 }

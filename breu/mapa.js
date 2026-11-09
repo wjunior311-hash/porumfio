@@ -2,7 +2,7 @@
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
 import * as R from './regras.js';
-import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=19';
+import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=20';
 
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
 const VENTOS = [[0.15, 'Vento calmo'], [0.45, 'Vento médio'], [0.85, 'Vento forte']];
@@ -33,7 +33,9 @@ export function criarMapa(ctx) {
   let viva = null; // cenário vivo desenhado em código
   const vivaId = (c) => (c?.img?.startsWith('viva:') ? c.img.slice(5) : null);
   const horaCena = (c) => (c?.fog?.hora != null && c.fog.hora !== '' ? +c.fog.hora : horaDaNoite(S.noite));
-  const syncViva = () => { const c = cena(); if (viva && c) { viva.setHora(horaCena(c)); viva.setVento(c.fog?.vento ?? 0.45); } };
+  // o trecho apagado da vila acompanha o que aconteceu: consertado, fino, aberto ou com brecha
+  const trechoAgora = () => (ctx.noite?.()?.circulo === 0 && (ctx.noite?.()?.fase ?? -1) >= 0 ? 'brecha' : S.guia?.trecho || '');
+  const syncViva = () => { const c = cena(); if (viva && c) { viva.setHora(horaCena(c)); viva.setVento(c.fog?.vento ?? 0.45); viva.setTrecho?.(trechoAgora()); } };
   let el = null; // raiz montada
   let W = 0, H = 0;
 
@@ -293,7 +295,7 @@ export function criarMapa(ctx) {
     const img = el.querySelector('img.mp-bg');
     viva?.destruir(); viva = null;
     const cvv = el.querySelector('[data-mpviva]');
-    if (cvv) { viva = criarCenaViva(cvv, vivaId(cena())); viva.setHora(horaCena(cena()), true); viva.setVento(cena().fog?.vento ?? 0.45); }
+    if (cvv) { viva = criarCenaViva(cvv, vivaId(cena())); viva.setHora(horaCena(cena()), true); viva.setVento(cena().fog?.vento ?? 0.45); viva.setTrecho?.(trechoAgora(), true); }
     MP.mesa = el.classList.contains('mesa');
     const wrap0 = el.querySelector('.mp-wrap');
     const size = () => {

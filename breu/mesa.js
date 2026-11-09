@@ -2,8 +2,8 @@
 // o pedido de rolagem, os dados que rolam no meio do mapa e o vídeo de abertura.
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
-import { CENAS_VIVAS } from './cenas-vivas.js?v=19';
-import { criarGuia, faixaDe } from './guia.js?v=7';
+import { CENAS_VIVAS } from './cenas-vivas.js?v=20';
+import { criarGuia, faixaDe } from './guia.js?v=8';
 import { ROLA, FX_C } from './guia-dados.js?v=5';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
@@ -25,8 +25,8 @@ export function criarMesa(ctx) {
   let salvarT = null;
   const G = criarGuia({
     S, R, esc,
-    salvar: (E) => { S.guia = E; clearTimeout(salvarT); salvarT = setTimeout(() => sb.from('breu_state').upsert({ key: 'guia', value: E, updated_at: new Date().toISOString() }), 500); },
-    repintar: (topo) => pintarGuia(topo),
+    salvar: (E) => { S.guia = E; MAPA.redraw(); clearTimeout(salvarT); salvarT = setTimeout(() => sb.from('breu_state').upsert({ key: 'guia', value: E, updated_at: new Date().toISOString() }), 500); },
+    repintar: (topo) => { pintarGuia(topo); pintarPainel(); MAPA.redraw(); },
     nomeAcao, acao: (t, v) => acao(t, v), pedir: (p) => pedir(p), encerrar: (id) => encerrar(id),
   });
   G.setEstado(S.guia);
@@ -500,7 +500,7 @@ export function criarMesa(ctx) {
   }
   async function onChange(t) {
     if (G.change(t)) return true;
-    if (t.matches('[data-ms-forca]')) { ctx.garantirNoite(); S.noite.circulo = Math.max(0, Math.min(40, +t.value || 0)); ctx.logNoite(`Círculo consertado com força ${S.noite.circulo}.`); await ctx.salvarNoite(); pintarPainel(); toast(`Força do círculo: ${S.noite.circulo}.`); return true; }
+    if (t.matches('[data-ms-forca]')) { ctx.garantirNoite(); S.noite.circulo = Math.max(0, Math.min(40, +t.value || 0)); ctx.logNoite(`Círculo consertado com força ${S.noite.circulo}.`); await ctx.salvarNoite(); G.marcar('trecho', S.noite.circulo >= 20 ? 'forte' : S.noite.circulo >= 10 ? 'fino' : 'aberto'); MAPA.redraw(); pintarPainel(); toast(`Força do círculo: ${S.noite.circulo}.`); return true; }
     if (t.dataset.msEst) { ctx.garantirNoite(); S.noite.retrato = { ...(S.noite.retrato || {}), [t.dataset.msEst]: t.value }; await ctx.salvarNoite(); pintarPainel(); MAPA.redraw(); return true; }
     return false;
   }
@@ -530,7 +530,7 @@ export function criarMesa(ctx) {
     animar(r);
   }
   function onPedido(v) { const antes = new Set((S.pedidos || []).map((x) => x.id)); S.pedidos = v?.lista || (v?.id ? [v] : []); repintar(); if (!isGM() && noMapa() && pedidosPara(meuChar()).some((x) => !antes.has(x.id))) toast('O mestre pediu uma rolagem.'); }
-  function onGuia(v) { if (JSON.stringify(v) === JSON.stringify(G.estado())) return; S.guia = v; G.setEstado(v); pintarGuia(); pintarPainel(); }
+  function onGuia(v) { S.guia = v; MAPA.redraw(); if (JSON.stringify(v) === JSON.stringify(G.estado())) return; G.setEstado(v); pintarGuia(); pintarPainel(); }
   function onNoite() { repintar(); }
 
   return { efeito, baixarVideo: preCarregarVideo, animar, pedirPavor, viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };

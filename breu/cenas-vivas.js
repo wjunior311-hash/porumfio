@@ -344,6 +344,9 @@ function cenaVila() {
   const traco = []; for (let a = 0; a < Math.PI * 2; a += 0.01) traco.push({ a, r: RAIO + Math.sin(a * 9) * 4 + (R() - .5) * 3 });
   const glifos = []; for (let k = 0; k < 16; k++) glifos.push({ a: (k / 16) * Math.PI * 2 + 0.11, tipo: k % 3 });
   const naFenda = (a) => { let x = a % (Math.PI * 2); if (x > Math.PI) x -= Math.PI * 2; return x > GAP.a && x < GAP.b; };
+  // o trecho: '' ou 'aberto' (apagado), 'fino' ou 'forte' (consertado), 'brecha' (rompido na noite)
+  const TR = { estado: '', alvo: 0, prog: 0 };
+  function setTrecho(v, ja) { TR.estado = v || ''; TR.alvo = v === 'fino' || v === 'forte' ? 1 : 0; if (ja) TR.prog = TR.alvo; }
   const olhos = Array.from({ length: 6 }, (_, i) => { const a = GAP.a - 0.2 + i * 0.1, d = RAIO + 80 + (i % 3) * 30; const [x, y] = noCirc(a, d); return { x, y, f: R() * 6.28 }; });
   const [gx2, gy2] = noCirc((GAP.a + GAP.b) / 2, RAIO + 150), grande = { x: gx2, y: gy2, vai: 60 };
   const fumaca = [];
@@ -440,6 +443,33 @@ function cenaVila() {
     ctx.strokeStyle = '#3e2a1a'; ctx.lineWidth = 2; [-30, 0, 30].forEach((x) => { ctx.beginPath(); ctx.moveTo(x, -30); ctx.lineTo(x, 30); ctx.stroke(); });
     ctx.restore();
   }
+  function trechoD(L, t, dt) {
+    // a linha nova vai sendo riscada da ponta de cima para a de baixo, devagar, como uma mão de riscador
+    TR.prog += (TR.alvo - TR.prog) * Math.min(1, dt * (TR.alvo ? 0.9 : 2.5));
+    if (TR.prog < 0.01) {
+      if (TR.estado === 'brecha') {
+        // brecha: a linha racha para fora, com uma luz vermelha baixa
+        const [x, y] = noCirc((GAP.a + GAP.b) / 2); const p = 0.5 + 0.5 * Math.sin(t * 3);
+        const gr = ctx.createRadialGradient(x, y, 4, x, y, 90); gr.addColorStop(0, `rgba(255,70,30,${0.35 + p * 0.25})`); gr.addColorStop(1, 'rgba(255,70,30,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 90, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(30,8,4,.7)'; ctx.lineWidth = 2.5; ctx.beginPath();
+        for (let k = 0; k < 7; k++) { const a = lerp(GAP.a - .06, GAP.b + .06, k / 6), [cx, cy] = noCirc(a, RAIO + (k % 2 ? 9 : -9)); k ? ctx.lineTo(cx, cy) : ctx.moveTo(cx, cy); } ctx.stroke();
+      }
+      return;
+    }
+    const forte = TR.estado === 'forte', fim = lerp(GAP.a, GAP.b, Math.min(1, TR.prog));
+    const noite = Math.min(1, L.escuro * 1.2);
+    ctx.lineCap = 'round';
+    [[forte ? 6 : 4, 'rgba(150,140,120,.35)'], [forte ? 3.6 : 2.2, `rgba(250,246,234,${forte ? .95 : .75})`]].forEach(([lw, cor]) => {
+      ctx.strokeStyle = cor; ctx.lineWidth = lw; ctx.beginPath(); let ini = true;
+      for (let a = GAP.a - 0.01; a <= fim; a += 0.008) { const tremor = forte ? 0 : Math.sin(a * 140) * 1.6; const [x, y] = noCirc(a, RAIO + tremor); ini ? ctx.moveTo(x, y) : ctx.lineTo(x, y); ini = false; }
+      ctx.stroke();
+    });
+    // a ponta que está riscando agora brilha
+    if (TR.prog < 0.98) { const [x, y] = noCirc(fim); const gr = ctx.createRadialGradient(x, y, 1, x, y, 26); gr.addColorStop(0, 'rgba(255,250,230,.9)'); gr.addColorStop(1, 'rgba(255,250,230,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 26, 0, 7); ctx.fill(); }
+    // consertado forte: brilha de leve à noite, com a mão do riscador
+    if (forte && noite > .3) { ctx.save(); ctx.shadowColor = `rgba(255,240,200,${0.4 + 0.2 * Math.sin(t * 1.5)})`; ctx.shadowBlur = 16; ctx.strokeStyle = 'rgba(255,250,235,.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); for (let a = GAP.a; a <= fim; a += 0.01) { const [x, y] = noCirc(a); a === GAP.a ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); ctx.restore(); }
+  }
   function circulo(L, t) {
     const noite = Math.min(1, L.escuro * 1.2);
     ctx.lineCap = 'round';
@@ -466,11 +496,11 @@ function cenaVila() {
   const pontoTelhado = (c) => { const [cx, cy] = c.op.chamine; return [c.x + cx * Math.cos(c.ang) - cy * Math.sin(c.ang), c.y + cx * Math.sin(c.ang) + cy * Math.cos(c.ang)]; };
   return {
     titulo: 'A vila de luto', legenda: 'A vila desenhada como no mapa do guia: o velório no alto, o pouso de Zuleide ao lado, a casa de farinha à esquerda, a venda, a oficina, as casas de baixo e a casa fechada. O juazeiro onde a bordadeira costura, o poço do pátio, a carroça do homem tatuado, e o círculo de cal com o trecho apagado do lado da estrada, onde fica a cerca do moço dos baldes. Escala sugerida no mapa: 40 passos de largura.',
-    horaInicial: 0.08, fogo: false,
+    horaInicial: 0.08, fogo: false, setTrecho,
     fixo,
     desenhar(L, t, dt) {
       desenharCaatinga(plantas, t, L, true);
-      circulo(L, t);
+      circulo(L, t); trechoD(L, t, dt);
       pocoD(L); carrocaD(L, t);
       casas.forEach((c) => casaD(c, L));
       juazeiroD(t, L);
@@ -486,6 +516,7 @@ function cenaVila() {
       const l = [{ x: px, y: py, r: 140 * tremor(t, 1), cor: [255, 180, 90], forca: .9 }, { x: fx, y: fy, r: 120 * tremor(t, 2), cor: [255, 170, 80], forca: .75 }];
       // lamparinas tapadas: só um fio de luz na frente de algumas casas
       ['zuleide', 'venda', 'firmina', 'casabento', 'cicero'].forEach((id, k) => { const [x, y] = frente(casa[id], 10); l.push({ x, y, r: 44 * tremor(t, k + 5), cor: [255, 190, 110], forca: .5 }); });
+      if (TR.estado === 'brecha' && TR.prog < 0.01) { const [x, y] = noCirc((GAP.a + GAP.b) / 2); l.push({ x, y, r: 120 * (0.85 + 0.15 * Math.sin(t * 3)), cor: [255, 60, 30], forca: .8 }); }
       return l;
     },
     depois(L, t) { olhosD(L, t, olhos, grande); },
@@ -1641,6 +1672,7 @@ export function criarCenaViva(canvas, id) {
   return {
     setHora(h, ja) { alvo = h; if (ja) hora = h; },
     setVento(v) { vento = v; },
+    setTrecho(v, ja) { cena.setTrecho?.(v, ja); },
     fase: () => luzEm(hora).nome,
     som: () => som.alternar(),
     somLigado: () => som.ligado(),

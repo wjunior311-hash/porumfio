@@ -2,8 +2,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
-import { criarMapa } from './mapa.js?v=28';
-import { criarMesa } from './mesa.js?v=12';
+import { criarMapa } from './mapa.js?v=29';
+import { criarMesa } from './mesa.js?v=13';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
