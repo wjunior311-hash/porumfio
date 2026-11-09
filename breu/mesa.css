@@ -426,3 +426,68 @@ button.ms-link { background: none; border: 0; }
 .vd-carrega { position: absolute; inset: auto 0 45% 0; display: grid; justify-items: center; gap: 12px; color: var(--osso2); font-family: var(--label); letter-spacing: .12em; text-transform: uppercase; font-size: 13px; }
 .vd-carrega b { width: min(320px, 70vw); height: 3px; background: var(--line2); border-radius: 2px; overflow: hidden; }
 .vd-carrega i { display: block; height: 100%; background: var(--brasa2); transition: width .2s; }
+
+/* ---------- menos botões: barra do mapa, ajustes e a peça escolhida ---------- */
+.ms-abas { grid-template-columns: repeat(3, 1fr); }
+.mp-bar { align-items: center; }
+.mp-ajb.on { border-color: var(--osso3); color: var(--claro); }
+.mp-aj { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--page); }
+.mp-ajl { font-family: var(--label); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--osso3); margin-left: 6px; }
+.mp-ajl:first-child { margin-left: 0; }
+.mp-pintando { font-size: 13px; color: var(--brasa2); }
+.ms-addb.on { border-color: var(--brasa); color: var(--claro); }
+.ms-mhead { align-items: center; }
+.ms-mhead .ms-addb { margin-left: auto; }
+.ms-add { border: 1px solid var(--line2); border-radius: 12px; background: var(--page); padding: 12px; display: grid; gap: 10px; }
+.ms-add[hidden] { display: none; }
+.ms-add .mp-add { display: grid; gap: 10px; }
+.ms-add .mp-elenco { display: flex; flex-wrap: wrap; gap: 6px; }
+.ms-add .mp-elenco .btn img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; margin-left: -6px; }
+.mp-sel { display: grid; gap: 10px; }
+.mp-sel.oculto { border-style: dashed; }
+.mp-selh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.mp-selh b { font-family: var(--display); font-size: 20px; color: var(--claro); }
+.mp-selh span { font-size: 13px; color: var(--osso3); }
+.mp-selh em { font-style: normal; font-family: var(--label); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--brasa2); border: 1px dashed var(--brasa2); border-radius: 4px; padding: 0 6px; }
+.mp-sg { display: flex; align-items: center; gap: 6px; }
+.mp-sg span { font-family: var(--label); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--osso3); margin-right: auto; }
+.mp-sg b { font-family: var(--display); font-size: 22px; color: #f1a594; min-width: 52px; text-align: center; }
+.mp-sg b small { font-size: 12px; color: var(--osso3); }
+.mp-atq { border-top: 0; padding-top: 0; }
+.mp-atq .field { width: 100%; }
+.mp-maisb { background: none; border: 0; padding: 0; justify-self: start; font-size: 13px; color: var(--osso3); text-decoration: underline; text-underline-offset: 3px; }
+.mp-mais { display: grid; gap: 8px; padding-top: 4px; border-top: 1px solid var(--line); }
+.mp-mais .btn { justify-self: start; }
+
+/* ---------- efeitos na tela ---------- */
+#efeitos { position: fixed; inset: 0; z-index: 85; pointer-events: none; display: grid; place-items: center; }
+#efeitos > * { grid-area: 1 / 1; }
+.fx-flash { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(170,20,10,.55)); animation: fx-flash 1.1s ease-out forwards; }
+.fx-flash.forte { background: radial-gradient(ellipse at center, rgba(170,20,10,.15) 20%, rgba(170,20,10,.75)); }
+@keyframes fx-flash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+.fx-num { display: grid; justify-items: center; text-align: center; animation: fx-num 1.9s cubic-bezier(.2,.9,.3,1) forwards; text-shadow: 0 4px 24px rgba(0,0,0,.8); }
+.fx-num b { font-family: var(--display); font-size: clamp(64px, 14vw, 140px); color: #ff8a70; line-height: 1; }
+.fx-num span { font-family: var(--label); letter-spacing: .14em; text-transform: uppercase; font-size: 15px; color: #ffd4c8; }
+@keyframes fx-num { 0% { transform: scale(.6); opacity: 0; } 15% { transform: scale(1.12); opacity: 1; } 30% { transform: scale(1); } 75% { opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
+.fx-faixa { width: 100%; padding: 22px 0; text-align: center; background: linear-gradient(90deg, transparent, rgba(8,8,10,.85) 20%, rgba(8,8,10,.85) 80%, transparent); animation: fx-faixa 2.6s ease-out forwards; }
+.fx-faixa span { font-family: var(--display); font-size: clamp(30px, 6vw, 64px); letter-spacing: .06em; color: var(--claro); }
+.fx-faixa.brecha span { color: #ff8a70; text-transform: uppercase; letter-spacing: .14em; }
+.fx-faixa.vinte span { color: var(--f3); text-shadow: 0 0 30px rgba(233,162,92,.7); }
+@keyframes fx-faixa { 0% { transform: scaleY(0); opacity: 0; } 12% { transform: scaleY(1); opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+.fx-ass { display: grid; justify-items: center; gap: 14px; animation: fx-ass 2.6s ease-out forwards; }
+.fx-ass i { width: min(46vw, 320px); aspect-ratio: 1; background: center/cover; border-radius: 50%; -webkit-mask: radial-gradient(circle, #000 52%, transparent 70%); mask: radial-gradient(circle, #000 52%, transparent 70%); filter: drop-shadow(0 0 40px rgba(194,85,47,.6)); }
+.fx-ass span { font-family: var(--display); font-size: clamp(24px, 4vw, 42px); color: var(--claro); text-shadow: 0 2px 20px #000; }
+@keyframes fx-ass { 0% { opacity: 0; transform: scale(1.3); filter: blur(10px); } 20% { opacity: 1; transform: scale(1); filter: blur(0); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(.96); } }
+.fx-treme { animation: fx-treme .45s linear; }
+.fx-treme2 { animation: fx-treme2 .6s linear; }
+@keyframes fx-treme { 20% { transform: translate(-4px, 2px); } 40% { transform: translate(4px, -2px); } 60% { transform: translate(-3px, -1px); } 80% { transform: translate(2px, 2px); } }
+@keyframes fx-treme2 { 15% { transform: translate(-9px, 4px) rotate(-.4deg); } 30% { transform: translate(8px, -5px) rotate(.4deg); } 45% { transform: translate(-7px, -3px); } 60% { transform: translate(6px, 4px); } 80% { transform: translate(-3px, 1px); } }
+/* o estado do próprio personagem, nas bordas da tela do jogador */
+#app::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 45; opacity: 0; transition: opacity .8s; }
+#app.fx-pavor::after { opacity: 1; background: radial-gradient(ellipse at center, transparent calc(70% - var(--pavor) * 10%), rgba(0,0,0,calc(.3 + var(--pavor) * .15))); }
+#app.fx-ferido::after { opacity: 1; background: radial-gradient(ellipse at center, transparent 55%, rgba(150,16,8,.5)); animation: fx-pulsa 1.6s ease-in-out infinite; }
+#app.fx-caido::after { opacity: 1; background: radial-gradient(ellipse at center, rgba(0,0,0,.2) 30%, rgba(40,0,0,.85)); }
+#app.fx-panico .mp-stage { animation: fx-panico 3s ease-in-out infinite; }
+@keyframes fx-pulsa { 50% { opacity: .45; } }
+@keyframes fx-panico { 25% { transform: skewX(.6deg) scale(1.005); } 50% { transform: skewY(-.5deg); filter: hue-rotate(-8deg); } 75% { transform: skewX(-.4deg); } }
+@media (prefers-reduced-motion: reduce) { .fx-treme, .fx-treme2, #app.fx-panico .mp-stage, #app.fx-ferido::after { animation: none !important; } }

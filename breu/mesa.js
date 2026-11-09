@@ -95,19 +95,21 @@ export function criarMesa(ctx) {
         <a class="ms-logo" href="#/" aria-label="Fichas"><img src="img/logo-horizontal.webp" alt="Breu"></a>
         <div class="ms-cenas" data-ms-cenas>${cenasHtml()}</div>
         <div class="ms-rel" data-ms-rel>${relogioHtml()}</div>
-        <div class="ms-links"><button class="btn sm" data-ms="video" title="Toca a abertura em todas as telas; no fim, abre a estrada">▶ Abertura</button><a class="ms-link" href="#/noite" title="Montar a noite e as regras">Noite</a><a class="ms-link" href="#/" title="As fichas">Fichas</a></div>
+        <div class="ms-links"><button class="btn sm" data-ms="video" title="Toca a abertura aqui (compartilhe a tela); no fim, mostra a estrada aos jogadores">▶ Abertura</button><a class="ms-link" href="#/noite" title="Montar a noite e as regras">Noite</a><a class="ms-link" href="#/" title="As fichas">Fichas</a></div>
       </header>
       <aside class="ms-guia" data-ms-guia>${G.html()}</aside>
       <section class="ms-centro">
         ${c ? `<div class="ms-mhead"><div class="ms-mnome"><span class="lbl">${A.ativa() === c.id ? '<i class="ms-ponto"></i>Os jogadores veem' : 'Só você vê esta cena'}</span><h1>${esc(c.nome)}</h1></div>
+          <button class="btn sm ms-addb ${U.add ? 'on' : ''}" data-ms="add" aria-expanded="${!!U.add}">+ Pôr no mapa</button>
           <div class="mp-rod"><span class="lbl">Rodada</span><b data-mp-rodada>${c.rodada}</b></div></div>
+          <div class="ms-add" data-ms-add ${U.add ? '' : 'hidden'}><div data-mpadd>${A.addHtml()}</div><details class="mp-more"><summary>Cenários próprios</summary>${A.listaCenas()}${A.formNovaCena(false)}</details></div>
           <div class="mp-bar" data-mpbar>${A.barHtml()}</div>
           ${A.stageHtml()}`
         : `<div class="ms-vazio"><h1>Nenhum cenário ainda</h1><p class="muted">Crie os cenários da one-shot. Eles ficam guardados e só aparecem para os jogadores quando você mostrar.</p><button class="btn primary" data-mp="vivas">Criar os cenários vivos</button></div>`}
       </section>
       <aside class="ms-painel">
         <div class="ms-sel mp-side" data-mpside>${A.sideHtml()}</div>
-        <nav class="ms-abas" role="tablist">${[['rolagens', 'Rolagens'], ['grupo', 'Grupo'], ['pecas', 'Peças'], ['mesa', 'A história']].map(([k, n]) => `<button role="tab" aria-selected="${U.aba === k}" class="${U.aba === k ? 'on' : ''}" data-ms="aba" data-v="${k}">${n}${k === 'rolagens' && U.novas && U.aba !== k ? `<i>${U.novas}</i>` : ''}</button>`).join('')}</nav>
+        <nav class="ms-abas" role="tablist">${[['rolagens', 'Rolagens'], ['grupo', 'Grupo'], ['mesa', 'A história']].map(([k, n]) => `<button role="tab" aria-selected="${U.aba === k}" class="${U.aba === k ? 'on' : ''}" data-ms="aba" data-v="${k}">${n}${k === 'rolagens' && U.novas && U.aba !== k ? `<i>${U.novas}</i>` : ''}</button>`).join('')}</nav>
         <div class="ms-aba" data-ms-aba>${abaHtml()}</div>
       </aside>
     </div>`;
@@ -132,7 +134,6 @@ export function criarMesa(ctx) {
 
   function abaHtml() {
     if (U.aba === 'grupo') return grupoHtml();
-    if (U.aba === 'pecas') return `<div data-mpadd>${A.addHtml()}</div><details class="mp-more"><summary>Cenas e cenários próprios</summary>${A.listaCenas()}${A.formNovaCena(false)}</details>`;
     if (U.aba === 'mesa') return `${circuloHtml()}${G.estadoHtml()}${S.noite?.log?.length ? `<div class="g-painel"><h4>O que aconteceu na noite</h4><ol class="ms-log">${S.noite.log.slice(0, 12).map((l) => `<li>${esc(l.t)}</li>`).join('')}</ol></div>` : ''}`;
     return rolagensHtml();
   }
@@ -156,11 +157,12 @@ export function criarMesa(ctx) {
           if (p.dif) return `<div class="ms-r ${x.total >= p.dif ? 'f2' : 'f0'}"><img src="${esc(ctx.picChar(c))}" alt=""><span>${esc(c.data.nome)}</span><b>${x.total}</b><p>${x.total >= p.dif ? 'Segurou o medo.' : p.pavor ? 'Falhou: ganhou 1 Pavor (já anotado no Grupo).' : 'Falhou.'}</p></div>`;
           return `<div class="ms-r f${f}"><img src="${esc(ctx.picChar(c))}" alt=""><span>${esc(c.data.nome)}</span><b>${x.total}</b>${r ? `<p><em>${FX_C[f]}</em> ${esc(r.f[f])}</p>` : ''}</div>`; }).join('')}</div></div>`;
     }
-    h += `<form class="ms-livre" data-ms-form="pedir"><span class="lbl">Pedir uma rolagem</span>
+    h += !U.livre ? `<button class="btn sm block ghost" data-ms="livre">+ Pedir outra rolagem</button>` : `<form class="ms-livre" data-ms-form="pedir"><span class="lbl">Pedir uma rolagem</span>
       <div class="ms-lr"><select class="field sm" name="per" aria-label="O que rolar"><optgroup label="Perícias">${R.PERICIAS.map(([n]) => `<option>${n}</option>`).join('')}</optgroup><optgroup label="Atributos">${Object.keys(ATR).map((n) => `<option>${n}</option>`).join('')}</optgroup></select>
       <select class="field sm" name="quem" aria-label="Quem rola"><option value="">Todos</option>${pjs().map((c) => `<option value="${c.id}">${esc(c.data.nome)}</option>`).join('')}</select>
       <button class="btn sm primary">Pedir</button></div>
       <p class="ms-dica">Aparece na tela de quem você escolheu, com um botão para rolar. A resposta chega aqui.</p></form>`;
+    if (!(S.pedidos || []).length && !U.livre) h = `<p class="ms-dica">Os pedidos de rolagem saem dos botões do guia, à esquerda. As respostas aparecem aqui.</p>` + h;
     h += `<div class="ms-feed">${S.rolls.slice(0, 18).map(linhaRoll).join('') || '<p class="ms-dica">Nenhuma rolagem ainda.</p>'}</div>`;
     return h;
   }
@@ -201,12 +203,13 @@ export function criarMesa(ctx) {
     const l = document.querySelector('.ms-mnome .lbl'); const cn = A.cena();
     if (l && cn) l.innerHTML = A.ativa() === cn.id ? '<i class="ms-ponto"></i>Os jogadores veem' : 'Só você vê esta cena';
   }
-  function repintar() { if (document.querySelector('.mesa')) { pintarTopo(); pintarGuia(); pintarPainel(); } pintarDock(); }
+  function repintar() { if (document.querySelector('.mesa')) { pintarTopo(); pintarGuia(); pintarPainel(); } pintarDock(); estadoProprio(); }
 
   function mount() {
     const g = document.querySelector('[data-ms-guia]');
     if (g) { g.scrollTop = U.scroll; g.addEventListener('scroll', () => { U.scroll = g.scrollTop; }, { passive: true }); }
     if (noMapa()) preCarregarVideo();
+    estadoProprio();
   }
 
   // ---------- o jogador: pedido e dados ----------
@@ -326,7 +329,7 @@ export function criarMesa(ctx) {
         if (t >= fim) { if (!el.classList.contains('pousou')) { alvo.textContent = el.dataset.v; el.classList.add('pousou'); } ok++; }
         else if (Math.floor(t / 55) !== +el.dataset.q) { el.dataset.q = Math.floor(t / 55); alvo.textContent = 1 + Math.floor(Math.random() * max); }
       });
-      if (ok < ds.length) requestAnimationFrame(tick); else card.classList.add('pronto');
+      if (ok < ds.length) requestAnimationFrame(tick); else { card.classList.add('pronto'); if (!dano && !ataque && dados.includes(20) && !card.dataset.vinte) { card.dataset.vinte = 1; efeito({ tipo: 'vinte', nome: quem }); } }
     };
     requestAnimationFrame(tick);
     som(ds.length);
@@ -356,6 +359,39 @@ export function criarMesa(ctx) {
     } catch { /* sem som, tudo bem */ }
   }
 
+  // ---------- efeitos na tela: dano, brecha, Assombro aparecendo, um 20 ----------
+  let fxBox = null;
+  function fx() { if (!fxBox) { fxBox = document.createElement('div'); fxBox.id = 'efeitos'; fxBox.setAttribute('aria-live', 'polite'); document.body.appendChild(fxBox); } return fxBox; }
+  function solto(html, cls, ms) { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; fx().appendChild(d); setTimeout(() => d.remove(), ms); }
+  function tremer(forca) { const a = document.getElementById('app'); a.classList.remove('fx-treme', 'fx-treme2'); void a.offsetWidth; a.classList.add(forca > 1 ? 'fx-treme2' : 'fx-treme'); setTimeout(() => a.classList.remove('fx-treme', 'fx-treme2'), 650); }
+  function efeito(e) {
+    if (!S.me || !e) return;
+    if (e.tipo === 'dano' || e.tipo === 'brecha') fecharDados();
+    if (e.tipo === 'dano') {
+      const meu = !isGM() && meuChar()?.id === e.cid;
+      tremer(meu ? 2 : 1);
+      solto('', `fx-flash ${meu ? 'forte' : ''}`, 1100);
+      solto(`<b>−${e.valor}</b><span>${meu ? 'Você perdeu Sangue' : esc(e.nome) + ' perdeu Sangue'}</span>`, 'fx-num', 1900);
+    } else if (e.tipo === 'brecha') {
+      tremer(2); solto('', 'fx-flash forte', 1300);
+      solto('<span>A linha rompeu</span>', 'fx-faixa brecha', 2600);
+    } else if (e.tipo === 'assombro') {
+      solto(`${e.img ? `<i style="background-image:url('${esc(e.img)}')"></i>` : ''}<span>${e.nome ? esc(e.nome) : 'Alguma coisa saiu do escuro'}</span>`, 'fx-ass', 2600);
+    } else if (e.tipo === 'vinte') {
+      solto(`<span>${esc(e.nome)} tirou um 20</span>`, 'fx-faixa vinte', 2400);
+    }
+  }
+  // o estado do próprio personagem pinta a borda da tela do jogador
+  function estadoProprio() {
+    const app = document.getElementById('app'); if (!app) return;
+    const c = !isGM() && meuChar(); const t = c && S.noite?.grupo?.[c.id];
+    const b = c && R.barras(c.data);
+    app.classList.toggle('fx-ferido', !!(t && t.sangue > 0 && t.sangue <= b.sangue / 3));
+    app.classList.toggle('fx-caido', !!(t && t.sangue <= 0));
+    app.classList.toggle('fx-panico', !!(t && t.prumo <= 0));
+    const p = Math.min(3, t?.pavor || 0); app.style.setProperty('--pavor', p); app.classList.toggle('fx-pavor', p > 0);
+  }
+
   // ---------- o vídeo de abertura ----------
   let video = null, preVideo = null;
   // o vídeo inteiro é baixado antes, para tocar sem travar; quem abre o app já começa a baixar
@@ -375,20 +411,10 @@ export function criarMesa(ctx) {
     return baixando;
   }
   function mostrarProgresso() { const b = video?.querySelector('.vd-carrega i'); if (b) b.style.width = Math.round(progresso * 100) + '%'; }
-  const preCarregarVideo = () => setTimeout(baixarVideo, 1500);
-  async function tocarVideo() {
-    const v = { id: uuid(), em: Date.now(), acao: 'tocar' };
-    S.video = v;
-    const { error } = await sb.from('breu_state').upsert({ key: 'video', value: v, updated_at: new Date().toISOString() });
-    if (error) toast('Não consegui mandar o vídeo para os jogadores.');
-    abrirVideo(v);
-  }
-  function onVideo(v) {
-    S.video = v;
-    if (!v) return;
-    if (v.acao === 'tocar' && Date.now() - v.em < 120000 && S.videoVisto !== v.id) abrirVideo(v);
-    else if (v.acao === 'parar' && video) { if (isGM()) fecharVideo(); else fimVideo(); }
-  }
+  const preCarregarVideo = () => { if (isGM()) setTimeout(baixarVideo, 1500); };
+  // o vídeo toca só na tela do mestre (ele compartilha a tela com a mesa)
+  function tocarVideo() { if (isGM()) abrirVideo({ id: uuid(), em: Date.now() }); }
+  function onVideo() {}
   function abrirVideo(v) {
     S.videoVisto = v.id;
     fecharVideo();
@@ -412,10 +438,7 @@ export function criarMesa(ctx) {
     });
     somB.addEventListener('click', () => { el.muted = false; somB.hidden = true; el.play(); });
     el.addEventListener('ended', () => fimVideo());
-    video.querySelector('[data-vd="pular"]')?.addEventListener('click', async () => {
-      await sb.from('breu_state').upsert({ key: 'video', value: { ...v, acao: 'parar' }, updated_at: new Date().toISOString() });
-      fimVideo();
-    });
+    video.querySelector('[data-vd="pular"]')?.addEventListener('click', () => fimVideo());
   }
   function fecharVideo() { document.body.classList.remove('vendo-video'); if (video) { video.querySelector('video')?.pause(); video.remove(); video = null; } }
   async function fimVideo() {
@@ -436,6 +459,8 @@ export function criarMesa(ctx) {
     e.preventDefault();
     const a = t.dataset.ms || t.dataset.dk, v = t.dataset.v;
     if (t.dataset.ms) {
+      if (a === 'add') { U.add = !U.add; const box = document.querySelector('[data-ms-add]'); if (box) box.hidden = !U.add; t.classList.toggle('on', U.add); return true; }
+      if (a === 'livre') { U.livre = true; pintarPainel(); return true; }
       if (a === 'aba') { U.aba = v; if (v === 'rolagens') U.novas = 0; pintarPainel(); return true; }
       if (a === 'video') { tocarVideo(); return true; }
       if (a === 'fase') { t.disabled = true; await virar(); return true; }
@@ -457,6 +482,7 @@ export function criarMesa(ctx) {
     if (f.dataset.msForm !== 'pedir') return false;
     const per = f.per.value, quem = f.quem.value;
     const nome = quem ? ctx.charById(quem)?.data.nome : '';
+    U.livre = false;
     await pedir({ label: per + (nome ? ` (${nome})` : ''), per, quem: quem ? [quem] : [] });
     return true;
   }
@@ -481,5 +507,5 @@ export function criarMesa(ctx) {
   function onGuia(v) { if (JSON.stringify(v) === JSON.stringify(G.estado())) return; S.guia = v; G.setEstado(v); pintarGuia(); pintarPainel(); }
   function onNoite() { repintar(); }
 
-  return { baixarVideo: preCarregarVideo, animar, pedirPavor, viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };
+  return { efeito, baixarVideo: preCarregarVideo, animar, pedirPavor, viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };
 }

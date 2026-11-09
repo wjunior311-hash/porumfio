@@ -2,8 +2,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
-import { criarMapa } from './mapa.js?v=26';
-import { criarMesa } from './mesa.js?v=6';
+import { criarMapa } from './mapa.js?v=27';
+import { criarMesa } from './mesa.js?v=7';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -33,7 +33,7 @@ const canEditCreation = (c) => c && (isGM() || (c.owner === S.session?.user.id &
 
 const MAPA = criarMapa({ sb, S, isGM: () => isGM(), esc, toast, picOf: (p) => picOf(p), picChar: (c) => picChar(c), estCls: (c) => estCls(c), charById: (id) => charById(id), rerender: () => rerender(),
   onCenas: () => MESA?.pintarTopo(), onSel: () => {},
-  animar: (r) => MESA?.animar(r), noite: () => S.noite,
+  animar: (r) => MESA?.animar(r), efeito: (e) => MESA?.efeito(e), noite: () => S.noite,
   ferir: (c, dano, txt) => { S.noite ||= novaNoite(); const t = trackerDe(c); t.sangue = Math.max(0, t.sangue - dano); logNoite(txt); salvarNoite(); MESA?.repintar(); },
   forcaCirculo: (v, txt) => { S.noite ||= novaNoite(); S.noite.circulo = v; if (txt) logNoite(txt); salvarNoite(); MESA?.repintar(); } });
 let MESA = null;
@@ -868,7 +868,8 @@ document.addEventListener('click', async (e) => {
   if (route().name === 'mapa' && isGM() && (t.dataset.trk || t.dataset.panico)) {
     S.noite ||= novaNoite(); const n = S.noite;
     if (t.dataset.trk) { const [id, k, dlt] = t.dataset.trk.split(':'); const c = charById(id), tr = trackerDe(c), b = R.barras(c.data);
-      const max = { sangue: b.sangue, prumo: b.prumo, brasa: b.brasa, pavor: 9 }[k]; tr[k] = Math.max(0, Math.min(max, tr[k] + +dlt)); }
+      const max = { sangue: b.sangue, prumo: b.prumo, brasa: b.brasa, pavor: 9 }[k]; const antes = tr[k]; tr[k] = Math.max(0, Math.min(max, tr[k] + +dlt));
+      if (k === 'sangue' && tr[k] < antes) MAPA.api.efeitoTodos({ tipo: 'dano', cid: c.id, nome: c.data.nome, valor: antes - tr[k] }); }
     if (t.dataset.panico) { const c = charById(t.dataset.panico), r = M.d(20), l = M.tabela(M.PANICO, r); logNoite(`${c.data.nome} entrou em pânico (${r}): ${l[2]}`); toast(`${c.data.nome}: ${l[2]}`); }
     salvarNoite(); rr(); return;
   }

@@ -71,10 +71,13 @@ export function criarMapa(ctx) {
         t.x = p.x; t.y = p.y; posToken(t);
       })
       .on('broadcast', { event: 'dado' }, ({ payload: p }) => ctx.animar?.(p))
+      .on('broadcast', { event: 'efeito' }, ({ payload: p }) => ctx.efeito?.(p))
       .on('broadcast', { event: 'reload' }, async () => { if (!el) return; await loadTokens(); draw(); })
       .subscribe();
   }
   const enviar = (event, payload) => bc?.send({ type: 'broadcast', event, payload });
+  // um efeito na tela de todo mundo (dano, brecha, Assombro aparecendo)
+  const efeitoTodos = (e) => { ctx.efeito?.(e); enviar('efeito', e); };
 
   // eventos do banco (chamados pelo canal principal do app)
   function onCena(p) {
@@ -130,23 +133,31 @@ export function criarMapa(ctx) {
       </div></div>`;
   }
 
+  // a barra de cima do mapa: só o que se usa toda hora; o resto fica em "Ajustes"
   function barHtml() {
     const c = cena(); if (!c) return '';
     const zoom = `<div class="seg"><button class="${MP.zoom === 1 ? 'on' : ''}" data-mp="zoom" data-v="1">1×</button><button class="${MP.zoom === 1.6 ? 'on' : ''}" data-mp="zoom" data-v="1.6">1,6×</button><button class="${MP.zoom === 2.4 ? 'on' : ''}" data-mp="zoom" data-v="2.4">2,4×</button></div>`;
+    const ajBtn = `<button class="btn sm ghost mp-ajb ${MP.aj ? 'on' : ''}" data-mp="ajustes" aria-expanded="${!!MP.aj}">Ajustes ${MP.aj ? '▴' : '▾'}</button>`;
     if (!isGM()) {
       const pc = meuPc();
-      const mov = pc ? `<span class="mp-mov">Movimento: <b>${Math.max(0, pc.passos - distPassos(pc, pc.x, pc.y)).toFixed(1).replace('.', ',')}</b> de ${String(pc.passos).replace('.', ',')} passos</span>` : '';
-      const circ = pc ? `<div class="seg">${RAIOS.map((r) => `<button data-mp="circ" data-v="${r.r}">Círculo ${r.n.toLowerCase()}</button>`).join('')}</div>` : '';
-      return `${mov}${zoom}${somBtn()}${circ}${!pc && meusChars().length ? meusChars().map((ch) => `<button class="btn sm" data-mp="entrar" data-v="${ch.id}">Colocar ${esc(ch.data.nome || 'meu personagem')} na cena</button>`).join('') : ''}`;
+      const mov = pc ? `<span class="mp-mov">Pode andar <b>${Math.max(0, pc.passos - distPassos(pc, pc.x, pc.y)).toFixed(1).replace('.', ',')}</b> de ${String(pc.passos).replace('.', ',')} passos</span>` : '';
+      const entrar = !pc && meusChars().length ? meusChars().map((ch) => `<button class="btn sm primary" data-mp="entrar" data-v="${ch.id}">Colocar ${esc(ch.data.nome || 'meu personagem')} na cena</button>`).join('') : '';
+      const circ = pc ? `<span class="mp-ajl">Riscar um círculo</span><div class="seg">${RAIOS.map((r) => `<button data-mp="circ" data-v="${r.r}">${r.n}</button>`).join('')}</div>` : '';
+      return `${mov}${entrar}${ajBtn}${MP.aj ? `<div class="mp-aj"><span class="mp-ajl">Zoom</span>${zoom}${somBtn()}${circ}</div>` : ''}`;
     }
     const fogOn = c.fog?.on !== false;
-    return `<div class="seg"><button class="${MP.tool === 'mover' ? 'on' : ''}" data-mp="tool" data-v="mover">Mover</button><button class="${MP.tool === 'revelar' ? 'on' : ''}" data-mp="tool" data-v="revelar" ${fogOn ? '' : 'disabled'}>Revelar</button><button class="${MP.tool === 'cobrir' ? 'on' : ''}" data-mp="tool" data-v="cobrir" ${fogOn ? '' : 'disabled'}>Cobrir</button></div>
-      ${MP.tool !== 'mover' ? `<div class="seg">${[1.5, 3, 6].map((b) => `<button class="${MP.brush === b ? 'on' : ''}" data-mp="brush" data-v="${b}">${b === 1.5 ? 'Pincel fino' : b === 3 ? 'Médio' : 'Largo'}</button>`).join('')}</div>` : ''}
-      <button class="btn sm primary" data-mp="rodada">Nova rodada</button>
-      ${zoom}${somBtn()}
-      ${vivaId(c) ? `<select class="field sm" data-mphora aria-label="Hora da cena">${HORAS.map(([v, n]) => `<option value="${v}" ${String(c.fog?.hora ?? '') === String(v) ? 'selected' : ''}>${n}</option>`).join('')}</select><select class="field sm" data-mpvento aria-label="Vento">${VENTOS.map(([v, n]) => `<option value="${v}" ${(c.fog?.vento ?? 0.45) === v ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
-      <button class="btn sm" data-mp="fog">${fogOn ? 'Tirar o escuro' : 'Pôr o escuro'}</button>
-      ${MP.mesa ? '' : MP.ativa === c.id ? `<span class="mp-on">Os jogadores estão vendo</span><button class="btn sm" data-mp="esconderCena">Tirar dos jogadores</button>` : `<button class="btn sm" data-mp="mostrar">Mostrar aos jogadores</button>`}`;
+    return `<button class="btn sm primary" data-mp="rodada" title="Libera o movimento de todos de novo">Nova rodada</button>
+      ${MP.tool !== 'mover' ? `<span class="mp-pintando">Pintando o escuro: clique e arraste no mapa</span><button class="btn sm" data-mp="tool" data-v="mover">Terminar</button>` : ''}
+      ${ajBtn}
+      ${MP.aj ? `<div class="mp-aj">
+        <span class="mp-ajl">Zoom</span>${zoom}${somBtn()}
+        <span class="mp-ajl">Escuro</span><button class="btn sm" data-mp="fog">${fogOn ? 'Tirar o escuro' : 'Pôr o escuro'}</button>
+        ${fogOn ? `<div class="seg"><button class="${MP.tool === 'revelar' ? 'on' : ''}" data-mp="tool" data-v="revelar">Revelar área</button><button class="${MP.tool === 'cobrir' ? 'on' : ''}" data-mp="tool" data-v="cobrir">Cobrir área</button></div>` : ''}
+        ${MP.tool !== 'mover' ? `<div class="seg">${[1.5, 3, 6].map((b) => `<button class="${MP.brush === b ? 'on' : ''}" data-mp="brush" data-v="${b}">${b === 1.5 ? 'Fino' : b === 3 ? 'Médio' : 'Largo'}</button>`).join('')}</div>` : ''}
+        ${vivaId(c) ? `<span class="mp-ajl">Luz</span><select class="field sm" data-mphora aria-label="Hora da cena">${HORAS.map(([v, n]) => `<option value="${v}" ${String(c.fog?.hora ?? '') === String(v) ? 'selected' : ''}>${n}</option>`).join('')}</select><select class="field sm" data-mpvento aria-label="Vento">${VENTOS.map(([v, n]) => `<option value="${v}" ${(c.fog?.vento ?? 0.45) === v ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
+        ${MP.mesa ? '' : MP.ativa === c.id ? `<button class="btn sm" data-mp="esconderCena">Tirar dos jogadores</button>` : `<button class="btn sm" data-mp="mostrar">Mostrar aos jogadores</button>`}
+      </div>` : ''}
+      ${!MP.mesa && !MP.aj ? (MP.ativa === c.id ? `<span class="mp-on">Os jogadores estão vendo</span>` : `<button class="btn sm" data-mp="mostrar">Mostrar aos jogadores</button>`) : ''}`;
   }
 
   const somBtn = () => (vivaId(cena()) ? `<button class="btn sm ${viva?.somLigado() ? 'primary' : ''}" data-mp="som">${viva?.somLigado() ? 'Som ligado' : 'Ligar o som'}</button>` : '');
@@ -156,7 +167,7 @@ export function criarMapa(ctx) {
     if (MP.mesa) return selHtml() || (isGM() ? `<p class="ms-dica">Clique numa peça no mapa para mexer nela: Sangue, nome, esconder, tirar.</p>` : `<p class="ms-dica">Arraste o seu personagem. Ele anda até o limite de passos da rodada; na próxima rodada, o limite volta.</p>`);
     const c = cena(); if (!c) return '';
     const sel = selHtml();
-    if (!isGM()) return sel || `<p class="small muted">Arraste o seu personagem. Ele anda até o limite de passos da rodada; na próxima rodada, o limite volta.</p>`;
+    if (!isGM()) return sel;
     return sel + addHtml();
   }
   function selHtml() {
@@ -172,13 +183,21 @@ export function criarMapa(ctx) {
           <button class="btn sm ghost" data-mp="apagar">Apagar o círculo</button></div>`;
       } else if (isGM()) {
         const b = d.best ? M.BESTIARIO.find((x) => x.id === d.best) : null;
-        sel = `<div class="mp-sel"><b>${esc(t.nome)}</b>${b ? `<span class="small muted"> · ${b.grau} de ${b.familia} · ${b.sentido} · Defesa ${b.defesa} · ${b.atq} · ${b.dano}</span>` : ''}
-          ${t.kind !== 'pc' ? `<div class="mp-row"><span>Sangue</span><button class="btn sm" data-mp="sangue" data-v="-5">−5</button><button class="btn sm" data-mp="sangue" data-v="-1">−1</button><b>${d.sangue ?? '–'}${d.max ? ' / ' + d.max : ''}</b><button class="btn sm" data-mp="sangue" data-v="1">+1</button></div>` : ''}
-          <div class="mp-row"><span>Passos por rodada</span><button class="btn sm" data-mp="passos" data-v="-1">−</button><b>${t.passos}</b><button class="btn sm" data-mp="passos" data-v="1">+</button></div>
-          ${t.kind === 'assombro' && b ? ataqueHtml(t, b) : ''}
-          ${t.kind === 'npc' && formaDe(t.nome) ? `<div class="mp-row"><span>Forma</span><b>${t.img === formaDe(t.nome) ? 'verdadeira' : 'disfarçada'}</b><button class="btn sm ${t.img === formaDe(t.nome) ? '' : 'primary'}" data-mp="forma">${t.img === formaDe(t.nome) ? 'Voltar ao disfarce' : 'Revelar a forma verdadeira'}</button></div>` : ''}
-          ${t.kind === 'npc' || t.kind === 'assombro' ? `<div class="mp-row"><span>Nome para os jogadores</span><b>${d.nomeVisto ? esc(t.nome) : '??'}</b><button class="btn sm ${d.nomeVisto ? '' : 'primary'}" data-mp="nome">${d.nomeVisto ? 'Esconder o nome' : 'Revelar o nome'}</button></div>` : ''}
-          <div class="mp-row">${t.kind !== 'pc' ? `<button class="btn sm" data-mp="visivel">${t.visivel ? 'Esconder dos jogadores' : 'Revelar aos jogadores'}</button>` : ''}<button class="btn sm ghost" data-mp="apagar">Tirar da cena</button></div></div>`;
+        const oculto = t.kind !== 'pc' && !t.visivel;
+        const sangue = t.kind !== 'pc' ? `<div class="mp-sg"><span>Sangue</span><button class="btn sm" data-mp="sangue" data-v="-5">−5</button><button class="btn sm" data-mp="sangue" data-v="-1">−1</button><b>${d.sangue ?? '–'}${d.max ? `<small>/${d.max}</small>` : ''}</b><button class="btn sm" data-mp="sangue" data-v="1">+1</button></div>` : '';
+        const mais = `<div class="mp-mais">
+            <div class="mp-row"><span>Passos por rodada</span><button class="btn sm" data-mp="passos" data-v="-1">−</button><b>${t.passos}</b><button class="btn sm" data-mp="passos" data-v="1">+</button></div>
+            ${t.kind === 'npc' || t.kind === 'assombro' ? `<div class="mp-row"><span>Nome que os jogadores leem</span><b>${d.nomeVisto ? esc(t.nome) : '??'}</b><button class="btn sm" data-mp="nome">${d.nomeVisto ? 'Esconder' : 'Mostrar o nome'}</button></div>` : ''}
+            ${t.kind === 'npc' && formaDe(t.nome) ? `<div class="mp-row"><span>Forma</span><b>${t.img === formaDe(t.nome) ? 'verdadeira' : 'disfarçada'}</b><button class="btn sm" data-mp="forma">${t.img === formaDe(t.nome) ? 'Voltar ao disfarce' : 'Mostrar a forma verdadeira'}</button></div>` : ''}
+            ${t.kind !== 'pc' && t.visivel ? `<button class="btn sm ghost" data-mp="visivel">Esconder de novo</button>` : ''}
+            <button class="btn sm ghost" data-mp="apagar">Tirar do mapa</button></div>`;
+        sel = `<div class="mp-sel ${oculto ? 'oculto' : ''}">
+          <div class="mp-selh"><b>${esc(t.nome)}</b>${b ? `<span>Defesa ${b.defesa} · ${esc(b.sentido)}</span>` : ''}${oculto ? '<em>escondido</em>' : ''}</div>
+          ${oculto ? `<button class="btn primary block" data-mp="visivel">Mostrar aos jogadores</button>` : ''}
+          ${t.kind === 'assombro' && b && !oculto ? ataqueHtml(t, b) : ''}
+          ${sangue}
+          <button class="mp-maisb" data-mp="mais" aria-expanded="${!!MP.mais}">${MP.mais ? 'Menos opções ▴' : 'Mais opções ▾'}</button>
+          ${MP.mais ? mais : ''}</div>`;
       }
     }
     return sel;
@@ -191,7 +210,7 @@ export function criarMapa(ctx) {
     const circs = MP.tokens.filter((x) => x.kind === 'circulo');
     const ops = [...pcs.map((x) => { const ch = charById(x.character_id); return `<option value="pc:${ch.id}">${esc(ch.data.nome)} (Defesa ${R.barras(ch.data).defesa})</option>`; }),
       `<option value="circ">O círculo da vila (força ${n.circulo ?? 14})</option>`, ...circs.map((x) => `<option value="tok:${x.id}">${esc(x.nome || 'Círculo')} (força ${x.data?.forca ?? 0})</option>`)];
-    return `<div class="mp-atq"><span class="lbl">Atacar · ${esc(b.atq)} · dano ${esc(b.dano)}</span><div class="mp-row"><select class="field sm" data-mp-alvo aria-label="Alvo do ataque">${ops.join('')}</select><button class="btn sm primary" data-mp="atacar">Rolar ataque</button></div></div>`;
+    return `<div class="mp-atq"><span class="lbl">Atacar</span><select class="field sm" data-mp-alvo aria-label="Alvo do ataque">${ops.join('')}</select><button class="btn primary block" data-mp="atacar">Rolar o ataque (${esc(b.atq)})</button></div>`;
   }
   async function atacar(t) {
     const b = M.BESTIARIO.find((x) => x.id === t.data?.best); if (!b) return;
@@ -205,15 +224,16 @@ export function criarMapa(ctx) {
         const dn = R.rolarDano(b.dano) || { total: 1 }; ruim = true;
         texto = `acertou ${ch.data.nome}: ${dn.total} de dano`;
         ctx.ferir?.(ch, dn.total, `${t.nome} acertou ${ch.data.nome} (${total} contra Defesa ${def}): ${dn.total} de dano.`);
+        setTimeout(() => efeitoTodos({ tipo: 'dano', cid: ch.id, nome: ch.data.nome, valor: dn.total }), 1400);
       } else texto = `errou ${ch.data.nome} (Defesa ${def})`;
     } else if (alvo === 'circ') {
       const f = ctx.noite?.()?.circulo ?? 14;
-      if (total > f) { texto = `abriu uma brecha no círculo!`; ruim = true; ctx.forcaCirculo?.(0, `${t.nome} abriu uma brecha no círculo (${total} contra força ${f}).`); }
+      if (total > f) { texto = `abriu uma brecha no círculo!`; ruim = true; ctx.forcaCirculo?.(0, `${t.nome} abriu uma brecha no círculo (${total} contra força ${f}).`); setTimeout(() => efeitoTodos({ tipo: 'brecha' }), 1400); }
       else { texto = `a linha segura: força ${Math.max(0, f - 3)}`; ctx.forcaCirculo?.(Math.max(0, f - 3), `${t.nome} investiu contra o círculo (${total} contra ${f}): segurou, força ${Math.max(0, f - 3)}.`); }
     } else if (alvo.startsWith('tok:')) {
       const c = MP.tokens.find((x) => x.id === alvo.slice(4)); if (!c) return;
       const d = { ...(c.data || {}) }, f = d.forca ?? 0;
-      if (total > f) { texto = `rompeu o círculo!`; ruim = true; d.forca = 0; } else { d.forca = Math.max(0, f - 3); texto = `o círculo segura: força ${d.forca}`; }
+      if (total > f) { texto = `rompeu o círculo!`; ruim = true; d.forca = 0; setTimeout(() => efeitoTodos({ tipo: 'brecha' }), 1400); } else { d.forca = Math.max(0, f - 3); texto = `o círculo segura: força ${d.forca}`; }
       c.data = d; await sb.from('breu_tokens').update({ data: d }).eq('id', c.id); draw(); paintSide();
     }
     const row = { id: 'atq-' + Date.now(), nome: t.nome, img: t.img, label: `Ataque: ${t.nome}`, total, detail: { tipo: 'ataque', dados, fica, bonus, resultado: texto, ruim } };
@@ -422,6 +442,8 @@ export function criarMapa(ctx) {
     const a = t.dataset.mp, v = t.dataset.v, c = cena();
     const sel = MP.tokens.find((x) => x.id === MP.sel);
     if (a === 'zoom') { MP.zoom = +v; refresh(); return; }
+    if (a === 'ajustes') { MP.aj = !MP.aj; paintBar(); return; }
+    if (a === 'mais') { MP.mais = !MP.mais; paintSide(); return; }
     if (a === 'mostrarId') { await mostrarCena(v); return; }
     if (a === 'som') { viva?.som(); paintBar(); return; }
     if (a === 'elenco') { await porNpc(v); return true; }
@@ -483,7 +505,9 @@ export function criarMapa(ctx) {
     else if (a === 'visivel') {
       sel.visivel = !sel.visivel;
       await sb.from('breu_tokens').update({ visivel: sel.visivel }).eq('id', sel.id);
-      enviar('reload', {}); draw(); paintSide(); return;
+      enviar('reload', {}); draw(); paintSide();
+      if (sel.visivel && sel.kind === 'assombro') efeitoTodos({ tipo: 'assombro', nome: sel.data?.nomeVisto ? sel.nome : '', img: sel.img });
+      return;
     } else if (a === 'apagar') {
       const { error } = await sb.from('breu_tokens').delete().eq('id', sel.id);
       if (error) { toast('Não consegui apagar.'); return; }
@@ -611,6 +635,7 @@ export function criarMapa(ctx) {
     const t = MP.tokens.find((x) => x.kind === 'assombro' && x.data?.best === id && !x.visivel);
     if (!t) { toast('Não há ' + (M.BESTIARIO.find((b) => b.id === id)?.nome || 'Assombro') + ' escondido nesta cena. Ponha um primeiro.'); return; }
     t.visivel = true; await sb.from('breu_tokens').update({ visivel: true }).eq('id', t.id);
+    efeitoTodos({ tipo: 'assombro', nome: t.data?.nomeVisto ? t.nome : '', img: t.img });
     enviar('reload', {}); MP.sel = t.id; draw(); paintSide(); toast(t.nome + ' apareceu para os jogadores.');
   }
   async function trocarForma(nome) {
@@ -621,7 +646,7 @@ export function criarMapa(ctx) {
     await sb.from('breu_tokens').update({ img: t.img }).eq('id', t.id); enviar('reload', {}); MP.sel = t.id; draw(); paintSide();
   }
   const api = {
-    setMesa: (v) => { MP.mesa = v; }, cenas: () => MP.cenas, ativa: () => MP.ativa, ver: () => MP.ver, cena, cenaDe, garantirCena, verCena, mostrarCena, esconderCena,
+    setMesa: (v) => { MP.mesa = v; }, efeitoTodos, cenas: () => MP.cenas, ativa: () => MP.ativa, ver: () => MP.ver, cena, cenaDe, garantirCena, verCena, mostrarCena, esconderCena,
     porGrupo, porNpc, porAssombro, revelarAssombro, trocarForma, formaDe, tokens: () => MP.tokens,
     temNpc: (nome) => MP.tokens.some((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(nome)),
     grupoFalta: () => { const na = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id)); return S.chars.filter((ch) => ch.status === 'aprovado' && !na.has(ch.id)).length; },
