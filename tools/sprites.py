@@ -274,48 +274,71 @@ def malekir_fx(c, t):
         if t % 2: c.p(hx - side * 2, 15, edge)                             # faísca
 
 def neo(c, blink):
-    skin, sh, lt = '#4f7c3a', '#3a5e2a', '#6c9c50'
-    hood, hood_sh, hood_dk = '#4d3d32', '#382c23', '#251c16'
-    leather, leather_sh = '#8c5a2c', '#6a4220'
-    # capa rasgada caindo nas costas e ombro direito
-    c.r(8, 16, 24, 26, hood_sh)
-    c.pts([(8, 27), (10, 27), (22, 27), (24, 27), (24, 25)], hood_sh)
-    body(c, '#3a2e26', '#2c231c', skin, skin, '#2c231c', '#1c1612')
-    # ombreiras de couro com rebites
-    c.r(9, 17, 12, 19, leather); c.pts([(10, 18), (12, 18)], '#c8a060')
-    c.r(19, 17, 23, 21, hood); c.pts([(20, 20), (22, 21), (23, 19)], hood_dk)   # capa sobre o ombro
-    # alças cruzadas, adagas extras, bolsa e corda
-    c.pts([(11, 20), (12, 21), (13, 22), (14, 23), (15, 24)], leather)
-    c.pts([(17, 21), (18, 21)], '#a0a8b0'); c.pts([(17, 22), (18, 22)], leather_sh)
-    c.r(10, 25, 20, 25, leather); c.r(16, 26, 18, 27, leather); c.p(17, 26, '#c8a060')
-    c.pts([(8, 24), (9, 23), (10, 24), (9, 25), (8, 25)], '#a07a4a')       # corda enrolada
-    # braços enfaixados
-    c.pts([(9, 20), (9, 22), (22, 22), (21, 23)], '#8a6a50')
-    # capuz
-    c.e(15, 10, 7, 7, hood); c.pts([(12, 2), (13, 2), (12, 1)], hood)
-    c.r(8, 10, 9, 16, hood_sh); c.pts([(10, 4), (9, 6), (21, 5)], hood_sh)
-    c.pts([(10, 8), (11, 14), (20, 4)], hood_dk)                           # rasgos
-    c.e(16, 11, 4, 4, hood_dk)                                             # sombra do rosto
-    # cabeça de jacaré
-    c.r(15, 10, 19, 14, skin); c.r(19, 11, 26, 13, skin); c.r(19, 14, 26, 14, sh)
-    c.r(15, 13, 18, 14, sh); c.r(19, 11, 24, 11, lt); c.p(26, 11, None)
-    c.pts([(25, 14), (23, 14), (21, 14)], '#ece2b8')                       # dentes
-    c.p(26, 12, '#1a1a10')
-    c.pts([(20, 12), (22, 12), (17, 12)], sh)
-    if blink: c.r(17, 11, 18, 11, '#1a1a10')
-    else: c.r(17, 10, 18, 11, '#ffa424'); c.p(18, 10, '#1a1a10'); c.p(18, 11, '#1a1a10')
+    # Neo "Presas de Kally": trog bárbaro de peito aberto, devoto de Kallyadranoch
+    skin, sh, lt = '#5e7a3a', '#435a28', '#7e9a50'
+    belly, crest = '#8a9a5a', '#2c3a1c'
+    camo, camo_a, camo_b = '#5a5e3a', '#3e4228', '#7a7448'
+    leather, leather_sh, bone, gold = '#7a4a26', '#5a3418', '#e8dcc0', '#d4a640'
+    # cauda saindo de trás, encostando no chão à esquerda
+    c.r(6, 26, 11, 27, skin); c.r(3, 28, 7, 28, skin); c.pts([(2, 29), (3, 29)], sh)
+    c.pts([(7, 25), (9, 25), (4, 27)], crest)                               # espinhos da cauda
+    body(c, skin, sh, skin, skin, camo, leather_sh)
+    # peito e barriga escamados, com cicatriz em diagonal
+    c.r(13, 20, 18, 23, belly); c.pts([(14, 21), (16, 21), (15, 22), (17, 22)], lt)
+    c.pts([(13, 19), (14, 20), (15, 21), (16, 22), (17, 23)], '#8a2a2a')
+    # colar de presas com medalhão dourado
+    c.pts([(12, 18), (13, 19), (14, 19), (17, 19), (18, 19), (19, 18)], '#3a2a1c')
+    c.pts([(13, 20), (18, 20), (14, 20), (13, 21), (18, 21), (15, 20), (17, 20)], bone); c.p(16, 19, gold); c.p(16, 20, '#a07a28')
+    # alça de couro cruzando o peito e tatuagem de dragão no ombro
+    c.pts([(19, 18), (19, 19), (18, 21), (17, 22)], leather)
+    c.pts([(21, 19), (22, 20), (21, 21), (22, 18)], '#b07a3a')
+    # braçadeiras de couro
+    c.r(9, 22, 10, 23, leather); c.r(21, 22, 22, 23, leather); c.p(9, 22, leather_sh); c.p(22, 23, leather_sh)
+    # cinto tático com bolsas
+    c.r(11, 24, 20, 25, '#3a3a24'); c.r(15, 24, 16, 25, '#1c1c14'); c.r(18, 24, 19, 26, camo_b); c.p(12, 26, '#2a2a1c')
+    # calça camuflada e botas enfaixadas
+    c.r(11, 26, 20, 26, camo); c.r(12, 27, 14, 29, camo); c.r(17, 27, 19, 29, camo)
+    c.pts([(12, 27), (14, 28), (17, 29), (19, 27), (13, 26), (17, 26)], camo_a)
+    c.pts([(13, 29), (18, 28), (11, 26), (20, 26)], camo_b)
+    c.r(11, 30, 14, 30, leather); c.r(17, 30, 20, 30, leather); c.pts([(12, 30), (18, 30)], leather_sh)
+    # cabeça de crocodilo de perfil, focinho para a direita
+    c.e(15, 11, 6, 6, skin); c.r(18, 10, 27, 13, skin); c.r(18, 14, 26, 14, sh)
+    c.r(11, 14, 18, 16, sh); c.r(12, 15, 17, 16, belly)                     # mandíbula/papada
+    c.r(19, 10, 26, 10, lt); c.p(27, 10, None); c.p(27, 11, '#1a1a10')      # topo do focinho + narina
+    c.pts([(20, 12), (22, 12), (24, 12), (12, 9), (13, 13)], sh)            # escamas
+    c.pts([(26, 14), (24, 14), (22, 14), (20, 15), (25, 15)], bone)         # presas
+    c.r(19, 13, 26, 13, '#2a1a10')                                          # boca fechada
+    # crista de espinhos escuros na nuca
+    for x, top in [(9, 7), (10, 5), (11, 4), (12, 3), (13, 3), (14, 3)]:
+        c.r(x, top, x, top + 2, crest)
+    c.pts([(9, 10), (8, 12), (9, 14)], crest)
+    if blink: c.r(17, 9, 19, 9, '#1a1a10')
+    else: c.r(17, 8, 19, 9, '#f0b020'); c.p(18, 8, '#1a1a10'); c.p(18, 9, '#1a1a10')
+    c.r(16, 7, 19, 7, crest)                                                # sobrancelha pesada
     return '#0e0b08'
 
 def neo_fx(c, t):
-    # mão no ombro segurando a adaga roxa, com relâmpagos que piscam
-    c.r(19, 18, 20, 19, '#4f7c3a'); c.p(21, 18, '#b06cff')                 # mão + anel
-    c.pts([(18, 19), (17, 20)], '#7a5030')                                 # cabo
-    blade = [(16, 20), (15, 21), (14, 21), (13, 22), (12, 22), (11, 23), (10, 23)]
-    c.pts(blade, '#c4ccd4')
-    glow = ['#b05cff', '#d9a8ff']
-    for i, (x, y) in enumerate(blade[2:]):
-        if (i + t) % 2 == 0: c.p(x, y, glow[(i + t) % 2])
-    if t % 2: c.pts([(9, 22), (11, 24), (14, 20)], '#b05cff')               # faíscas
+    # machado de batalha erguido na mão esquerda
+    shaft, metal, hi, dk = '#4a2e1a', '#9aa0a6', '#d8dde2', '#5a6066'
+    c.r(5, 3, 5, 27, shaft); c.p(5, 28, '#c8c0b0')
+    for y, a in [(1, 3), (2, 2), (3, 1), (4, 0), (5, 0), (6, 0), (7, 0), (8, 1), (9, 2), (10, 3)]:
+        c.r(a, y, 4, y, metal)                                              # lâmina em meia-lua
+    for y, b in [(3, 7), (4, 8), (5, 8), (6, 8), (7, 8), (8, 7)]:
+        c.r(6, y, b, y, metal)
+    c.pts([(3, 1), (2, 2), (1, 3), (0, 4), (0, 5), (0, 6), (0, 7), (1, 8), (2, 9), (3, 10)], hi if t % 4 == 0 else '#c0c6cc')
+    c.pts([(4, 2), (4, 9), (6, 3), (6, 8)], dk)
+    c.pts([(2, 5), (3, 6), (2, 7), (1, 6)], '#6a5040')                              # dragão gravado
+    c.r(6, 22, 8, 24, '#5e7a3a'); c.p(8, 24, '#435a28')                     # mão no cabo
+    # Adaga da Súplica na mão direita, brilhando roxo
+    c.r(21, 24, 22, 25, '#5e7a3a')
+    c.pts([(23, 24), (24, 24)], '#3a2418')
+    blade = [(25, 25), (26, 26), (27, 27), (28, 28), (29, 29)]
+    c.pts(blade, '#9a6cd8'); c.pts([(25, 26), (26, 27), (27, 28), (28, 29)], '#6a3ca8')
+    glow = ['#b05cff', '#e0b8ff']
+    for i, (x, y) in enumerate(blade):
+        if (i + t) % 2 == 0: c.p(x, y, glow[(i + t) % 4 // 2])
+    sp = [(27, 24), (29, 26), (30, 28), (25, 28)]
+    c.p(*sp[t], '#c890ff')                                                  # faísca
 
 CHARS = [
     ('hippion', hippion, hippion_fx), ('malekir', malekir, malekir_fx), ('fani', fani, fani_fx),
