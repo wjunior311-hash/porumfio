@@ -516,3 +516,7 @@ div.g-rec button { background: var(--taipa2); border: 0; border-radius: 4px; wid
 div.g-rec b { font-family: var(--display); color: var(--claro); }
 .g-agora { font-size: 13.5px; background: var(--taipa); border: 1px solid var(--linha); border-radius: 6px; padding: 6px 10px; }
 .g-agora b { color: var(--claro); } .g-agora .ruim { color: #f1a594; } .g-agora small { color: var(--osso3); display: block; }
+.fx-forma { animation-duration: 3.6s; }
+.fx-forma i { width: min(60vw, 420px); aspect-ratio: .95; border-radius: 0; background-position: center top; -webkit-mask: radial-gradient(ellipse 50% 55% at 50% 45%, #000 60%, transparent 100%); mask: radial-gradient(ellipse 50% 55% at 50% 45%, #000 60%, transparent 100%); filter: drop-shadow(0 0 50px rgba(200,30,20,.7)); animation: fx-rasga 3.6s ease-out forwards; }
+@keyframes fx-rasga { 0% { clip-path: polygon(48% 0, 52% 0, 51% 100%, 49% 100%); } 25% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); } 100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); } }
+.fx-forma span { color: #ff8a70; }

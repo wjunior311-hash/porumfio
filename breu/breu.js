@@ -2,8 +2,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
-import { criarMapa } from './mapa.js?v=29';
-import { criarMesa } from './mesa.js?v=13';
+import { criarMapa } from './mapa.js?v=32';
+import { criarMesa } from './mesa.js?v=16';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -294,7 +294,9 @@ async function salvarNoite() {
 function logNoite(t) { S.noite.log.unshift({ t, em: Date.now() }); S.noite.log = S.noite.log.slice(0, 40); }
 function trackerDe(c) {
   const b = R.barras(c.data);
-  return (S.noite.grupo[c.id] ||= { sangue: b.sangue, prumo: b.prumo, pavor: 0, brasa: b.brasa });
+  const t = (S.noite.grupo[c.id] ||= { sangue: b.sangue, prumo: b.prumo, pavor: 0, brasa: b.brasa });
+  if (t.vigias == null) t.vigias = 25;
+  return t;
 }
 function faixaNoite() {
   const n = S.noite;
@@ -868,7 +870,7 @@ document.addEventListener('click', async (e) => {
   if (route().name === 'mapa' && isGM() && (t.dataset.trk || t.dataset.panico)) {
     S.noite ||= novaNoite(); const n = S.noite;
     if (t.dataset.trk) { const [id, k, dlt] = t.dataset.trk.split(':'); const c = charById(id), tr = trackerDe(c), b = R.barras(c.data);
-      const max = { sangue: b.sangue, prumo: b.prumo, brasa: b.brasa, pavor: 9 }[k]; const antes = tr[k]; tr[k] = Math.max(0, Math.min(max, tr[k] + +dlt));
+      const max = { sangue: b.sangue, prumo: b.prumo, brasa: b.brasa, pavor: 9, vigias: 999 }[k]; const antes = tr[k]; tr[k] = Math.max(0, Math.min(max, tr[k] + +dlt));
       if (k === 'sangue' && tr[k] < antes) MAPA.api.efeitoTodos({ tipo: 'dano', cid: c.id, nome: c.data.nome, valor: antes - tr[k] }); }
     if (t.dataset.panico) { const c = charById(t.dataset.panico), r = M.d(20), l = M.tabela(M.PANICO, r); logNoite(`${c.data.nome} entrou em pânico (${r}): ${l[2]}`); toast(`${c.data.nome}: ${l[2]}`); }
     salvarNoite(); rr(); return;
@@ -887,7 +889,7 @@ document.addEventListener('click', async (e) => {
     if (t.dataset.ntRm) { const [i, j] = t.dataset.ntRm.split(':').map(Number); n.fases[i].splice(j, 1); salvarNoite(); rerender(); return; }
     if (t.dataset.ntPdif) { n.pavorDif = +t.dataset.ntPdif; salvarNoite(); rerender(); return; }
     if (t.dataset.trk) { const [id, k, dlt] = t.dataset.trk.split(':'); const c = charById(id), tr = trackerDe(c), b = R.barras(c.data);
-      const max = { sangue: b.sangue, prumo: b.prumo, brasa: b.brasa, pavor: 9 }[k]; tr[k] = Math.max(0, Math.min(max, tr[k] + +dlt));
+      const max = { sangue: b.sangue, prumo: b.prumo, brasa: b.brasa, pavor: 9, vigias: 999 }[k]; tr[k] = Math.max(0, Math.min(max, tr[k] + +dlt));
       salvarNoite(); rerender(); return; }
     if (t.dataset.ret) { const [id, k] = t.dataset.ret.split(':'); n.retrato = { ...(n.retrato || {}), [id]: k }; salvarNoite(); rerender(); return; }
     if (t.dataset.panico) { const c = charById(t.dataset.panico), r = M.d(20), l = M.tabela(M.PANICO, r);

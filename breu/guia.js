@@ -1,5 +1,5 @@
 // O guia da mesa, dentro do app: o mestre segue a sessão por aqui e aperta os botões que mexem no mapa.
-import { GENTE, VISTO, ROLA, FX_C, PISTAS, ATOS, RESOLVER, MOMENTOS as M } from './guia-dados.js?v=5';
+import { GENTE, VISTO, ROLA, FX_C, PISTAS, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=6';
 
 export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {} };
 // o que o grupo conseguiu durante o dia; muda o conserto, o corpo e a noite
@@ -245,6 +245,8 @@ function mapaHtml() {
 }
 
   const GAVETAS = {
+  situacoes: () => `<h2>Se acontecer…</h2><p class="g-cinza">As situações que costumam travar a mesa, com a saída de cada uma. Clique para abrir.</p>
+    ${SITUACOES.map(([grupo, itens]) => `<h4>${grupo}</h4><div class="g-conversa">${itens.map(([q, r]) => `<details><summary>${q}</summary><p>${r}</p></details>`).join('')}</div>`).join('')}`,
   resolver: () => `<h2>Travei: como resolver</h2><p class="g-cinza">Para quando um jogador faz algo que não está no guia.</p>
     ${RESOLVER.passos.map(([t, d], i) => `<h4>${i + 1}. ${t}</h4><p>${d}</p>`).join('')}
     <h4>Qual perícia usar</h4><table class="g-tab"><tbody>${RESOLVER.pericias.map(([q, p]) => `<tr><td>${q}</td><td><b>${p}</b></td></tr>`).join('')}</tbody></table>
@@ -281,7 +283,7 @@ function mapaHtml() {
   // ---------- o momento atual ----------
   function html() {
     const m = M[E.aqui] || M.inicio;
-    let h = `<div class="g-top"><button class="g-mini segredo" data-g="gaveta" data-v="segredo">O segredo</button><button class="g-mini" data-g="gaveta" data-v="gente">Pessoas</button><button class="g-mini" data-g="gaveta" data-v="dados">Dados</button><button class="g-mini" data-g="gaveta" data-v="conduzir">Como conduzir</button><button class="g-mini travei" data-g="gaveta" data-v="resolver">Travei: como resolver</button></div>
+    let h = `<div class="g-top"><button class="g-mini segredo" data-g="gaveta" data-v="segredo">O segredo</button><button class="g-mini" data-g="gaveta" data-v="gente">Pessoas</button><button class="g-mini" data-g="gaveta" data-v="dados">Dados</button><button class="g-mini" data-g="gaveta" data-v="conduzir">Como conduzir</button><button class="g-mini travei" data-g="gaveta" data-v="resolver">Travei: como resolver</button><button class="g-mini travei" data-g="gaveta" data-v="situacoes">Se acontecer…</button></div>
       <nav class="g-atos">${ATOS.map(([id, a, n], i) => `<button class="g-ato ${m.ato === i ? 'on' : ''} ${m.ato > i ? 'feito' : ''}" data-g="ir" data-v="${id}"><b>${a}</b><span>${n}</span></button>`).join('')}</nav>`;
     h += m.lugar ? `<div class="g-migalha"><button data-g="ir" data-v="patio">← Mapa da vila</button></div>` : '';
     h += `<h2 class="g-titulo">${esc(m.titulo)}</h2>`;

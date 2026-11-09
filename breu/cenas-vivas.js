@@ -128,7 +128,7 @@ function poeiraD(t, dt, L) {
 }
 const vaga = Array.from({ length: 26 }, () => ({ x: 100 + Math.random() * (W - 200), y: 100 + Math.random() * (H - 200), f: Math.random() * 6.28 }));
 function vagaD(L, t) {
-  if (L.i < 2 || L.i > 3) return;
+  if (L.i < 2 || L.i > 5) return;
   vaga.forEach(v => { const x = v.x + Math.sin(t * .4 + v.f) * 30, y = v.y + Math.cos(t * .33 + v.f) * 24, a = (Math.sin(t * 2 + v.f) + 1) / 2;
     ctx.fillStyle = `rgba(220,255,140,${a * .8})`; ctx.shadowColor = 'rgba(200,255,120,1)'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(x, y, 1.8, 0, 7); ctx.fill(); });
   ctx.shadowBlur = 0;
@@ -507,15 +507,13 @@ function cenaVila() {
       desenharCaatinga(plantas, t, L, false);
       urubus(L, t, { x: C.x, y: C.y - 60 });
       poeiraD(t, dt, L);
-      const fontes = [{ x: pontoTelhado(vel)[0], y: pontoTelhado(vel)[1], taxa: .45 }, { x: pontoTelhado(far)[0], y: pontoTelhado(far)[1], taxa: L.escuro > .3 ? .2 : .5 }];
-      if (L.escuro < .5) fontes.push({ x: pontoTelhado(casa.oficina)[0], y: pontoTelhado(casa.oficina)[1], taxa: .6 });
+      // fogo de dia; quando escurece, a vila apaga tudo e a fumaça some aos poucos
+      const fontes = L.escuro < .3 ? [{ x: pontoTelhado(vel)[0], y: pontoTelhado(vel)[1], taxa: .45 }, { x: pontoTelhado(far)[0], y: pontoTelhado(far)[1], taxa: .5 }, { x: pontoTelhado(casa.oficina)[0], y: pontoTelhado(casa.oficina)[1], taxa: .6 }] : [];
       fumacaD(fontes, fumaca, t, dt, L);
     },
     luzes(L, t) {
-      const [px, py] = frente(vel, 30), [fx, fy] = frente(far, 20);
-      const l = [{ x: px, y: py, r: 140 * tremor(t, 1), cor: [255, 180, 90], forca: .9 }, { x: fx, y: fy, r: 120 * tremor(t, 2), cor: [255, 170, 80], forca: .75 }];
-      // lamparinas tapadas: só um fio de luz na frente de algumas casas
-      ['zuleide', 'venda', 'firmina', 'casabento', 'cicero'].forEach((id, k) => { const [x, y] = frente(casa[id], 10); l.push({ x, y, r: 44 * tremor(t, k + 5), cor: [255, 190, 110], forca: .5 }); });
+      // luz chama: a vila passa a noite toda no escuro, de janela vedada
+      const l = [];
       if (TR.estado === 'brecha' && TR.prog < 0.01) { const [x, y] = noCirc((GAP.a + GAP.b) / 2); l.push({ x, y, r: 120 * (0.85 + 0.15 * Math.sin(t * 3)), cor: [255, 60, 30], forca: .8 }); }
       return l;
     },
@@ -777,7 +775,7 @@ function cenaEstrada() {
       poeiraD(t, dt, L);
       fumacaD([{ x: W - 110, y: 120, taxa: .45, r0: 6, cresce: 14, a0: .2, sobe: true }], fumaca, t, dt, L);
     },
-    luzes(L, t) { return [{ x: W - 70, y: 140, r: 300 * tremor(t, 4), cor: [255, 150, 70], forca: .65 }, { x: W - 200, y: 60, r: 120 * tremor(t, 7), cor: [255, 180, 90], forca: .5 }]; },
+    luzes() { return []; },
     depois(L, t) { olhosD(L, t, olhos, { x: P(820)[0] - 170, y: P(820)[1] + 60, vai: 90 }); },
   };
 }
@@ -954,13 +952,13 @@ function cenaMoco() {
       caldeiraoD(L, t);
       { const sv = vetorSombra(L); matacoes.forEach(m => sombraForma(() => { ctx.beginPath(); m.pts.forEach(([px, py], i) => i ? ctx.lineTo(m.x + px, m.y + py) : ctx.moveTo(m.x + px, m.y + py)); ctx.closePath(); }, sv.x * m.r * .9, sv.y * m.r * .9, .6)); }
       matacoes.forEach(m => matacao(m, L));
-      lenhaD(L, t); baratasD(L, t); ruinaD(L); carrinhoD(L); lamparinaD(t, L.escuro > .15);
+      lenhaD(L, t); baratasD(L, t); ruinaD(L); carrinhoD(L); lamparinaD(t, false);
       desenharCaatinga(plantas, t, L, false);
       urubus(L, t, { x: centro.x, y: centro.y });
       morcegosD(L, t);
       poeiraD(t, dt, L);
     },
-    luzes(L, t) { return L.escuro > .15 ? [{ x: lamparina.x, y: lamparina.y - 4, r: 130 * tremor(t, 6), cor: [255, 180, 90], forca: .9 }] : []; },
+    luzes() { return []; },
     depois(L, t) { olhosD(L, t, olhos, { x: centro.x - 420, y: centro.y + 260, vai: 120 }); },
   };
 }
@@ -1642,7 +1640,7 @@ export function criarCenaViva(canvas, id) {
   const cena = def.fabrica();
   const fixoCv = document.createElement('canvas'); fixoCv.width = W; fixoCv.height = H;
   cena.fixo(fixoCv.getContext('2d'));
-  let hora = cena.horaInicial, alvo = hora, vivo = true, escala = 1;
+  let hora = cena.horaInicial, alvo = hora, vivo = true, escala = 1, pessoas = [];
   const medir = () => { const r = canvas.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1); if (!r.width) return; canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.width * dpr * H / W); escala = canvas.width / W; };
   const ro = new ResizeObserver(medir); ro.observe(canvas); medir();
   const t0 = performance.now(); let ultimo = t0;
@@ -1660,7 +1658,10 @@ export function criarCenaViva(canvas, id) {
     ctx.drawImage(fixoCv, 0, 0);
     cena.desenhar(L, t, dt);
     ctx.fillStyle = `rgba(${L.tom.map(Math.round).join(',')},${L.tomA})`; ctx.globalCompositeOperation = 'soft-light'; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
-    escuridao(L, cena.luzes(L, t));
+    // à noite ninguém acende nada lá fora; dentro de casa, só vela pequena e tapada
+    const luzes = cena.luzes(L, t).map((l) => (cena.interior && L.escuro > .3 ? { ...l, r: l.r * .55, forca: l.forca * .7 } : l));
+    // um halo fraco em volta de cada personagem, para o jogador se achar no escuro
+    escuridao(L, luzes.concat(pessoas.map((p, k) => ({ x: p.x * W, y: p.y * H, r: 78 + Math.sin(t * .7 + k) * 4, cor: [170, 185, 215], forca: .5 }))));
     vagaD(L, t);
     cena.depois(L, t);
     if (!cena.interior) nevoa(L, t);
@@ -1672,6 +1673,7 @@ export function criarCenaViva(canvas, id) {
   return {
     setHora(h, ja) { alvo = h; if (ja) hora = h; },
     setVento(v) { vento = v; },
+    setPessoas(l) { pessoas = l || []; },
     setTrecho(v, ja) { cena.setTrecho?.(v, ja); },
     fase: () => luzEm(hora).nome,
     som: () => som.alternar(),

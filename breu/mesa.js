@@ -2,9 +2,9 @@
 // o pedido de rolagem, os dados que rolam no meio do mapa e o vídeo de abertura.
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
-import { CENAS_VIVAS } from './cenas-vivas.js?v=20';
-import { criarGuia, faixaDe } from './guia.js?v=8';
-import { ROLA, FX_C } from './guia-dados.js?v=5';
+import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
+import { criarGuia, faixaDe } from './guia.js?v=9';
+import { ROLA, FX_C } from './guia-dados.js?v=6';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
 const ATN = Object.fromEntries(R.ATRIBUTOS.map((a) => [a.k, a.n]));
@@ -182,6 +182,7 @@ export function criarMesa(ctx) {
       return `<div class="ms-pj ${est !== 'inteiro' ? 'alerta' : ''}"><div class="ms-pjh"><span class="ms-pic ${ctx.estCls(c)}"><img src="${esc(ctx.picChar(c))}" alt=""></span><div><b>${esc(c.data.nome)}</b><small>Defesa ${b.defesa} · Firmeza ${R.atrib(c.data).firmeza}${t.pavor ? ` · <em>mão −${t.pavor}</em>` : ''}</small></div>
           <select class="ms-est" data-ms-est="${c.id}" aria-label="Retrato de ${esc(c.data.nome)}">${ctx.ESTADOS.map(([k, l]) => `<option value="${k}" ${(S.noite?.retrato?.[c.id] || 'auto') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
         <div class="ms-cnts">${cnt('sangue', b.sangue, 'Sangue')}${cnt('prumo', b.prumo, 'Prumo')}${cnt('pavor', null, 'Pavor')}${cnt('brasa', b.brasa, 'Brasa')}</div>
+        <div class="ms-vig"><span>Vigias</span><button data-trk="${c.id}:vigias:-5">−5</button><button data-trk="${c.id}:vigias:-1">−1</button><b>${t.vigias ?? 25}</b><button data-trk="${c.id}:vigias:1">+1</button><button data-trk="${c.id}:vigias:5">+5</button></div>
         ${t.prumo <= 0 ? `<button class="btn sm" data-panico="${c.id}">Rolar o pânico</button>` : ''}</div>`;
     }).join('')}</div>`;
   }
@@ -230,7 +231,7 @@ export function criarMesa(ctx) {
     const b = R.barras(c.data), t = S.noite?.grupo?.[c.id] || { sangue: b.sangue, prumo: b.prumo, pavor: 0, brasa: b.brasa };
     const barra = (k, n, max, lbl) => `<div class="jg-b ${k}"><span>${lbl}</span><b>${n}${max != null ? `<small>/${max}</small>` : ''}</b>${max ? `<i style="--p:${Math.max(0, Math.min(1, n / max))}"></i>` : ''}</div>`;
     return `<a class="jg-ficha" href="#/ficha/${c.id}" title="Abrir a ficha"><span class="ms-pic ${ctx.estCls(c)}"><img src="${esc(ctx.picChar(c))}" alt=""></span><div><b>${esc(c.data.nome)}</b><small>Defesa ${b.defesa}${t.pavor ? ` · <em>Pavor ${t.pavor}</em>` : ''}</small></div></a>
-      <div class="jg-barras">${barra('sangue', t.sangue, b.sangue, 'Sangue')}${barra('prumo', t.prumo, b.prumo, 'Prumo')}${barra('pavor', t.pavor, null, 'Pavor')}${b.brasa ? barra('brasa', t.brasa, b.brasa, 'Brasa') : ''}</div>`;
+      <div class="jg-barras">${barra('sangue', t.sangue, b.sangue, 'Sangue')}${barra('prumo', t.prumo, b.prumo, 'Prumo')}${barra('pavor', t.pavor, null, 'Pavor')}${b.brasa ? barra('brasa', t.brasa, b.brasa, 'Brasa') : ''}${barra('vigias', t.vigias ?? 25, null, 'Vigias')}</div>`;
   }
   function dockHtml(lateral) {
     if (isGM() && desktop()) return '';
@@ -377,6 +378,9 @@ export function criarMesa(ctx) {
       solto('<span>A linha rompeu</span>', 'fx-faixa brecha', 2600);
     } else if (e.tipo === 'assombro') {
       solto(`${e.img ? `<i style="background-image:url('${esc(e.img)}')"></i>` : ''}<span>${e.nome ? esc(e.nome) : 'Alguma coisa saiu do escuro'}</span>`, 'fx-ass', 2600);
+    } else if (e.tipo === 'forma') {
+      tremer(1); solto('', 'fx-flash forte', 1400);
+      solto(`<i style="background-image:url('${esc(e.img)}')"></i><span>${e.nome ? esc(e.nome) + ', de verdade' : 'O disfarce rasga'}</span>`, 'fx-ass fx-forma', 3600);
     } else if (e.tipo === 'vinte') {
       solto(`<span>${esc(e.nome)} tirou um 20</span>`, 'fx-faixa vinte', 2400);
     }

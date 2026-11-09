@@ -2,7 +2,7 @@
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
 import * as R from './regras.js';
-import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=20';
+import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=22';
 
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
 const VENTOS = [[0.15, 'Vento calmo'], [0.45, 'Vento médio'], [0.85, 'Vento forte']];
@@ -338,6 +338,7 @@ export function criarMapa(ctx) {
   }
 
   function draw() {
+    viva?.setPessoas?.(MP.tokens.filter((t) => t.kind === 'pc' && t.visivel !== false).map((t) => ({ x: t.x, y: t.y })));
     if (!el) return;
     const box = el.querySelector('[data-mptoks]'); if (!box || !cena()) return;
     const sz = tokPx(), pp = passoPx();
@@ -509,7 +510,7 @@ export function criarMapa(ctx) {
     if (a === 'forca') { d.forca = Math.max(0, (d.forca || 0) + +v); }
     else if (a === 'raio') { d.raio = +v; }
     else if (a === 'sangue') { d.sangue = Math.max(0, Math.min(d.max || 999, (d.sangue ?? d.max ?? 0) + +v)); }
-    else if (a === 'forma') { const alt = formaDe(sel.nome); if (!alt) return; sel.img = sel.img === alt ? fotoNpc(sel.nome) : alt; await sb.from('breu_tokens').update({ img: sel.img }).eq('id', sel.id); enviar('reload', {}); draw(); paintSide(); return; }
+    else if (a === 'forma') { await trocarForma(sel.nome); return; }
     else if (a === 'nome') { d.nomeVisto = !d.nomeVisto; sel.data = d; await sb.from('breu_tokens').update({ data: d }).eq('id', sel.id); enviar('reload', {}); draw(); paintSide(); return; }
     else if (a === 'passos') { const p = Math.max(0, sel.passos + +v); sel.passos = p; await sb.from('breu_tokens').update({ passos: p }).eq('id', sel.id); draw(); paintSide(); return; }
     else if (a === 'visivel') {
@@ -670,6 +671,8 @@ export function criarMapa(ctx) {
     if (!t || !alt) { toast(t ? 'A imagem da forma verdadeira ainda não chegou.' : nome + ' não está nesta cena.'); return; }
     t.img = t.img === alt ? fotoNpc(t.nome) : alt;
     await sb.from('breu_tokens').update({ img: t.img }).eq('id', t.id); enviar('reload', {}); MP.sel = t.id; draw(); paintSide();
+    // a revelação: o retrato grande abre na tela de todo mundo, rasgando
+    if (t.img === alt) efeitoTodos({ tipo: 'forma', img: alt.replace('img/tok/', 'img/npc/'), nome: t.data?.nomeVisto ? t.nome : '' });
   }
   const api = {
     setMesa: (v) => { MP.mesa = v; }, efeitoTodos, levar, separados, minhaCena, cenas: () => MP.cenas, ativa: () => MP.ativa, ver: () => MP.ver, cena, cenaDe, garantirCena, verCena, mostrarCena, esconderCena,

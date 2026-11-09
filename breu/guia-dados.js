@@ -76,6 +76,41 @@ const CONVERSA = {
 };
 Object.entries(CONVERSA).forEach(([k, v]) => { if (GENTE[k]) GENTE[k].conversa = v; });
 
+// ---------------- situações que costumam travar a mesa, com a saída de cada uma ----------------
+export const SITUACOES = [
+  ['Luta', [
+    ['Um jogador ataca um Assombro', 'Peça <b>Luta</b> (de perto) ou <b>Pontaria</b> (de longe). Precisa tirar a <b>Defesa</b> do Assombro (aparece na peça) ou mais. Acertou com arma <b>marcada</b> (a lança de Damião, as flechas de Flecha, ou qualquer arma que Tião riscar): role o dano da arma (d8, ou d6 na faca) e tire do Sangue do Assombro na peça. Acertou com arma <b>comum</b>: não fere, só empurra; o Assombro recua uns passos e perde o próximo movimento.'],
+    ['O Assombro chegou a 0 de Sangue', 'Ele desfaz em cinza, ou em pó de osso. Narre isso, e na peça use <b>Mais opções › Tirar do mapa</b>.'],
+    ['Um personagem chegou a 0 de Sangue', '<b>Caído:</b> não anda nem age, só fala baixo. Alguém do lado pode gastar a vez para tratar: <b>Ervas e Cura 10</b>, e ele levanta com 1 de Sangue (o Inácio levanta com 1d6 + Juízo, uma vez por pessoa por noite). Se um caído levar outro golpe, <b>morre</b>. Avise a mesa disso quando alguém cair: é o momento mais tenso da noite.'],
+    ['Um personagem chegou a 0 de Prumo', '<b>Pânico.</b> Na aba Grupo aparece o botão <b>Rolar o pânico</b>: ele diz o que o personagem faz. Alguém pode acalmar com <b>Presença</b> ou <b>Canto 10</b> (Priya é a melhor): o Prumo volta para 1.'],
+    ['Alguém sai do círculo à noite', 'Do lado de fora, ele é o alvo preferido. Os Assombros que estiverem perto vão nele primeiro. Para voltar com um Assombro do lado, peça <b>Atletismo 10</b>; falhou, leva um ataque antes de cruzar a linha.'],
+    ['Os jogadores riscam um círculo novo', 'No celular deles tem <b>Ajustes › Riscar um círculo</b>. A força do círculo é o resultado de <b>Traços</b>. Quem tem o Dom pode gastar 1 de Brasa para somar +3.'],
+  ]],
+  ['Quando a história sai do trilho', [
+    ['Acusam a bordadeira logo na chegada', 'Deixe acusar. Sem prova, a vila não acredita: ela chora, diz que chegou ontem e aponta o homem tatuado. A partir daí ela fica mais cuidadosa, e a vila olha torto para quem acusou (−1 dado para fazer a vila confiar).'],
+    ['Prendem ou matam a bordadeira de dia', 'De dia ela não reage. <b>Presa:</b> marque na aba A história; na Hora Morta, o moço dos baldes tenta soltar ela, e ela tenta abrir o círculo no caminho. <b>Morta:</b> o moço dos baldes ataca quem fez e depois fica parado, sem ordem, na cerca. Os Assombros ainda vêm pelo trecho, mas a Hora Morta perde o pior momento: é uma vitória dos jogadores, deixe ser.'],
+    ['Querem ir embora da vila', 'É Dia Curto: a próxima vila fica a um dia de caminho. O homem da venda diz isso, com medo. Se insistirem, deixe: a noite pega eles na estrada, sem círculo, e a luta é a mesma, só que pior.'],
+    ['Querem linchar o homem tatuado', 'A vila topa rápido. Alguém precisa defender ele (sem dado, mas a ferreira fica contra). Se ninguém defender, ele foge para o mocó antes do sol cair, e a noite perde o pó que chia.'],
+    ['Ninguém conserta o círculo, ninguém investiga', 'Tudo bem: a noite fica mais dura sozinha (o guia da noite muda pelo que está marcado em A história). Na Tarde, use "A vila não espera" para empurrar alguém.'],
+    ['Um jogador quer fazer algo que você não previu', 'Abra <b>Travei: como resolver</b>. Na dúvida: diga sim, peça um dado se tiver risco e use o que a pessoa da vila quer.'],
+  ]],
+  ['A mesa e as pessoas', [
+    ['O grupo se separou em vários lugares', 'Vá um de cada vez, uns 3 minutos cada, e termine sempre num gancho ("e aí você ouve alguém atrás de você"). Para mostrar uma cena só para um, use <b>Levar só ele para outra cena</b> na peça.'],
+    ['Um jogador chegou atrasado ou caiu a internet', 'O personagem estava na casa de farinha, ajudando. Quando ele voltar, recarrega a página: tudo continua de onde estava.'],
+    ['A sessão está passando da hora', 'Corte a Tarde: cada um faz <b>uma</b> coisa só e vá direto para o Entardecer. Na noite, ponha menos Assombros e vá para a Hora Morta mais cedo. O que importa é o momento em que a bordadeira aparece.'],
+    ['Alguém quer dormir ou descansar', 'Ninguém dorme numa noite de Dia Curto. De dia, não tem tempo. Quem insistir em dormir à noite ganha 1 Pavor quando acordar com os barulhos.'],
+    ['Alguém quer comprar e não tem dinheiro', 'Cada um começa com <b>25 vigias</b> (marcadas na aba Grupo). Dá para pagar com trabalho: carregar farinha para a venda paga 3 vigias, ajudar a ferreira dá desconto.'],
+    ['Um jogador ficou de fora da cena muito tempo', 'Pergunte direto para ele: "E você, enquanto isso?" Ou faça uma pessoa da vila procurar ele.'],
+  ]],
+  ['Problemas no app', [
+    ['O personagem de alguém não aparece no mapa', 'No guia, aperte <b>Colocar o grupo no mapa</b>. Ou abra <b>+ Pôr no mapa</b>, em cima do mapa.'],
+    ['Um jogador não consegue andar', 'O limite de passos da rodada acabou. Aperte <b>Nova rodada</b>. Você, como mestre, pode arrastar qualquer peça sem limite.'],
+    ['A tela de alguém parece antiga ou travada', 'Recarregar a página (no computador, Ctrl + Shift + R; no celular, fechar e abrir o link). Nada se perde.'],
+    ['O som não toca', 'Na barra do mapa, <b>Ajustes › Ligar o som</b>. O navegador só deixa tocar depois que a pessoa toca na tela uma vez.'],
+    ['Pedi uma rolagem e não chegou', 'Olhe na aba Rolagens se o pedido está no ar. Se a pessoa não vê o botão, peça para recarregar a página.'],
+  ]],
+];
+
 // ---------------- quando os jogadores inventam algo que não está no guia ----------------
 export const RESOLVER = {
   passos: [
