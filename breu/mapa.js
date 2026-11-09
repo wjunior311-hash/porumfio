@@ -14,6 +14,9 @@ const RAIOS = [{ n: 'Pequeno', r: 1 }, { n: 'Médio', r: 3 }, { n: 'Grande', r: 
 
 export function criarMapa(ctx) {
   const { sb, S, isGM, esc, toast, picOf, picChar, charById } = ctx;
+  const estCls = ctx.estCls || (() => '');
+  // gente da vila e Assombros entram sem nome: os jogadores só veem ?? até o mestre revelar
+  const nomeTok = (t) => { if ((t.kind !== 'npc' && t.kind !== 'assombro') || t.data?.nomeVisto) return esc(t.nome); return isGM() ? `${esc(t.nome)} <i class="nm-oc">??</i>` : '??'; };
   const uid = () => S.session?.user.id;
   const MP = { cenas: [], ativa: null, ver: null, tokens: [], tool: 'mover', brush: 3, sel: null, zoom: window.innerWidth < 700 ? 1.6 : 1, loaded: false, busy: false, live: {} };
   let bc = null; // canal de broadcast (arrasto ao vivo)
@@ -148,6 +151,7 @@ export function criarMapa(ctx) {
         sel = `<div class="mp-sel"><b>${esc(t.nome)}</b>${b ? `<span class="small muted"> · ${b.grau} de ${b.familia} · ${b.sentido} · Defesa ${b.defesa} · ${b.atq} · ${b.dano}</span>` : ''}
           ${t.kind !== 'pc' ? `<div class="mp-row"><span>Sangue</span><button class="btn sm" data-mp="sangue" data-v="-5">−5</button><button class="btn sm" data-mp="sangue" data-v="-1">−1</button><b>${d.sangue ?? '–'}${d.max ? ' / ' + d.max : ''}</b><button class="btn sm" data-mp="sangue" data-v="1">+1</button></div>` : ''}
           <div class="mp-row"><span>Passos por rodada</span><button class="btn sm" data-mp="passos" data-v="-1">−</button><b>${t.passos}</b><button class="btn sm" data-mp="passos" data-v="1">+</button></div>
+          ${t.kind === 'npc' || t.kind === 'assombro' ? `<div class="mp-row"><span>Nome para os jogadores</span><b>${d.nomeVisto ? esc(t.nome) : '??'}</b><button class="btn sm ${d.nomeVisto ? '' : 'primary'}" data-mp="nome">${d.nomeVisto ? 'Esconder o nome' : 'Revelar o nome'}</button></div>` : ''}
           <div class="mp-row">${t.kind !== 'pc' ? `<button class="btn sm" data-mp="visivel">${t.visivel ? 'Esconder dos jogadores' : 'Revelar aos jogadores'}</button>` : ''}<button class="btn sm ghost" data-mp="apagar">Tirar da cena</button></div></div>`;
       }
     }
@@ -242,8 +246,8 @@ export function criarMapa(ctx) {
       const src = t.img || (ch ? picChar(ch) : '');
       const d = t.data || {};
       const ferido = d.max && d.sangue != null && d.sangue <= d.max / 2;
-      return `<div class="mp-tok k-${t.kind} ${MP.sel === t.id ? 'sel' : ''} ${t.visivel ? '' : 'oculto'} ${t.owner === uid() ? 'meu' : ''} ${podeMover(t) ? 'mov' : ''} ${ferido ? 'ferido' : ''}" data-tok="${t.id}" style="width:${sz}px;height:${sz}px;left:${t.x * W}px;top:${t.y * H}px">
-        ${src ? `<img src="${esc(src)}" alt="" draggable="false">` : `<i>${esc((t.nome || '?')[0])}</i>`}<span class="nm">${esc(t.nome)}</span></div>`;
+      return `<div class="mp-tok k-${t.kind} ${ch ? estCls(ch) : ''} ${MP.sel === t.id ? 'sel' : ''} ${t.visivel ? '' : 'oculto'} ${t.owner === uid() ? 'meu' : ''} ${podeMover(t) ? 'mov' : ''} ${ferido ? 'ferido' : ''}" data-tok="${t.id}" style="width:${sz}px;height:${sz}px;left:${t.x * W}px;top:${t.y * H}px">
+        ${src ? `<img src="${esc(src)}" alt="" draggable="false">` : `<i>${esc((t.nome || '?')[0])}</i>`}<span class="nm">${nomeTok(t)}</span></div>`;
     }).join('');
     box.innerHTML = circ + pecas;
     const pc = !isGM() && meuPc();
@@ -411,6 +415,7 @@ export function criarMapa(ctx) {
     if (a === 'forca') { d.forca = Math.max(0, (d.forca || 0) + +v); }
     else if (a === 'raio') { d.raio = +v; }
     else if (a === 'sangue') { d.sangue = Math.max(0, Math.min(d.max || 999, (d.sangue ?? d.max ?? 0) + +v)); }
+    else if (a === 'nome') { d.nomeVisto = !d.nomeVisto; sel.data = d; await sb.from('breu_tokens').update({ data: d }).eq('id', sel.id); enviar('reload', {}); draw(); paintSide(); return; }
     else if (a === 'passos') { const p = Math.max(0, sel.passos + +v); sel.passos = p; await sb.from('breu_tokens').update({ passos: p }).eq('id', sel.id); draw(); paintSide(); return; }
     else if (a === 'visivel') {
       sel.visivel = !sel.visivel;
