@@ -1,5 +1,5 @@
 // O guia da mesa, dentro do app: o mestre segue a sessão por aqui e aperta os botões que mexem no mapa.
-import { GENTE, VISTO, ROLA, FX_C, PISTAS, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=6';
+import { GENTE, VISTO, ROLA, FX_C, PISTAS, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=7';
 
 export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {} };
 // o que o grupo conseguiu durante o dia; muda o conserto, o corpo e a noite
