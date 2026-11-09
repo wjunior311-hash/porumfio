@@ -376,3 +376,12 @@ details.prontos summary { cursor: pointer; font-family: var(--label); letter-spa
 .mp-tok.est-panico::after { filter: drop-shadow(0 0 6px rgba(150, 170, 230, .9)); }
 .mp-tok.est-caido::after { filter: grayscale(1) brightness(.6); }
 @keyframes est-pulso-m { 50% { filter: drop-shadow(0 0 1px rgba(220, 60, 40, .4)); } }
+/* Assombros sem moldura: a criatura solta no mapa, com as bordas do fundo apagadas */
+.mp-tok.k-assombro { background: none; border: 0; box-shadow: none; overflow: visible; }
+.mp-tok.k-assombro::after { content: none; }
+.mp-tok.k-assombro img { position: absolute; left: -45%; top: -35%; width: 190%; height: 170%; max-width: none; border-radius: 0; object-fit: contain; object-position: 50% 50%;
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 52%, transparent 78%); mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 52%, transparent 78%);
+  filter: drop-shadow(0 6px 6px rgba(0,0,0,.7)) contrast(1.15) brightness(1.08); }
+.mp-tok.k-assombro .nm { top: 128%; }
+.mp-tok.k-assombro.sel { outline: 0; }
+.mp-tok.k-assombro.sel img { filter: drop-shadow(0 0 6px rgba(240,120,60,.95)) contrast(1.15) brightness(1.1); }
