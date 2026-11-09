@@ -3,7 +3,7 @@
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=18';
-import { criarGuia, faixaDe } from './guia.js?v=1';
+import { criarGuia, faixaDe } from './guia.js?v=2';
 import { ROLA, FX_C } from './guia-dados.js?v=1';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
@@ -119,7 +119,7 @@ export function criarMesa(ctx) {
   function relogioHtml(soVer) {
     const n = S.noite || {}, f = n.fase ?? -1, prox = soVer ? 9 : f + 1;
     return `<div class="ms-fases">${M.FASES.map((x, i) => `<span class="${i === f ? 'on' : i < f ? 'foi' : ''}" title="${esc(x.n)}"><img src="img/fase-${x.k}.webp" alt="">${i === f ? `<b>${esc(x.n)}</b>` : ''}</span>`).join('')}</div>
-      ${prox <= 4 ? `<button class="btn sm ${f < 0 ? '' : 'primary'}" data-ms="fase" title="O app rola o Pavor de todos">${prox === 0 ? 'Começar a noite' : `→ ${esc(M.FASES[prox].n)}`}</button>` : ''}`;
+      ${prox <= 4 ? `<button class="btn sm ${f < 0 ? '' : 'primary'}" data-ms="fase" title="Vira a fase e pede a todos que rolem o Pavor">${prox === 0 ? 'Começar a noite' : `→ ${esc(M.FASES[prox].n)}`}</button>` : ''}`;
   }
 
   function abaHtml() {
@@ -136,10 +136,11 @@ export function criarMesa(ctx) {
       const quem = p.quem?.length ? pjs().filter((c) => p.quem.includes(c.id)) : pjs();
       const rs = respostas(p), r = p.rola ? ROLA[p.rola] : null;
       h += `<div class="ms-pedido"><div class="ms-ph"><span class="lbl">Pedido no ar</span><button class="btn sm ghost" data-g="cancelar">Encerrar</button></div>
-        <b class="ms-pl">${esc(p.label)}</b><span class="ms-pper">${esc([p.per, p.alt].filter(Boolean).join(' ou '))}</span>
+        <b class="ms-pl">${esc(p.label)}</b><span class="ms-pper">${esc([p.per, p.alt].filter(Boolean).join(' ou '))}${p.dif ? ` · precisa de ${p.dif}` : ''}</span>
         <div class="ms-resp">${quem.map((c) => { const x = rs.find((y) => y.character_id === c.id);
           if (!x) return `<div class="ms-r esp"><img src="${esc(ctx.picChar(c))}" alt=""><span>${esc(c.data.nome)}</span><i>rolando…</i></div>`;
           const f = faixaDe(x.total);
+          if (p.dif) return `<div class="ms-r ${x.total >= p.dif ? 'f2' : 'f0'}"><img src="${esc(ctx.picChar(c))}" alt=""><span>${esc(c.data.nome)}</span><b>${x.total}</b><p>${x.total >= p.dif ? 'Segurou o medo.' : p.pavor ? 'Falhou: ganhou 1 Pavor (já anotado no Grupo).' : 'Falhou.'}</p></div>`;
           return `<div class="ms-r f${f}"><img src="${esc(ctx.picChar(c))}" alt=""><span>${esc(c.data.nome)}</span><b>${x.total}</b>${r ? `<p><em>${FX_C[f]}</em> ${esc(r.f[f])}</p>` : ''}</div>`; }).join('')}</div></div>`;
     }
     h += `<form class="ms-livre" data-ms-form="pedir"><span class="lbl">Pedir uma rolagem</span>
@@ -227,11 +228,11 @@ export function criarMesa(ctx) {
     const aberto = lateral || U.dk;
     if (p) {
       const feito = S.rolls.find((r) => r.character_id === c.id && r.detail?.pedido === p.id);
-      if (feito) h += `<div class="dk-card feito"><span class="lbl">${esc(p.label)}</span><p>Você tirou <b>${feito.total}</b>. O mestre conta o que acontece.</p></div>`;
+      if (feito) h += `<div class="dk-card feito"><span class="lbl">${esc(p.label)}</span><p>Você tirou <b>${feito.total}</b>${p.dif ? (feito.total >= p.dif ? `, contra ${p.dif}: segurou o medo.` : `, contra ${p.dif}: ganhou 1 Pavor (um dado a menos em tudo até o amanhecer).`) : '. O mestre conta o que acontece.'}</p></div>`;
       else {
         const ops = [p.per, p.alt].filter(Boolean).map((per) => ({ per, ...maoDe(c, per) }));
         const top = Math.max(...ops.map((o) => o.forca));
-        h += `<div class="dk-card pede"><span class="lbl">O mestre pede</span><b class="dk-t">${esc(p.label)}</b>
+        h += `<div class="dk-card pede"><span class="lbl">O mestre pede</span><b class="dk-t">${esc(p.label)}</b>${p.dif ? `<p class="dk-nota" style="margin:-6px 0 10px">Precisa tirar ${p.dif} ou mais.</p>` : ''}
           <div class="dk-bts">${ops.map((o) => `<button class="btn primary ${ops.length === 1 || o.forca === top ? 'melhor' : ''}" data-dk="rolar" data-per="${esc(o.per)}" data-ped="1"><span>Rolar ${esc(o.per)}</span><small>${o.txt}</small></button>`).join('')}</div>
           ${pavorDe(c) ? `<p class="dk-nota">Pavor ${pavorDe(c)}: um dado a menos por Pavor.</p>` : ''}</div>`;
       }
@@ -270,10 +271,11 @@ export function criarMesa(ctx) {
     const attr = ATR[per] || R.PERICIA_ATRIB[per], pericia = ATR[per] ? '' : per;
     const p = doPedido ? pedidoPara(c) : null;
     const ajuste = -pavorDe(c);
-    const res = R.rolar(c.data, { attr, pericia, ajuste, dif: 0 });
+    const dif = p?.dif || 0;
+    const res = R.rolar(c.data, { attr, pericia, ajuste, dif });
     const label = p ? p.label : pericia ? `${per} (${ATN[attr]})` : per;
     U.dk = false;
-    const row = await ctx.registrar(c, label, res, { tipo: 'teste', dados: res.dados, fica: res.fica, bonus: res.bonus, mao: res.mao, ajuste, dif: 0, marcante: res.marcante, desastre: res.desastre, vazia: res.vazia, per, ...(p ? { pedido: p.id } : {}) });
+    const row = await ctx.registrar(c, label, res, { tipo: 'teste', dados: res.dados, fica: res.fica, bonus: res.bonus, mao: res.mao, ajuste, dif, passou: dif ? res.passou : undefined, marcante: res.marcante, desastre: res.desastre, vazia: res.vazia, per, ...(p ? { pedido: p.id } : {}) });
     animar(row || { character_id: c.id, label, total: res.total, detail: { dados: res.dados, fica: res.fica, bonus: res.bonus, vazia: res.vazia, marcante: res.marcante, desastre: res.desastre } });
     pintarDock();
   }
@@ -423,8 +425,20 @@ export function criarMesa(ctx) {
     await pedir({ label: per + (nome ? ` (${nome})` : ''), per, quem: quem ? [quem] : [] });
     return true;
   }
+  // o Pavor da virada: quem falha ganha 1 Pavor, anotado pelo app do mestre
+  function aplicarPavor(r) {
+    const p = S.pedido; if (!p?.pavor || r.detail?.pedido !== p.id || r.detail?.passou !== false) return;
+    ctx.garantirNoite(); const n = S.noite; n.pavorVisto ||= [];
+    if (n.pavorVisto.includes(r.id)) return;
+    n.pavorVisto.push(r.id); n.pavorVisto = n.pavorVisto.slice(-60);
+    const c = ctx.charById(r.character_id); if (!c) return;
+    const t = ctx.trackerDe(c); t.pavor = Math.min(9, (t.pavor || 0) + 1);
+    ctx.logNoite(`${c.data.nome} falhou no Pavor (${r.total}) e ganhou 1 Pavor.`);
+    ctx.salvarNoite();
+  }
+  async function pedirPavor(fase, dif) { await pedir({ label: `O Pavor: ${fase}`, per: 'Firmeza', dif, pavor: true, quem: [] }); }
   function onRoll(r) {
-    if (isGM()) { if (U.aba !== 'rolagens') U.novas++; pintarPainel(); if (r.detail?.pedido) pintarGuia(); }
+    if (isGM()) { aplicarPavor(r); if (U.aba !== 'rolagens') U.novas++; pintarPainel(); if (r.detail?.pedido) pintarGuia(); }
     pintarDock();
     animar(r);
   }
@@ -432,5 +446,5 @@ export function criarMesa(ctx) {
   function onGuia(v) { if (JSON.stringify(v) === JSON.stringify(G.estado())) return; S.guia = v; G.setEstado(v); pintarGuia(); pintarPainel(); }
   function onNoite() { repintar(); }
 
-  return { viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };
+  return { pedirPavor, viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };
 }

@@ -99,7 +99,7 @@ function noiteHtml() {
     ? { f: 'O trecho está aberto: eles entram', d: 'Não precisam investir contra nada. Passam pelo buraco e vão direto para ' + alvo + '. Quem estiver no caminho, luta.' }
     : { f: 'Eles investem contra o trecho', d: `O trecho tem a força que o conserto tirou. Cada investida: o Assombro rola a mão dele contra essa força. <b>Não superou:</b> a linha segura e perde 3 de força. <b>Superou:</b> abre uma brecha e ele entra. Fechar a brecha leva uma rodada inteira e uma nova rolagem de Traços.` };
   const rodadas = { f: 'Rode em rodadas', d: 'Diga: "Agora a noite anda em rodadas." Em cada rodada, <b>os jogadores agem primeiro</b>, na ordem que quiserem: cada um anda (até os passos dele) e faz uma ação (atacar, riscar, curar, encorajar, ajudar). <b>Depois agem os Assombros.</b> No app, aperte <b>Nova rodada</b> a cada volta. Arma sem traço não fere Assombro: só faz ele perder o próximo movimento.' };
-  const pavor = { f: 'O Pavor da virada', d: 'O app já rolou a Firmeza de todos quando você virou a fase: confira na aba Rolagens. Quem falhou ganhou 1 Pavor (menos um dado em tudo até o amanhecer). Encorajar alguém (uma ação) tira 1.' };
+  const pavor = { f: 'O Pavor da virada', d: 'Quando você vira a fase, o app pede Firmeza a todos: cada jogador rola no próprio celular. Quem tira menos de 15 ganha 1 Pavor sozinho (menos um dado em tudo até o amanhecer). Encorajar alguém (uma ação) tira 1.' };
   const fimFase = { f: 'Quando a ameaça desta fase acabar, avance', d: 'Os Assombros morreram, foram empurrados para fora, ou recuaram para o escuro. Não precisa matar todos: depois de três ou quatro rodadas sem chance, eles recuam e esperam a próxima fase.' };
 
   let hm;
@@ -145,7 +145,7 @@ function noiteHtml() {
 
   ${passosHtml([
     { f: 'Pergunte onde cada um passa a noite', pergunte: '"A vila inteira está na casa de farinha. Onde vocês ficam: lá dentro, de vigia no trecho, no velório com o corpo, ou em outro lugar?"', app: 'Arraste as peças de cada um para onde disseram. Os Assombros entram pelos botões de cada fase, escondidos na borda do mapa.', acoes: [['cena', 'vila'], ['grupo']] },
-    { f: 'Comece a noite: Crepúsculo', d: 'A luz das cenas vivas escurece sozinha, e o app rola o Pavor de todos. Os dados aparecem na tela de cada um.', acoes: [['fase', 0]] },
+    { f: 'Comece a noite: Crepúsculo', d: 'A luz das cenas vivas escurece sozinha, e o app pede a cada jogador que role Firmeza (o Pavor). As respostas chegam na aba Rolagens.', acoes: [['fase', 0]] },
   ], 'Antes de escurecer')}
 
   ${passosHtml([
@@ -155,7 +155,7 @@ function noiteHtml() {
   ], 'Crepúsculo')}
 
   ${passosHtml([
-    { f: 'Vire para o Breu', d: 'O app rola o Pavor de todos.', acoes: [['fase', 1]] },
+    { f: 'Vire para o Breu', d: 'Cada jogador rola o Pavor no celular.', acoes: [['fase', 1]] },
     { f: 'Leia', leia: [['', 'A noite fechou. Agora só existe o que uma lamparina tapada alcança. O resto é um preto sem fundo, e do preto vêm os barulhos: pedra rolando, mato quebrando, unha raspando no chão.'], ['', 'Alguma coisa bate na linha de cal. O círculo segura. Mas vocês sentiram, no peito, ele balançar.']] },
     { f: `Revele: 1 Tisnado, 1 Farejador de Borralho e 1 Rolador${mais}`, d: 'O Rolador se enrola feito bola e rola contra o trecho, testando a linha.', acoes: [['assombro', 'cinza-1'], ['assombro', 'cinza-2'], ['assombro', 'osso-1'], ...(corpoNaVila ? [['assombro', 'cinza-2']] : [])] },
     investida,
@@ -164,10 +164,10 @@ function noiteHtml() {
     rodadas, fimFase,
   ], 'Breu')}
 
-  ${passosHtml([{ f: 'Vire para a Hora Morta', d: `Chega a Corcunda de Cinza${corpoNaVila ? ' e mais 1 Farejador' : ''}. O app rola o Pavor de todos.`, acoes: [['fase', 2], ['assombro', 'cinza-4'], ...(corpoNaVila ? [['assombro', 'cinza-2']] : [])] }, ...hm.filter((p) => p !== pavor)], 'Hora Morta')}
+  ${passosHtml([{ f: 'Vire para a Hora Morta', d: `Chega a Corcunda de Cinza${corpoNaVila ? ' e mais 1 Farejador' : ''}. Cada jogador rola o Pavor no celular.`, acoes: [['fase', 2], ['assombro', 'cinza-4'], ...(corpoNaVila ? [['assombro', 'cinza-2']] : [])] }, ...hm.filter((p) => p !== pavor)], 'Hora Morta')}
 
   ${passosHtml([
-    { f: 'Vire para Antes da Aurora', d: 'O app rola o Pavor de todos.', acoes: [['fase', 3]] },
+    { f: 'Vire para Antes da Aurora', d: 'Cada jogador rola o Pavor no celular.', acoes: [['fase', 3]] },
     { f: 'Leia', leia: [['', 'O céu, lá longe, muda de preto para um cinza que ainda não é luz. O que está lá fora sabe o que isso quer dizer. Os barulhos ficam mais rápidos, mais desesperados. O que não conseguir voltar para a fenda antes do sol vai ficar encurralado.']] },
     { f: 'Os Assombros fogem', d: 'Cada um corre para a fenda mais perto. Em fuga, não atacam o círculo, só quem estiver no caminho. Atacar um em fuga, pelas costas, dá <b>+1 dado</b>.' },
     { f: 'Cuidado com o encurralado', d: 'Um Assombro sem caminho até a fenda ataca com <b>+2 dados</b> e não recua. É a hora mais comum de perder alguém.' },

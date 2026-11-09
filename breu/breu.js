@@ -3,7 +3,7 @@ import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { criarMapa } from './mapa.js?v=24';
-import { criarMesa } from './mesa.js?v=3';
+import { criarMesa } from './mesa.js?v=4';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -38,7 +38,7 @@ function criarAMesa() {
   MESA = criarMesa({ sb, S, esc, toast, isGM: () => isGM(), MAPA, route: () => route(), go: (p) => go(p), rerender: () => rerender(),
     charById: (id) => charById(id), picChar: (c) => picChar(c), estCls: (c) => estCls(c), estadoDe: (c) => estadoDe(c), ESTADOS,
     trackerDe: (c) => trackerDe(c), garantirNoite: () => { S.noite ||= novaNoite(); }, virarFase: () => virarFase(), salvarNoite: () => salvarNoite(),
-    registrar: (c, l, r, d) => registrar(c, l, r, d) });
+    registrar: (c, l, r, d) => registrar(c, l, r, d), logNoite: (t) => logNoite(t) });
 }
 // repinta a tela certa: a mesa do mestre se repinta por partes, o resto recarrega
 function rr() { if (route().name === 'mapa' && MESA) { MESA.repintar(); MAPA.redraw(); } else rerender(); }
@@ -339,7 +339,7 @@ function viewNoite() {
     <div class="relogio-m">${M.FASES.map((f, i) => `<div class="rm${i === n.fase ? ' on' : i < n.fase ? ' foi' : ''}"><img src="img/fase-${f.k}.webp" alt=""><span>${f.n}</span></div>`).join('')}</div>
     ${n.fase >= 0 ? `<div class="box">${esc(M.FASES[n.fase].d)}</div>` : ''}
     ${n.fase >= 0 && n.fase < 4 && n.fases[n.fase]?.length ? `<p class="small" style="margin:0">Chegam agora: <b>${n.fases[n.fase].map((id) => bestOf(id).nome).join(', ')}</b>.</p>` : ''}
-    <div class="ro-adj"><div><span class="flab">Teste de Pavor na virada</span><p class="fhelp" style="margin:0">Firmeza contra ${n.pavorDif}. Quem falha recebe 1 Pavor.</p></div>
+    <div class="ro-adj"><div><span class="flab">Teste de Pavor na virada</span><p class="fhelp" style="margin:0">Cada jogador rola Firmeza contra ${n.pavorDif} no celular. Quem falha recebe 1 Pavor.</p></div>
       <div class="sub-opts">${[15, 20].map((v) => `<button class="pill${n.pavorDif === v ? ' sel' : ''}" data-nt-pdif="${v}">${v}</button>`).join('')}</div></div>
     ${prox <= 4 ? `<button class="btn primary block" data-act="virarFase">${n.fase < 0 ? 'Começar a noite: Crepúsculo' : `Virar para ${M.FASES[prox].n}`}</button>` : `<button class="btn block" data-act="novaNoite">Começar uma nova noite</button>`}`;
 
@@ -376,18 +376,14 @@ async function virarFase() {
     n.dia = 0;
     logNoite('Aurora. As fendas fecharam; o Pavor sumiu e a Brasa voltou.');
   } else {
-    for (const c of aprovados()) {
-      const t = trackerDe(c);
-      const r = R.rolar(c.data, { attr: 'firmeza', ajuste: -t.pavor, dif: n.pavorDif });
-      if (!r.passou) t.pavor += 1;
-      res.push(`${c.data.nome} ${r.total}${r.passou ? '' : ' (+1 Pavor)'}`);
-      await sb.from('breu_rolls').insert({ character_id: c.id, user_id: S.session.user.id, label: `Pavor na virada (${f.n})`, total: r.total, detail: { tipo: 'teste', dados: r.dados, fica: r.fica, bonus: 0, dif: n.pavorDif, passou: r.passou, vazia: r.vazia, marcante: r.marcante, desastre: r.desastre } });
-    }
+    // o Pavor é dos jogadores: cada um rola a Firmeza no próprio celular, e quem falha ganha 1 Pavor
     const chegam = (n.fases[prox] || []).map((id) => bestOf(id).nome);
-    logNoite(`${f.n}. Pavor: ${res.join(', ') || 'ninguém'}.${chegam.length ? ' Chegam: ' + chegam.join(', ') + '.' : ''}`);
+    logNoite(`${f.n}. Pedi o Pavor a todos (Firmeza contra ${n.pavorDif}).${chegam.length ? ' Chegam: ' + chegam.join(', ') + '.' : ''}`);
+    await salvarNoite();
+    await MESA.pedirPavor(f.n, n.pavorDif);
   }
   await salvarNoite(); rr();
-  toast(prox === 4 ? 'Aurora!' : `${f.n}: Pavor rolado para todos.`);
+  toast(prox === 4 ? 'Aurora!' : `${f.n}: pedi o Pavor a todos. Cada um rola no celular.`);
 }
 
 // ---------- personagens prontos ----------
