@@ -921,6 +921,15 @@ document.addEventListener('submit', (ev) => {
 });
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && ui.modal) actions.closeModal(); });
 window.addEventListener('hashchange', () => { ui.modal = null; render(); window.scrollTo(0, 0); });
+
+// Tela sempre acesa durante a sessão: o celular fica na mesa e não apaga no meio do combate.
+let telaAcesa = null;
+async function manterTelaAcesa() {
+  try { if ('wakeLock' in navigator && document.visibilityState === 'visible' && !telaAcesa) { telaAcesa = await navigator.wakeLock.request('screen'); telaAcesa.addEventListener('release', () => { telaAcesa = null; }); } } catch (e) { telaAcesa = null; }
+}
+document.addEventListener('visibilitychange', manterTelaAcesa);
+document.addEventListener('click', manterTelaAcesa, { once: true });
+manterTelaAcesa();
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; });
 window.addEventListener('appinstalled', () => { toast('App instalado!'); render(); });
 
