@@ -39,11 +39,21 @@ const petHTML = (id, size, ko = false) =>
   `<div class="pet${ko ? ' ko' : ''}" style="width:${size}px;height:${size}px;background-image:url('${sprite(id)}')" aria-hidden="true"></div>`;
 
 function rollDice(expr) {
-  const m = String(expr).replace(/\s/g, '').match(/^(\d+)d(\d+)([+-]\d+)?/i);
-  if (!m) return null;
-  const n = +m[1], f = +m[2], mod = m[3] ? +m[3] : 0, dice = [];
-  for (let i = 0; i < n; i++) dice.push(1 + Math.floor(Math.random() * f));
-  return { total: dice.reduce((a, b) => a + b, 0) + mod, text: '[' + dice.join(', ') + ']' + (mod ? (mod > 0 ? ' + ' + mod : ' − ' + -mod) : '') };
+  // Aceita vários termos, como "1d8+5 +1d6 ácido": rola todos os dados e soma os números.
+  const s = String(expr).replace(/\s/g, '');
+  if (!/^\d+d\d+/i.test(s)) return null;
+  let total = 0, mod = 0; const grupos = [];
+  // Lê só a sequência inicial de termos ligados por + ou −; para no primeiro texto, "(", "/" etc.
+  const re = /([+-]?)(\d+)(?:d(\d+))?/iy;
+  for (let m; (m = re.exec(s)) && (re.lastIndex === m[0].length || m[1]);) {
+    const [, sinal, n, f] = m;
+    const k = sinal === '-' ? -1 : 1;
+    if (!f) { mod += k * +n; continue; }
+    const dice = [];
+    for (let i = 0; i < +n; i++) dice.push(1 + Math.floor(Math.random() * +f));
+    total += k * dice.reduce((a, b) => a + b, 0); grupos.push('[' + dice.join(', ') + ']');
+  }
+  return { total: total + mod, text: grupos.join(' + ') + (mod ? (mod > 0 ? ' + ' + mod : ' − ' + -mod) : '') };
 }
 function showRoll(r) { ui.roll = r; clearTimeout(showRoll.t); showRoll.t = setTimeout(() => { ui.roll = null; renderRoll(); }, 9000); renderRoll(); }
 function test(title, bonus, critOn = 20) {

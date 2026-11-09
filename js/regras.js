@@ -63,6 +63,17 @@ export const PODERES = {
   'Sangue Frio': { grupo: 'passiva', quando: 'Atenção: sofre 1 de dano a mais por dado de frio.' },
   'Sombra': { grupo: 'passiva', quando: '+2 em Furtividade e se esconde mesmo andando normalmente.' },
   'Velocidade Ladina': { grupo: 'luta', pm: 2, quando: 'Uma vez por rodada: ganha uma ação de movimento a mais.' },
+  // Neo, bárbaro
+  'Arma Natural Aprimorada': { grupo: 'passiva', quando: 'Mordida mais forte: dano maior e crítico 19 (já está na ficha).' },
+  'Escamas Dracônicas': { grupo: 'passiva', quando: '+2 na Defesa e em Fortitude (já está na ficha).' },
+  'Estilo de Duas Mãos': { grupo: 'passiva', quando: 'Arma corpo a corpo segurada com as duas mãos: +5 no dano. Não vale com arma leve.' },
+  'Fúria': { grupo: 'luta', pm: 2, quando: '+2 no ataque e no dano corpo a corpo. Sem Furtividade nem nada que peça calma. Acaba se a rodada passar sem você atacar ou ser atacado.',
+    extras: [{ pm: 1, texto: '+1 nos bônus da Fúria', repetivel: true, aCadaNiveis: 5 }] },
+  'Instinto Selvagem': { grupo: 'passiva', quando: '+1 no dano, em Percepção e em Reflexos (já está na ficha).' },
+  'Pele de Ferro': { grupo: 'passiva', quando: '+4 na Defesa sem armadura pesada (já está na ficha).' },
+  'Presas Primordiais': { grupo: 'luta', pm: 1, quando: 'Como você já tem mordida, ela sobe dois passos de dano até o fim da cena (1d8 vira 1d12).' },
+  'Saliva Corrosiva': { grupo: 'luta', quando: 'Mordida já causa +1d6 de ácido. Ação de movimento: cobre a arma de saliva, +1d6 de ácido no próximo acerto.' },
+  'Complicação: De Peito Aberto': { grupo: 'passiva', quando: 'Atenção: não pode vestir armadura e veste dois itens a menos.' },
   // Zuri
   'Cria de Megalokk': { grupo: 'passiva', quando: 'Você é monstro e enxerga no escuro.' },
   'Dom Artístico': { grupo: 'passiva', quando: '+2 em Atuação e ganha o dobro em apresentações.' },

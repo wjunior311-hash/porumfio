@@ -12,6 +12,8 @@ function tabela(c, extras) {
 export const CLASSES = {
   Arcanista: { pv0: 8, pv: 2, pm: 6, chave: 'INT', magias: 'cada',
     niveis: tabela('arcanista', { 1: ['caminho do arcanista', 'magias (1º círculo)'], 5: ['magias (2º círculo)'], 9: ['magias (3º círculo)'], 13: ['magias (4º círculo)'], 17: ['magias (5º círculo)'] }) },
+  Bárbaro: { pv0: 24, pv: 6, pm: 3, chave: null, magias: null,
+    niveis: tabela('bárbaro', { 1: ['fúria +2'], 2: ['instinto selvagem +1'], 3: ['redução de dano 2'], 5: ['fúria +3'], 6: ['redução de dano 4'], 8: ['instinto selvagem +2'], 9: ['redução de dano 6'], 10: ['fúria +4'], 12: ['redução de dano 8'], 14: ['instinto selvagem +3'], 15: ['fúria +5', 'redução de dano 10'], 20: ['fúria +6', 'fúria titânica'] }) },
   Bardo: { pv0: 12, pv: 3, pm: 4, chave: 'CAR', magias: 'par',
     niveis: tabela('bardo', { 1: ['inspiração +1', 'magias (1º círculo)'], 2: ['eclético'], 5: ['inspiração +2'], 6: ['magias (2º círculo)'], 9: ['inspiração +3'], 10: ['magias (3º círculo)'], 13: ['inspiração +4'], 14: ['magias (4º círculo)'], 17: ['inspiração +5'] }) },
   Bucaneiro: { pv0: 16, pv: 4, pm: 3, chave: null, magias: null,

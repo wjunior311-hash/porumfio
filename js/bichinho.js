@@ -4,7 +4,7 @@ const FALAS = {
   hippion: ['Mar calmo nunca fez bom marinheiro.', 'Cadê meu tridente? Ah, tá aqui.', 'Alguém aí tem um peixe?', 'Hoje o vento tá a nosso favor!'],
   malekir: ['O conhecimento é a única chama que não se apaga.', 'Não encoste nos meus pergaminhos.', 'Wynna, me dê paciência com este grupo.', 'Sinto cheiro de magia antiga…'],
   fani: ['Psiu! A floresta tá ouvindo.', 'Meu camaleão mudou de cor de novo.', 'Já abraçou uma árvore hoje?', 'Allihanna cuida da gente.'],
-  neo: ['…', 'Brilhante. Posso pegar?', 'Sssh. Tem alguém vindo.', 'Aposto que você não me viu chegar.'],
+  neo: ['Grrr.', 'Camisa? Pra esconder isso aqui? Nunca.', 'Kallyadranoch vê quem morde primeiro.', 'Fiz a fila, sargento. Agora deixa eu bater.'],
   zuri: ['Uma música pra alegrar a mesa?', 'Minhas cobras gostaram de você.', 'Não olha muito fundo nos meus olhos, hein.', 'O show não pode parar!'],
 };
 const HABITAT = {
