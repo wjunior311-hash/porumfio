@@ -1,12 +1,12 @@
 // A mesa ao vivo: a tela do mestre no computador (guia, mapa e painel juntos),
 // o pedido de rolagem, os dados que rolam no meio do mapa e o vídeo de abertura.
-import * as R from './regras.js?v=3';
+import * as R from './regras.js?v=4';
 import * as M from './mestre-dados.js';
 import { abrirTour, jaViu } from './tutorial.js?v=1';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=13';
-import { ROLA, FX_C } from './guia-dados.js?v=9';
+import { criarGuia, faixaDe } from './guia.js?v=14';
+import { ROLA, FX_C } from './guia-dados.js?v=10';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
 const ATN = Object.fromEntries(R.ATRIBUTOS.map((a) => [a.k, a.n]));
@@ -149,7 +149,10 @@ export function criarMesa(ctx) {
     const f = S.noite?.circulo ?? 14;
     return `<div class="g-painel ms-circ"><h4>O círculo da vila <small>os Assombros investem contra isto</small></h4>
       <div class="ms-cf"><b class="${f <= 0 ? 'rompido' : ''}">${f > 0 ? f : 'Brecha'}</b><div class="g-seg"><button data-ms="circ" data-v="-3">Investida (−3)</button><button data-ms="circ" data-v="-1">−1</button><button data-ms="circ" data-v="1">+1</button><button data-ms="circ" data-v="0">Brecha</button></div></div>
-      <label class="ms-cr">Consertado com <input class="field sm" type="number" min="0" max="40" value="${Math.max(0, f)}" data-ms-forca> <span>(o resultado da rolagem de Traços)</span></label></div>`;
+      <div class="ms-cons"><span class="lbl">Consertar o trecho</span>
+        <div class="g-seg"><button class="${U.aceso ? '' : 'on'}" data-ms="aceso" data-v="0">Sem o Dom (metade)</button><button class="${U.aceso ? 'on' : ''}" data-ms="aceso" data-v="1">Com o Dom, gastou 1 Brasa</button></div>
+        <label class="ms-cr">Resultado de Traços <input class="field sm" type="number" min="0" max="45" placeholder="ex.: 17" data-ms-forca></label>
+        <p class="g-nota">${U.aceso ? 'Aceso: com 10 ou mais, a força é o resultado inteiro. Abaixo de 10 não acende, a Brasa se perde e vale a metade.' : 'Apagado: a força é a metade do resultado.'} ${S.guia?.rec?.cal ? '' : 'Sem cal: −2.'}</p></div></div>`;
   }
   function rolagensHtml() {
     let h = '';
@@ -230,9 +233,11 @@ export function criarMesa(ctx) {
   const pedidosPara = (c) => (c ? (S.pedidos || []).filter((p) => (!p.quem?.length || p.quem.includes(c.id)) && Date.now() - p.em < 90 * 60e3) : []);
   const pedidoPara = (c) => pedidosPara(c).at(-1) || null;
   const pavorDe = (c) => S.noite?.grupo?.[c.id]?.pavor || 0;
+  // ferido (metade do Sangue ou menos) tira um dado, como manda o livro
+  const feridoDe = (c) => { const t = S.noite?.grupo?.[c.id]; if (!t || t.sangue == null) return 0; const max = R.barras(c.data).sangue; return t.sangue > 0 && t.sangue <= max / 2 ? 1 : 0; };
   function maoDe(c, per) {
     const at = R.atrib(c.data), attr = ATR[per] || R.PERICIA_ATRIB[per];
-    const n = Math.min(5, (at[attr] || 1) - pavorDe(c)), b = ATR[per] ? 0 : R.bonusPericia(R.grauPericia(c.data, per));
+    const n = Math.min(5, (at[attr] || 1) - pavorDe(c) - feridoDe(c)), b = ATR[per] ? 0 : R.bonusPericia(R.grauPericia(c.data, per));
     return { n, b, txt: `${n <= 0 ? '2d20 (fica o pior)' : n + 'd20'}${b ? '+' + b : ''}`, forca: (n <= 0 ? 0 : n * 10) + b * 2 };
   }
   function fichaMini(c) {
@@ -256,7 +261,7 @@ export function criarMesa(ctx) {
         const top = Math.max(...ops.map((o) => o.forca));
         h += `<div class="dk-card pede"><span class="lbl">O mestre pede</span><b class="dk-t">${esc(p.label)}</b>${p.dif ? `<p class="dk-nota" style="margin:-6px 0 10px">Precisa tirar ${p.dif} ou mais.</p>` : ''}
           <div class="dk-bts">${ops.map((o) => `<button class="btn primary ${ops.length === 1 || o.forca === top ? 'melhor' : ''}" data-dk="rolar" data-per="${esc(o.per)}" data-ped="${p.id}"><span>Rolar ${esc(o.per)}</span><small>${o.txt}</small></button>`).join('')}</div>
-          ${pavorDe(c) ? `<p class="dk-nota">Pavor ${pavorDe(c)}: um dado a menos por Pavor.</p>` : ''}</div>`;
+          ${pavorDe(c) ? `<p class="dk-nota">Pavor ${pavorDe(c)}: um dado a menos por Pavor.</p>` : ''}${feridoDe(c) ? '<p class="dk-nota">Ferido: um dado a menos até ser tratado.</p>' : ''}</div>`;
       }
     }
     const pers = [...Object.keys(ATR).map((n) => ({ n, a: true })), ...R.PERICIAS.map(([n]) => ({ n, g: R.grauPericia(c.data, n) }))];
@@ -293,7 +298,7 @@ export function criarMesa(ctx) {
   async function rolarComo(c, per, pedId) {
     const attr = ATR[per] || R.PERICIA_ATRIB[per], pericia = ATR[per] ? '' : per;
     const p = pedId ? (S.pedidos || []).find((x) => x.id === pedId) || null : null;
-    const ajuste = -pavorDe(c);
+    const ajuste = -pavorDe(c) - feridoDe(c);
     const dif = p?.dif || 0;
     const label = p ? p.label : pericia ? `${per} (${ATN[attr]})` : per;
     let dadosFisicos = null;
@@ -514,6 +519,7 @@ export function criarMesa(ctx) {
       if (a === 'aba') { U.aba = v; if (v === 'rolagens') U.novas = 0; pintarPainel(); return true; }
       if (a === 'video') { tocarVideo(v || 'abertura'); return true; }
       if (a === 'fase') { t.disabled = true; await virar(); return true; }
+      if (a === 'aceso') { U.aceso = t.dataset.v === '1'; pintarPainel(); return true; }
       if (a === 'circ') { ctx.garantirNoite(); const f = S.noite.circulo ?? 14, v = +t.dataset.v; S.noite.circulo = v === 0 ? 0 : Math.max(0, f + v); ctx.logNoite(v === 0 ? 'O círculo abriu uma brecha.' : `Força do círculo: ${S.noite.circulo}.`); await ctx.salvarNoite(); pintarPainel(); return true; }
       if (a === 'tela-preta') { await A.esconderCena(); pintarTopo(); toast('Os jogadores estão sem cena.'); return true; }
     }
@@ -524,7 +530,16 @@ export function criarMesa(ctx) {
   }
   async function onChange(t) {
     if (G.change(t)) return true;
-    if (t.matches('[data-ms-forca]')) { ctx.garantirNoite(); S.noite.circulo = Math.max(0, Math.min(40, +t.value || 0)); ctx.logNoite(`Círculo consertado com força ${S.noite.circulo}.`); await ctx.salvarNoite(); G.marcar('trecho', S.noite.circulo >= 20 ? 'forte' : S.noite.circulo >= 10 ? 'fino' : 'aberto'); MAPA.redraw(); pintarPainel(); toast(`Força do círculo: ${S.noite.circulo}.`); return true; }
+    if (t.matches('[data-ms-forca]')) {
+      const r = Math.max(0, +t.value || 0); if (!t.value) return true;
+      const acende = U.aceso && r >= 10, semCal = !S.guia?.rec?.cal;
+      const forca = Math.max(0, Math.min(45, (acende ? r : Math.floor(r / 2)) - (semCal ? 2 : 0)));
+      ctx.garantirNoite(); S.noite.circulo = forca;
+      const como = acende ? 'aceso' : U.aceso ? 'não acendeu, a Brasa se perdeu' : 'apagado, metade';
+      ctx.logNoite(`Trecho consertado: Traços ${r} (${como}${semCal ? ', sem cal −2' : ''}) = força ${forca}.`);
+      await ctx.salvarNoite(); G.marcar('trecho', r < 10 ? 'aberto' : r >= 20 ? 'forte' : 'fino'); MAPA.redraw(); pintarPainel();
+      toast(r < 10 ? `Traços ${r}: a linha não pega.` : `Força do círculo: ${forca} (${como}).`); return true;
+    }
     if (t.dataset.msEst) { ctx.garantirNoite(); S.noite.retrato = { ...(S.noite.retrato || {}), [t.dataset.msEst]: t.value }; await ctx.salvarNoite(); pintarPainel(); MAPA.redraw(); return true; }
     return false;
   }

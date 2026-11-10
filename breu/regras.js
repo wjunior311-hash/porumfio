@@ -26,7 +26,7 @@ export const PERICIAS = [
 
 export const SOTAQUES = {
   Serra: '+2 de força em Barrar e em traços de Osso. Leva o dobro do tempo.',
-  'Maré': 'Não se apaga com chuva nem água; +2 em Sopro e Lodo. −2 de força em terra seca e pedra.',
+  Litoral: 'Não se apaga com chuva nem água; +2 em Sopro e Lodo. −2 de força em terra seca e pedra.',
   'Terra seca': 'Traça na metade do tempo; +2 em Cinza. Perde 4 por investida, em vez de 3.',
   Mata: '+2 em Prender e em traços de Raiz. Não funciona no modo No ar.',
   Cidades: 'Qualquer um aprende sem perder dado; aceito em todo lugar. Nenhum bônus.',
@@ -34,8 +34,7 @@ export const SOTAQUES = {
 
 export const ORIGENS = [
   { k: 'serra', n: 'A serra', pericia: 'Ofícios', sotaque: 'Serra', pergunta: 'Que pedra da sua casa você ainda lembra de cor?', d: 'Frio, neblina, pedra e casas agarradas na encosta.' , costume: ["Pé de pedra", "+1 dado para escalar e andar em encosta. O frio da serra não te custa Sangue."], visual: "Lã grossa em camadas, mantas de tear e gorros de tricô, em cinza-azulado e terra queimada. Traços entalhados em plaquinhas de pedra-sabão penduradas no pescoço. Botas de couro amarradas até a canela." },
-  { k: 'litoral', n: 'O mar', pericia: 'Atletismo', sotaque: 'Maré', pergunta: 'Quem te levou para o mar pela primeira vez?', d: 'Praia aberta, vento, jangadas, vilas de pescador e sal.' , costume: ["Fôlego de mar", "Prende a respiração o dobro do tempo e nada, rema e aguenta onda sem perder dado."], visual: "Tecido leve que seca rápido, calça arregaçada, pés descalços e chapéu de palha largo, em azul anil e branco desbotados de sal. Rede de pesca usada como capa, colares de conchas. Traços riscados com sal molhado nos braços." },
-  { k: 'mangue', n: 'O mangue', pericia: 'Percepção', sotaque: 'Maré', pergunta: 'Quem te ensinou a ler a maré?', d: 'Palafitas, lama, raízes e o sobe e desce da maré.' , costume: ["Pé de lama", "Não perde dado andando na lama ou na água rasa, e de dia sempre sabe quando a maré vai virar."], visual: "Roupa curta de algodão grosso, manchada de lama cinza até a cintura, pés descalços e chapéu de palha. Cesto de caranguejo nas costas, lama seca na pele contra o mosquito. Traços riscados com lama do mangue nos braços." },
+  { k: 'litoral', n: 'O litoral e o mangue', pericia: 'Atletismo', sotaque: 'Litoral', pergunta: 'Quem te ensinou a ler a maré?', d: 'Praia aberta, palafitas, lama, raízes e o sobe e desce da maré.' , costume: ["Fôlego de maré", "Prende a respiração o dobro do tempo e não perde dado andando na lama ou na água rasa."], visual: "Tecido leve que seca rápido, calça arregaçada, pés descalços e chapéu de palha largo, em azul anil e branco desbotados de sal. Rede de pesca usada como capa, colares de conchas. Traços pintados com lama do mangue nos braços." },
   { k: 'seca', n: 'A terra seca', pericia: 'Sobrevivência', sotaque: 'Terra seca', pergunta: 'Que poço secou na sua infância?', d: 'Chão rachado, poços fundos, sol que pesa.' , costume: ["Sede curta", "Aguenta um dia inteiro sem água sem perder nada e ganha +1 dado para achar água."], visual: "Algodão cru claro, lenço cobrindo o rosto contra a poeira e couro curtido nas pernas contra os espinhos, em ocre e vermelho de barro. Traços riscados com carvão e cinza; sempre um tição na cintura." },
   { k: 'mata', n: 'A mata', pericia: 'Furtividade', sotaque: 'Mata', pergunta: 'Que som da mata te faz parar até hoje?', d: 'Árvores que cobrem o céu, rios, trilhas que somem.' , costume: ["Ouvido de mata", "+1 dado em Percepção para ouvir, e de dia você nunca se perde na mata."], visual: "Algodão tingido com casca e folha, em verde-escuro e marrom. Cesto trançado nas costas, colares de sementes. Traços riscados em pulseiras de fibra e em lascas de casca de árvore." },
   { k: 'cidade', n: 'Uma cidade de vigília', pericia: 'Saberes', sotaque: 'Cidades', pergunta: 'Você foi convocado, se ofereceu ou fugiu da convocação?', d: 'Muros, guarda, toque de recolher e ordem.' , costume: ["Papel em dia", "Você tem salvo-conduto: entra em cidades muradas sem ser barrado e ganha +1 dado em Lábia com guardas e autoridades."], visual: "Peças de uniforme reaproveitadas, botões de metal e braçadeira numerada da convocação, em cinza e ferrugem, as cores oficiais. Traços carimbados em placas de metal, todos iguais." },
@@ -359,7 +358,7 @@ export const PRONTOS = [
     respostaOrigem: 'O avô, que contava as ondas em voz alta.',
     protege: 'Davi, e quem estiver atrás dele na brecha. Não conseguiu proteger o irmão mais novo.',
     medo: 'Água escura subindo sem fazer barulho.' }),
-  pronto({ id: 'davi', nome: 'Davi', origem: 'estrada', sotaqueEstrada: 'Maré', oficio: 'mensageiro',
+  pronto({ id: 'davi', nome: 'Davi', origem: 'estrada', sotaqueEstrada: 'Litoral', oficio: 'mensageiro',
     conceito: 'Mensageiro que conhece cada abrigo entre a serra e o mar e conta o tempo pelo sol.',
     aparencia: 'Uns 25 anos, magro, pele parda, cachos com as laterais raspadas, brinco de argola. Roupa de remendos, funda enrolada no pulso, lanterna fechada na cintura, aliança de fio trançado.',
     atrib: { vigor: 2, agilidade: 4, juizo: 2, presenca: 2, firmeza: 1 },

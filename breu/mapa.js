@@ -1,7 +1,7 @@
 // Mapa compartilhado da mesa: cena, peças, escuro, círculos e movimento limitado por rodada.
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
-import * as R from './regras.js?v=3';
+import * as R from './regras.js?v=4';
 import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=22';
 
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
@@ -496,8 +496,15 @@ export function criarMapa(ctx) {
     if (a === 'circ') {
       const base = isGM() ? (sel && sel.kind !== 'circulo' ? sel : null) : meuPc();
       const x = base ? base.x : 0.5, y = base ? base.y : 0.5;
-      const forca = isGM() ? 10 : +(prompt('Força do círculo (o resultado da sua rolagem de Traços):', '10') || 0);
-      if (!isGM() && !forca) return;
+      let forca = 10;
+      if (!isGM()) {
+        const r = +(prompt('Qual foi o resultado da sua rolagem de Traços?', '') || 0); if (!r) return;
+        const ch = ctx.charById(meuPc()?.character_id), dom = ch ? R.domIndex(ch.data) > 0 : false;
+        const aceso = dom && confirm('Você tem o Dom. Gastar 1 Brasa para acender o traço? (OK = gastar, Cancelar = riscar apagado)');
+        forca = aceso && r >= 10 ? r : Math.floor(r / 2);
+        toast(aceso ? (r >= 10 ? `Traço aceso: força ${forca}. Avise o mestre que gastou 1 Brasa.` : `Não acendeu (precisa de 10). A Brasa se perdeu; traço apagado, força ${forca}.`) : `Traço apagado: força ${forca} (metade de ${r}).`);
+        if (!forca) return;
+      }
       const { data, error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'circulo', owner: uid(), nome: 'Círculo', x, y, ax: x, ay: y, data: { raio: +v, forca } }).select().single();
       if (error) { toast('Não consegui traçar.'); return; }
       if (!MP.tokens.some((x2) => x2.id === data.id)) MP.tokens.push(data);
