@@ -188,7 +188,7 @@ function noiteHtml() {
 
   ${passosHtml([
     { f: 'Pergunte onde cada um passa a noite', pergunte: '"A vila inteira está na casa de farinha. Onde vocês ficam: lá dentro, de vigia no trecho, no velório com o corpo, ou em outro lugar?"', app: 'Arraste as peças de cada um para onde disseram. Os Assombros entram pelos botões de cada fase, escondidos na borda do mapa.', acoes: [['cena', 'vila'], ['grupo']] },
-    { f: 'Comece a noite: Crepúsculo', d: 'A luz das cenas vivas escurece sozinha, e o app pede a cada jogador que role Firmeza (o Pavor). As respostas chegam na aba Rolagens.', acoes: [['fase', 0]] },
+    { f: 'Comece a noite: Crepúsculo', d: 'Aperte os dois botões, nesta ordem. Primeiro o vídeo da noite caindo passa para todos (22 segundos): a vila escurece e as fendas abrem lá fora. Quando acabar, aperte o segundo: a luz das cenas escurece sozinha, e o app pede a cada jogador que role Firmeza (o Pavor). As respostas chegam na aba Rolagens.', acoes: [['video', 'noite'], ['fase', 0]] },
   ], 'Antes de escurecer')}
 
   ${passosHtml([

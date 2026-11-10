@@ -3,7 +3,7 @@
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=12';
+import { criarGuia, faixaDe } from './guia.js?v=13';
 import { ROLA, FX_C } from './guia-dados.js?v=9';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
@@ -12,6 +12,7 @@ const ORDEM_CENAS = Object.keys(CENAS_VIVAS);
 const CURTO = { estrada: 'Estrada', vila: 'Vila', moco: 'Mocó', velorio: 'Velório', farinha: 'Casa de farinha', zuleide: 'Zuleide' };
 const VIDEOS = {
   abertura: { src: 'video/abertura.mp4', nome: 'a abertura', fim: 'Pular e abrir a estrada' },
+  noite: { src: 'video/noite.mp4', nome: 'a noite caindo', fim: 'Fechar o vídeo' },
   fenda: { src: 'video/fenda.mp4', nome: 'a fenda abrindo', fim: 'Fechar o vídeo' },
   celeste: { src: 'video/celeste.mp4', nome: 'a bordadeira se revelando', fim: 'Fechar o vídeo' },
 };
@@ -422,7 +423,7 @@ export function criarMesa(ctx) {
   }
   function mostrarProgresso(q) { if (video?.dataset.qual !== q) return; const b = video.querySelector('.vd-carrega i'); if (b) b.style.width = Math.round(vids[q].progresso * 100) + '%'; }
   // baixa a abertura primeiro, depois os vídeos da noite
-  const preCarregarVideo = () => setTimeout(() => baixarVideo('abertura').then(() => baixarVideo('fenda')).then(() => baixarVideo('celeste')), 1500);
+  const preCarregarVideo = () => setTimeout(() => baixarVideo('abertura').then(() => baixarVideo('noite')).then(() => baixarVideo('fenda')).then(() => baixarVideo('celeste')), 1500);
   // o vídeo toca para todos, por cima do mapa (não em tela cheia)
   async function tocarVideo(qual) {
     if (!isGM()) return;
