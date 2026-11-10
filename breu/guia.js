@@ -1,5 +1,5 @@
 // O guia da mesa, dentro do app: o mestre segue a sessão por aqui e aperta os botões que mexem no mapa.
-import { GENTE, VISTO, ROLA, FX_C, PISTAS, PISTA_ONDE, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=11';
+import { GENTE, VISTO, ROLA, FX_C, PISTAS, PISTA_ONDE, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=12';
 
 export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {} };
 // o que o grupo conseguiu durante o dia; muda o conserto, o corpo e a noite
@@ -188,6 +188,12 @@ function noiteHtml() {
 
   ${passosHtml([
     { f: 'Pergunte onde cada um passa a noite', pergunte: '"A vila inteira está na casa de farinha. Onde vocês ficam: lá dentro, de vigia no trecho, no velório com o corpo, ou em outro lugar?"', app: 'Arraste as peças de cada um para onde disseram. Os Assombros entram pelos botões de cada fase, escondidos na borda do mapa.', acoes: [['cena', 'vila'], ['grupo']] },
+    { f: 'Explique a noite (é a primeira vez deles)', d: 'Antes do vídeo. A noite tem regras novas, e é agora que elas importam. Leia com calma:', leia: [
+['O mapa e a noite', 'No mapa, cada um arrasta o seu personagem. Dá para andar até 6 passos por rodada; quando eu aperto Nova rodada, libera de novo. À noite, jogamos em rodadas: vocês dizem o que fazem, rolam o que eu pedir, e depois os Assombros agem.'],
+['A regra mais importante', 'Assombro não atravessa linha de cal: ele investe contra ela, e cada investida enfraquece a linha. E arma comum não mata Assombro, só empurra. Para ferir de verdade, a arma precisa estar marcada com um traço.'],
+['O corpo e a cabeça', 'Na ficha tem o Sangue, que é o corpo: se zera, cai. O Prumo é a cabeça: se zera, entra em pânico. Quem tem o Dom tem Brasa, que gasta para acender os traços. E tem o Pavor: cada vez que a noite muda de fase, todo mundo rola Firmeza, e quem falha ganha 1 Pavor. Cada Pavor tira um dado de tudo até o amanhecer. Encorajar alguém tira 1. E quem perde metade do Sangue fica ferido e também rola um dado a menos. O app já desconta o Pavor e o ferido sozinho.'],
+['Exemplo 3', 'O Damião está com 1 de Pavor. A Firmeza dele é 3, mas o Pavor tira um dado: ele rola 2. O app já faz essa conta sozinho.'],
+['Exemplo 4', 'Se o Pavor tirar todos os dados, a mão fica vazia: rola 2 dados e fica com o pior. É quando o medo toma conta.']] },
     { f: 'Comece a noite: Crepúsculo', d: 'Aperte os dois botões, nesta ordem. Primeiro o vídeo da noite caindo passa para todos (22 segundos): a vila escurece e as fendas abrem lá fora. Quando acabar, aperte o segundo: a luz das cenas escurece sozinha, e o app pede a cada jogador que role Firmeza (o Pavor). As respostas chegam na aba Rolagens.', acoes: [['video', 'noite'], ['fase', 0]] },
   ], 'Antes de escurecer')}
 
