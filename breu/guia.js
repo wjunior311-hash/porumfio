@@ -239,7 +239,7 @@ function auroraHtml() {
   return `
   <div class="g-meta"><span class="g-pill tempo">10 min</span></div>
   <div class="g-acoes">${acaoBtn(['fase', 4])}</div>
-  ${leiaHtml([['', 'O sol aparece por cima da caatinga como se nada tivesse acontecido. A luz entra pelas frestas das portas. O Pavor vai saindo do corpo devagar, como água de roupa no varal.'], ['', 'A vila conta quem sobrou.']])}
+  ${leiaHtml([['', 'O sol aparece por cima do mato seco como se nada tivesse acontecido. A luz entra pelas frestas das portas. O Pavor vai saindo do corpo devagar, como água de roupa no varal.'], ['', 'A vila conta quem sobrou.']])}
   <section class="g-bloco"><h3 class="g-rot">O que contar, pelo que aconteceu</h3><div class="g-mestre">${fim.map((f) => `<p>${f}</p>`).join('')}</div></section>
   <section class="g-bloco"><h3 class="g-rot">Se alguém pegou o caderno</h3>${leiaHtml([['A última página', '"A romaria passa na lua nova. O sinal é a vila sem soleira."']])}<p class="g-instr">É o gancho para a próxima sessão. Se ninguém pegou, o caderno some com Celeste.</p></section>
   <section class="g-bloco"><h3 class="g-rot">Para fechar</h3><div class="g-trava">Pergunte a cada jogador, um de cada vez: <b>o que o seu personagem leva desta noite?</b> Uma frase basta. É o fim da sessão.</div></section>`;
@@ -295,7 +295,7 @@ function mapaHtml() {
     <h4>Mostre, não conte</h4><p>Quando um NPC faz algo escondido, você não diz "ela usou um poder". Você descreve o que os personagens veem e deixa os jogadores concluírem. A página da noite já traz o texto de cada caso.</p>
     <h4>Como rodar uma luta</h4><ul><li>Diga "agora a noite anda em rodadas".</li><li>Os jogadores agem primeiro, na ordem que quiserem: cada um anda e faz uma ação.</li><li>Depois os Assombros agem. Eles atacam rolando a mão contra a Defesa do personagem, ou contra a força do círculo.</li><li>Atacar é Luta ou Pontaria contra a Defesa do Assombro. Acertou: role o dano e tire do Sangue dele no app. Arma sem traço não fere: só faz ele perder o próximo movimento.</li><li>No app, aperte <b>Nova rodada</b> a cada volta.</li></ul>
     <h4>Círculo e brecha</h4><p>Cada investida que não supera a força do círculo tira 3 dela. Uma que supera abre uma brecha: fechar leva uma rodada inteira e uma nova rolagem de Traços.</p>
-    <h4>Seis jogadores</h4><p>Se alguém está calado há tempo, vire para ele: "e você, Kaeleen, enquanto isso?" É metade do trabalho.</p>
+    <h4>Muitos jogadores</h4><p>Se alguém está calado há tempo, vire para ele: "e você, Flecha, enquanto isso?" É metade do trabalho.</p>
     <h4>Os NPCs vêm até eles</h4><p>Se a mesa parar, alguém da vila aparece com o que quer. A vila não espera.</p>`,
 };
 
