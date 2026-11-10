@@ -1,5 +1,5 @@
 // O guia da mesa, dentro do app: o mestre segue a sessão por aqui e aperta os botões que mexem no mapa.
-import { GENTE, VISTO, ROLA, FX_C, PISTAS, PISTA_ONDE, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=13';
+import { GENTE, VISTO, ROLA, FX_C, PISTAS, PISTA_ONDE, MUNDO, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=14';
 
 export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {} };
 // o que o grupo conseguiu durante o dia; muda o conserto, o corpo e a noite
@@ -374,6 +374,8 @@ function mapaHtml() {
       ${g.conversa ? `<h4>Se perguntarem…</h4>${g.conversa.dica ? `<p class="g-cinza">${g.conversa.dica}</p>` : ''}
         <div class="g-conversa">${g.conversa.linhas.map(([q, r]) => `<details><summary>${q}</summary><p>${r}</p></details>`).join('')}</div>
         ${g.conversa.rola ? `<h4>Para arrancar mais dela, peça uma rolagem</h4>${rolaHtml(g.conversa.rola)}` : ''}` : `<h4>Falas prontas</h4>${g.falas.map((f) => `<p class="g-fala">${f}</p>`).join('')}`}
+      <h4>Se perguntarem do mundo ou da vila</h4><p class="g-cinza">${g.mundo || ''}</p>
+        <div class="g-conversa">${MUNDO.map(([q, r]) => `<details><summary>${q}</summary><p>${r}</p></details>`).join('')}</div>
       <h4>O que só você sabe</h4><div class="g-mestre"><p>${g.segredo}</p></div>
       <h4>Quem é</h4><p>${g.como}</p>`);
   }

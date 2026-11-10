@@ -3,8 +3,8 @@ import * as R from './regras.js?v=4';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
-import { criarMapa } from './mapa.js?v=40';
-import { criarMesa } from './mesa.js?v=32';
+import { criarMapa } from './mapa.js?v=41';
+import { criarMesa } from './mesa.js?v=33';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
