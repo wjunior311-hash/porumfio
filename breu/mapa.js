@@ -2,14 +2,14 @@
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
 import { ASS_TEXTO } from './ass-texto.js?v=1';
-import * as R from './regras.js?v=4';
+import * as R from './regras.js?v=5';
 import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=22';
 
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
 const VENTOS = [[0.15, 'Vento calmo'], [0.45, 'Vento médio'], [0.85, 'Vento forte']];
 
 // o elenco da one-shot: quem tem retrato entra no mapa com ele
-const ELENCO = [['Celeste', 'celeste'], ['Zeca', 'zeca'], ['Brás', 'bras'], ['Rosário', 'rosario'], ['Bento', 'bento'], ['Dona Lindalva', 'lindalva'], ['Dona Zuleide', 'zuleide', 1], ['Seu Orlando', 'orlando', 1], ['Joana', 'joana', 1], ['Dona Firmina', 'firmina', 1]];
+const ELENCO = [['Celeste', 'celeste'], ['Zeca', 'zeca'], ['Brás', 'bras'], ['Rosário', 'rosario'], ['Bento', 'bento'], ['Dona Lindalva', 'lindalva'], ['Dona Zuleide', 'zuleide'], ['Seu Orlando', 'orlando'], ['Joana', 'joana'], ['Dona Firmina', 'firmina']];
 // onde cada pessoa da vila fica: entram sozinhas na primeira vez que a cena vai ao ar.
 // Quem tem 1 no fim entra escondido: ainda não foi apresentado na chegada.
 const NPC_LUGAR = {

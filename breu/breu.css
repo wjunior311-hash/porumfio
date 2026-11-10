@@ -388,3 +388,7 @@ details.prontos summary { cursor: pointer; font-family: var(--label); letter-spa
 /* peças com recorte de rosto em fundo claro */
 .mp-tok.k-pc, .mp-tok.k-npc { background: #efe8da; }
 .mp-tok.k-pc img[src*="/tok/"], .mp-tok.k-npc img[src*="/tok/"] { object-position: 50% 50%; }
+.gen-tg { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 12.5px; }
+.gen-tg span { color: var(--osso3, #7a7a76); }
+.gen-tg button { border: 1px solid var(--line2, #2a313b); background: transparent; color: inherit; border-radius: 999px; padding: 3px 10px; font: inherit; cursor: pointer; opacity: .75; }
+.gen-tg button.on { border-color: var(--brasa, #c2552f); opacity: 1; }

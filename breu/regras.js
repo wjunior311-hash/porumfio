@@ -167,7 +167,12 @@ export const pontosTotais = (p) => (p.dom === 'faisca' ? 5 : 6);
 export const pontosUsados = (p) => ATRIBUTOS.reduce((a, x) => a + (p.atrib[x.k] - 1), 0);
 
 export function origemDe(p) { return ORIGENS.find((o) => o.k === p.origem); }
-export function oficioDe(p) { return OFICIOS.find((o) => o.k === p.oficio); }
+// o nome do ofício e do caminho no gênero de quem joga (p.genero: 'f' ou 'm'; sem isso, o nome do livro)
+const NOME_F = { mensageiro: 'Mensageira', riscador: 'Riscadora', rezadeira: 'Rezadeira / Ervateira', cantador: 'Cantadora', cacador: 'Caçadora', guardiao: 'Guardiã', pozeiro: 'Pozeira',
+  batedor: 'Batedora', embaixador: 'Embaixadora', marcador: 'Marcadora', curandeira: 'Curandeira', benzedeira: 'Benzedeira', rastreador: 'Rastreadora', matador: 'Matadora de Assombros', memoria: 'Guardiã da Memória', polvorista: 'Polvorista', fumaceira: 'Fumaceira' };
+const NOME_M = { rezadeira: 'Rezador / Ervateiro', curandeira: 'Curandeiro', benzedeira: 'Benzedeiro', fumaceira: 'Fumaceiro' };
+const noGenero = (x, p) => { if (!x) return x; const g = p?.genero, n = g === 'f' ? NOME_F[x.k] : g === 'm' ? NOME_M[x.k] : null; return n ? { ...x, n } : x; };
+export function oficioDe(p) { const o = OFICIOS.find((x) => x.k === p.oficio); return o && p?.genero ? { ...noGenero(o, p), caminhos: o.caminhos.map((c) => noGenero(c, p)) } : o; }
 export function caminhoDe(p) { return oficioDe(p)?.caminhos.find((c) => c.k === p.caminho); }
 const melh = (p, tipo) => norm(p).melhorias.filter((m) => m.tipo === tipo);
 

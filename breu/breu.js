@@ -1,10 +1,10 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import * as R from './regras.js?v=4';
+import * as R from './regras.js?v=5';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
-import { criarMapa } from './mapa.js?v=42';
-import { criarMesa } from './mesa.js?v=34';
+import { criarMapa } from './mapa.js?v=43';
+import { criarMesa } from './mesa.js?v=35';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -597,7 +597,7 @@ function sheetBody(p, c = null) {
   return `<div class="ficha"><div class="f-a">
     <div class="sheet-head">
       <div class="pic ${c ? estCls(c) : ''}${p.pronto || p.retrato ? ' retrato' : ''}">${of ? `<img src="${c ? picChar(c) : picOf(p)}" alt="">` : ''}</div>
-      <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, cam?.n, or?.n].filter(Boolean).join(' · '))}</p><h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}${c && R.marcosGanhos(p) ? `<span class="chip" style="margin-top:8px;display:inline-block">${R.patamar(p).n}</span>` : ''}</div>
+      <div><p class="lbl" style="margin:0 0 4px">${esc([of?.n, cam?.n, or?.n].filter(Boolean).join(' · '))}</p>${c && of && (c.owner === S.session?.user.id || isGM()) ? `<div class="gen-tg"><span>Ofício no</span><button data-genero="m" class="${p.genero === 'm' ? 'on' : ''}">masculino</button><button data-genero="f" class="${p.genero === 'f' ? 'on' : ''}">feminino</button></div>` : ''}<h1>${esc(p.nome || 'Sem nome')}</h1>${p.conceito ? `<p class="sub" style="margin:6px 0 0">${esc(p.conceito)}</p>` : ''}${c && R.marcosGanhos(p) ? `<span class="chip" style="margin-top:8px;display:inline-block">${R.patamar(p).n}</span>` : ''}</div>
     </div>
     ${c && c.status === 'aprovado' && !p.pronto && !p.periciaLivre && canEdit(c) ? `<div class="evo livre"><div><span class="lbl">Regra nova</span><p style="margin:4px 0 0">Agora todo personagem começa com uma <b>perícia livre</b>, além das três da origem e do ofício.</p></div></div>${livrePicker(p, 'data-livre="1"')}` : ''}
     ${c ? evoBanner(c) : ''}
@@ -818,7 +818,7 @@ function viewAdmin() {
 document.addEventListener('click', async (e) => {
   if (route().name === 'mapa' && e.target.closest('[data-mp]')) { await MAPA.click(e); return; }
   if (MESA && await MESA.click(e)) return;
-  const t = e.target.closest('[data-dia],[data-po],[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-ret],[data-livre],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
+  const t = e.target.closest('[data-dia],[data-po],[data-mesa-marca],[data-nt],[data-nt-pjs],[data-nt-fam],[data-nt-rm],[data-nt-pdif],[data-trk],[data-ret],[data-livre],[data-genero],[data-panico],[data-roll-attr],[data-roll-per],[data-roll-dmg],[data-ro-attr],[data-ro-adj],[data-ro-dif],[data-pronto],[data-act],[data-set],[data-attr],[data-ess],[data-evo-tipo],[data-evo-alvo],[data-evo-sangue],[data-evo-caminho]');
   if (!t) return;
   const wiz = t.closest('.wiz');
   const c = wiz ? charById(wiz.dataset.char) : null;
@@ -872,6 +872,7 @@ document.addEventListener('click', async (e) => {
   if (ui.roller && t.dataset.roAttr) { ui.roller.attr = t.dataset.roAttr; ui.roller.res = null; rerender(); return; }
   if (ui.roller && t.dataset.roAdj) { ui.roller.ajuste = Math.max(-5, Math.min(4, ui.roller.ajuste + +t.dataset.roAdj)); ui.roller.res = null; rerender(); return; }
   if (ui.roller && t.dataset.roDif) { const n = +t.dataset.roDif; ui.roller.dif = ui.roller.dif === n ? 0 : n; ui.roller.res = null; rerender(); return; }
+  if (t.dataset.genero) { const c = charById(route().arg); if (!c || c.owner !== S.session?.user.id && !isGM()) return; c.data.genero = t.dataset.genero; await saveNow(c); rerender(); return; }
   if (t.dataset.livre) { const c = charById(route().arg); if (!c || c.owner !== S.session?.user.id && !isGM()) return; c.data.periciaLivre = t.dataset.v; await saveNow(c); rerender(); toast('Perícia livre escolhida.'); return; }
   if (route().name === 'mapa' && isGM() && (t.dataset.trk || t.dataset.panico)) {
     S.noite ||= novaNoite(); const n = S.noite;
