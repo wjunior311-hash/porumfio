@@ -3,8 +3,8 @@ import * as R from './regras.js?v=4';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
-import { criarMapa } from './mapa.js?v=38';
-import { criarMesa } from './mesa.js?v=29';
+import { criarMapa } from './mapa.js?v=39';
+import { criarMesa } from './mesa.js?v=31';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -282,9 +282,10 @@ function viewMesa() {
 // ---------- painel do mestre: a noite ----------
 let noiteSalvando = false;
 const aprovados = () => S.chars.filter((c) => c.status === 'aprovado');
+const naSessao = () => aprovados().filter((c) => !(S.mesa?.ausentes || []).includes(c.id));
 const bestOf = (id) => M.BESTIARIO.find((b) => b.id === id);
 function novaNoite() {
-  const pjs = Math.max(1, aprovados().length || 4);
+  const pjs = Math.max(1, naSessao().length || 4);
   return { tipo: 'dura', pjs, familias: [], fases: [[], [], [], []], fase: -1, pavorDif: 15, pressagio: null, paisagem: 'A terra seca', complicacao: null, circulo: 14, grupo: {}, log: [] };
 }
 async function salvarNoite() {

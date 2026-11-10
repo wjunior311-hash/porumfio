@@ -5,8 +5,8 @@ import * as M from './mestre-dados.js';
 import { abrirTour, jaViu } from './tutorial.js?v=1';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=18';
-import { ROLA, FX_C } from './guia-dados.js?v=12';
+import { criarGuia, faixaDe } from './guia.js?v=19';
+import { ROLA, FX_C } from './guia-dados.js?v=13';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
 const ATN = Object.fromEntries(R.ATRIBUTOS.map((a) => [a.k, a.n]));
@@ -24,7 +24,8 @@ export function criarMesa(ctx) {
   const { sb, S, esc, toast, isGM, MAPA } = ctx;
   const A = MAPA.api;
   const U = { aba: 'rolagens', novas: 0, scroll: 0, dk: false };
-  const pjs = () => S.chars.filter((c) => c.status === 'aprovado');
+  const pjs = () => S.chars.filter((c) => c.status === 'aprovado' && !(S.mesa?.ausentes || []).includes(c.id));
+  const ausentes = () => S.chars.filter((c) => c.status === 'aprovado' && (S.mesa?.ausentes || []).includes(c.id));
   const noMapa = () => ctx.route().name === 'mapa';
   const desktop = () => isGM() && window.innerWidth >= 1100;
 
@@ -193,8 +194,9 @@ export function criarMesa(ctx) {
           <select class="ms-est" data-ms-est="${c.id}" aria-label="Retrato de ${esc(c.data.nome)}">${ctx.ESTADOS.map(([k, l]) => `<option value="${k}" ${(S.noite?.retrato?.[c.id] || 'auto') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
         <div class="ms-cnts">${cnt('sangue', b.sangue, 'Sangue')}${cnt('prumo', b.prumo, 'Prumo')}${cnt('pavor', null, 'Pavor')}${cnt('brasa', b.brasa, 'Brasa')}</div>
         <div class="ms-vig"><span>Vigias</span><button data-trk="${c.id}:vigias:-5">−5</button><button data-trk="${c.id}:vigias:-1">−1</button><b>${t.vigias ?? 25}</b><button data-trk="${c.id}:vigias:1">+1</button><button data-trk="${c.id}:vigias:5">+5</button></div>
-        ${t.prumo <= 0 ? `<button class="btn sm" data-panico="${c.id}">Rolar o pânico</button>` : ''}</div>`;
-    }).join('')}</div>`;
+        ${t.prumo <= 0 ? `<button class="btn sm" data-panico="${c.id}">Rolar o pânico</button>` : ''}
+        <button class="ms-fora" data-ms="ausente" data-v="${c.id}">O jogador saiu: tirar da sessão</button></div>`;
+    }).join('')}</div>${ausentes().map((c) => `<div class="ms-aus"><span class="ms-pic"><img src="${esc(ctx.picChar(c))}" alt=""></span><div><b>${esc(c.data.nome)}</b><small>Fora desta sessão. Se o jogador chegar, aperte o botão: a peça entra na cena que está no ar. O guia, em Se acontecer, diz como pôr na história.</small></div><button class="btn sm primary" data-ms="chegou" data-v="${c.id}">Chegou: pôr na mesa</button></div>`).join('')}`;
   }
 
   // ---------- pintar sem recarregar a tela ----------
@@ -531,6 +533,14 @@ export function criarMesa(ctx) {
       if (a === 'aba') { U.aba = v; if (v === 'rolagens') U.novas = 0; pintarPainel(); return true; }
       if (a === 'video') { tocarVideo(v || 'abertura'); return true; }
       if (a === 'fase') { t.disabled = true; await virar(); return true; }
+      if (a === 'ausente' || a === 'chegou') {
+        const id = t.dataset.v, l = new Set(S.mesa?.ausentes || []);
+        a === 'ausente' ? l.add(id) : l.delete(id);
+        S.mesa = { ...(S.mesa || {}), ausentes: [...l] };
+        await sb.from('breu_state').upsert({ key: 'mesa', value: S.mesa, updated_at: new Date().toISOString() });
+        if (a === 'chegou') { await A.porGrupo(); toast(`${ctx.charById(id)?.data.nome || 'O personagem'} entrou na mesa.`); }
+        pintarPainel(); repintar(); return true;
+      }
       if (a === 'aceso') { U.aceso = t.dataset.v === '1'; pintarPainel(); return true; }
       if (a === 'circ') { ctx.garantirNoite(); const f = S.noite.circulo ?? 14, v = +t.dataset.v; S.noite.circulo = v === 0 ? 0 : Math.max(0, f + v); ctx.logNoite(v === 0 ? 'O círculo abriu uma brecha.' : `Força do círculo: ${S.noite.circulo}.`); await ctx.salvarNoite(); pintarPainel(); return true; }
       if (a === 'tela-preta') { await A.esconderCena(); pintarTopo(); toast('Os jogadores estão sem cena.'); return true; }

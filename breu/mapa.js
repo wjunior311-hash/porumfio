@@ -279,7 +279,7 @@ export function criarMapa(ctx) {
   function addHtml() {
     if (!cena()) return '';
     const naCena = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id));
-    const faltam = S.chars.filter((ch) => ch.status === 'aprovado' && !naCena.has(ch.id));
+    const faltam = S.chars.filter((ch) => ch.status === 'aprovado' && !(S.mesa?.ausentes || []).includes(ch.id) && !naCena.has(ch.id));
     return `<div class="mp-add">
         ${faltam.length ? `<button class="btn sm" data-mp="grupo">Colocar o grupo (${faltam.length})</button>` : ''}
         <select class="field sm" data-mpbest><option value="">+ Assombro (entra escondido)</option>${['Cinza', 'Raiz', 'Osso', 'Sopro', 'Lodo', 'Velho'].map((f) => `<optgroup label="${f}">${M.BESTIARIO.filter((b) => (f === 'Velho' ? b.grau === 'Velho' : b.familia === f && b.grau !== 'Velho')).map((b) => `<option value="${b.id}">${esc(b.nome)} · ${b.grau}</option>`).join('')}</optgroup>`).join('')}</select>
@@ -664,7 +664,7 @@ export function criarMapa(ctx) {
   async function porGrupo() {
     const c = cena(); if (!c) return;
     const naCena = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id));
-    const faltam = S.chars.filter((ch) => ch.status === 'aprovado' && !naCena.has(ch.id));
+    const faltam = S.chars.filter((ch) => ch.status === 'aprovado' && !(S.mesa?.ausentes || []).includes(ch.id) && !naCena.has(ch.id));
     if (!faltam.length) { toast('O grupo já está na cena.'); return; }
     // o grupo entra junto, perto do centro de baixo
     const usados = [];
@@ -710,7 +710,7 @@ export function criarMapa(ctx) {
     setMesa: (v) => { MP.mesa = v; }, efeitoTodos, levar, separados, minhaCena, cenas: () => MP.cenas, ativa: () => MP.ativa, ver: () => MP.ver, cena, cenaDe, garantirCena, verCena, mostrarCena, esconderCena,
     porGrupo, porNpc, porAssombro, revelarAssombro, trocarForma, formaDe, tokens: () => MP.tokens,
     temNpc: (nome) => MP.tokens.some((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(nome)),
-    grupoFalta: () => { const na = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id)); return S.chars.filter((ch) => ch.status === 'aprovado' && !na.has(ch.id)).length; },
+    grupoFalta: () => { const na = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id)); return S.chars.filter((ch) => ch.status === 'aprovado' && !(S.mesa?.ausentes || []).includes(ch.id) && !na.has(ch.id)).length; },
     stageHtml, barHtml, sideHtml, addHtml, listaCenas, formNovaCena, paintBar, paintSide, loaded: () => MP.loaded,
   };
 

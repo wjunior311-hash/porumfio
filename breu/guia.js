@@ -1,5 +1,5 @@
 // O guia da mesa, dentro do app: o mestre segue a sessão por aqui e aperta os botões que mexem no mapa.
-import { GENTE, VISTO, ROLA, FX_C, PISTAS, PISTA_ONDE, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=12';
+import { GENTE, VISTO, ROLA, FX_C, PISTAS, PISTA_ONDE, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=13';
 
 export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {} };
 // o que o grupo conseguiu durante o dia; muda o conserto, o corpo e a noite
@@ -37,7 +37,7 @@ export function criarGuia(ctx) {
   function mudar(patch) { E = { ...E, ...patch }; ctx.salvar(E); }
 
   // ---------- dados dos personagens, tirados das fichas ----------
-  const pjs = () => S.chars.filter((c) => c.status === 'aprovado');
+  const pjs = () => S.chars.filter((c) => c.status === 'aprovado' && !(S.mesa?.ausentes || []).includes(c.id));
   function dadosDe(c, per) {
     const p = c.data, at = R.atrib(p);
     if (ATR_DIRETO[per]) return { n: at[ATR_DIRETO[per]] || 1, b: 0 };

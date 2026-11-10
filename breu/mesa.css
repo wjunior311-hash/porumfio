@@ -585,3 +585,9 @@ div.g-rec b { font-family: var(--display); color: var(--claro); }
 .retrato figcaption span { color: var(--osso2); font-size: 14.5px; }
 .retrato figcaption small { color: var(--osso3); font-size: 12.5px; }
 @keyframes ret-in { from { opacity: 0; transform: scale(.97); } }
+.ms-fora { background: none; border: 0; color: var(--osso3); font-size: 12.5px; text-decoration: underline; cursor: pointer; justify-self: start; padding: 2px 0; }
+.ms-aus { display: grid; grid-template-columns: 40px 1fr; gap: 6px 10px; align-items: center; padding: 10px; border: 1px dashed var(--line2); border-radius: 10px; margin-top: 10px; opacity: .9; }
+.ms-aus .ms-pic { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; filter: grayscale(1); }
+.ms-aus .ms-pic img { width: 100%; height: 100%; object-fit: cover; }
+.ms-aus small { display: block; color: var(--osso3); font-size: 12.5px; }
+.ms-aus button { grid-column: 1 / -1; }
