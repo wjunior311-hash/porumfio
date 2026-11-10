@@ -283,6 +283,7 @@ export const MOMENTOS = {
     voltar: true },
   celeste: { ato: 3, titulo: 'A bordadeira na sombra', lugar: true, app: 'A vila de luto', quem: ['celeste'],
     leia: [['', 'Ela está na sombra, costurando a mortalha, e sorri antes de vocês chegarem. Já tem uma caneca de chá estendida.']],
+    passos: [{ f: 'Se ela for descoberta (o pó no braço, ou as pistas jogadas na cara dela)', d: 'Aperte os três botões, nesta ordem: o vídeo passa para todos (13 segundos), e depois as peças dela e do moço dos baldes mudam no mapa. Marque <b>Descoberta</b> na aba A história.', acoes: [['video', 'celeste'], ['forma', 'Celeste'], ['forma', 'Zeca']] }],
     opcoes: [{ t: 'Ler o que ela não diz', rola: 'conversaCeleste' }, { t: 'Ficar de olho nela a tarde toda', rola: 'observar' }, { t: 'Acusar ela de dia', nota: 'Ela não luta. Chora, nega, e diz que foi o homem de cabeça raspada. A vila tende a acreditar nela. Se prenderem, ela espera a Hora Morta para fugir e abrir o círculo no caminho. Marque na aba A história.' }, { t: 'Jogar o pó do homem tatuado no braço dela', nota: 'O pó chia e fumega. Debaixo da manga aparecem as Marcas riscadas na pele. A vila vê. Marque na aba A história: <b>Descoberta</b>.' }],
     mestre: ['Sob o sol, ela rola <b>um dado a menos</b> em tudo.', 'Os Assombros não atacam ela, a menos que ela seja atacada ou esteja sangrando.'],
     voltar: true },

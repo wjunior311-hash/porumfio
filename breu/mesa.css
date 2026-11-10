@@ -534,3 +534,4 @@ div.g-rec b { font-family: var(--display); color: var(--claro); }
 .g-pistas ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
 .g-pistas li { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 10px; border: 1px solid var(--linha); border-radius: 8px; font-size: 14.5px; }
 .g-pistas li.on { border-color: var(--mato); color: #c7dbb0; }
+.vd-carrega[hidden], .vd-som[hidden] { display: none !important; }

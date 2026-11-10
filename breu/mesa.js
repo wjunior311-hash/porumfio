@@ -3,14 +3,18 @@
 import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=11';
-import { ROLA, FX_C } from './guia-dados.js?v=8';
+import { criarGuia, faixaDe } from './guia.js?v=12';
+import { ROLA, FX_C } from './guia-dados.js?v=9';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
 const ATN = Object.fromEntries(R.ATRIBUTOS.map((a) => [a.k, a.n]));
 const ORDEM_CENAS = Object.keys(CENAS_VIVAS);
 const CURTO = { estrada: 'Estrada', vila: 'Vila', moco: 'Mocó', velorio: 'Velório', farinha: 'Casa de farinha', zuleide: 'Zuleide' };
-const VIDEO = 'video/abertura.mp4';
+const VIDEOS = {
+  abertura: { src: 'video/abertura.mp4', nome: 'a abertura', fim: 'Pular e abrir a estrada' },
+  fenda: { src: 'video/fenda.mp4', nome: 'a fenda abrindo', fim: 'Fechar o vídeo' },
+  celeste: { src: 'video/celeste.mp4', nome: 'a bordadeira se revelando', fim: 'Fechar o vídeo' },
+};
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 
 export function criarMesa(ctx) {
@@ -34,7 +38,7 @@ export function criarMesa(ctx) {
   function nomeCena(key) { return A.cenaDe(key)?.nome || CENAS_VIVAS[key]?.nome || key; }
   function nomeBest(id) { return M.BESTIARIO.find((b) => b.id === id)?.nome || 'Assombro'; }
   function nomeAcao(tipo, v) {
-    if (tipo === 'video') return 'Passar a abertura para todos';
+    if (tipo === 'video') return `Passar ${(VIDEOS[v] || VIDEOS.abertura).nome} para todos`;
     if (tipo === 'cena') { const c = A.cenaDe(v); return c && A.ativa() === c.id ? `✓ No ar: ${nomeCena(v)}` : `Mostrar: ${nomeCena(v)}`; }
     if (tipo === 'grupo') { const n = A.grupoFalta(); return n ? `Colocar o grupo no mapa (${n})` : '✓ O grupo está no mapa'; }
     if (tipo === 'npc') return A.temNpc(v) ? `✓ ${v} está no mapa` : `Pôr ${v} no mapa`;
@@ -49,7 +53,7 @@ export function criarMesa(ctx) {
     return null;
   }
   async function acao(tipo, v) {
-    if (tipo === 'video') { tocarVideo(); return; }
+    if (tipo === 'video') { tocarVideo(v); return; }
     if (tipo === 'cena') { const c = await A.garantirCena(v); if (c) await A.mostrarCena(c.id); }
     else if (tipo === 'grupo') await A.porGrupo();
     else if (tipo === 'npc') await A.porNpc(v);
@@ -399,27 +403,30 @@ export function criarMesa(ctx) {
   // ---------- o vídeo de abertura ----------
   let video = null, preVideo = null;
   // o vídeo inteiro é baixado antes, para tocar sem travar; quem abre o app já começa a baixar
-  let videoUrl = null, baixando = null, progresso = 0;
-  function baixarVideo() {
-    baixando ||= (async () => {
+  const vids = {}; // qual -> { url, baixando, progresso }
+  const qualDe = (q) => (VIDEOS[q] ? q : 'abertura');
+  function baixarVideo(q = 'abertura') {
+    q = qualDe(q); const d = vids[q] ||= { url: null, baixando: null, progresso: 0 };
+    d.baixando ||= (async () => {
       try {
-        const r = await fetch(VIDEO, { cache: 'force-cache' });
+        const r = await fetch(VIDEOS[q].src, { cache: 'force-cache' });
         const total = +r.headers.get('content-length') || 0, partes = [];
         const leitor = r.body.getReader(); let n = 0;
-        for (;;) { const { done, value } = await leitor.read(); if (done) break; partes.push(value); n += value.length; if (total) { progresso = n / total; mostrarProgresso(); } }
-        videoUrl = URL.createObjectURL(new Blob(partes, { type: 'video/mp4' }));
-      } catch { videoUrl = VIDEO; }
-      progresso = 1; mostrarProgresso();
-      return videoUrl;
+        for (;;) { const { done, value } = await leitor.read(); if (done) break; partes.push(value); n += value.length; if (total) { d.progresso = n / total; mostrarProgresso(q); } }
+        d.url = URL.createObjectURL(new Blob(partes, { type: 'video/mp4' }));
+      } catch { d.url = VIDEOS[q].src; }
+      d.progresso = 1; mostrarProgresso(q);
+      return d.url;
     })();
-    return baixando;
+    return d.baixando;
   }
-  function mostrarProgresso() { const b = video?.querySelector('.vd-carrega i'); if (b) b.style.width = Math.round(progresso * 100) + '%'; }
-  const preCarregarVideo = () => setTimeout(baixarVideo, 1500);
+  function mostrarProgresso(q) { if (video?.dataset.qual !== q) return; const b = video.querySelector('.vd-carrega i'); if (b) b.style.width = Math.round(vids[q].progresso * 100) + '%'; }
+  // baixa a abertura primeiro, depois os vídeos da noite
+  const preCarregarVideo = () => setTimeout(() => baixarVideo('abertura').then(() => baixarVideo('fenda')).then(() => baixarVideo('celeste')), 1500);
   // o vídeo toca para todos, por cima do mapa (não em tela cheia)
-  async function tocarVideo() {
+  async function tocarVideo(qual) {
     if (!isGM()) return;
-    const v = { id: uuid(), em: Date.now(), acao: 'tocar' };
+    const v = { id: uuid(), em: Date.now(), acao: 'tocar', qual: qualDe(qual) };
     S.video = v;
     const { error } = await sb.from('breu_state').upsert({ key: 'video', value: v, updated_at: new Date().toISOString() });
     if (error) toast('Não consegui mandar o vídeo para os jogadores.');
@@ -431,7 +438,7 @@ export function criarMesa(ctx) {
     if (v.acao === 'tocar' && Date.now() - v.em < 120000 && S.videoVisto !== v.id) {
       S.videoVisto = v.id;
       if (!noMapa()) { ctx.go('mapa'); setTimeout(() => abrirVideo(v), 700); } else abrirVideo(v);
-    } else if (v.acao === 'parar' && video) fimVideo();
+    } else if (v.acao === 'parar' && video) fimVideo(v);
   }
   // a caixa do vídeo fica exatamente em cima da área do mapa
   function encaixarVideo() {
@@ -444,35 +451,37 @@ export function criarMesa(ctx) {
   function abrirVideo(v) {
     S.videoVisto = v.id;
     fecharVideo();
-    video = document.createElement('div'); video.className = 'vd'; video.setAttribute('role', 'dialog'); video.setAttribute('aria-label', 'Abertura');
+    const q = qualDe(v.qual), d = vids[q] || { url: null, progresso: 0 };
+    video = document.createElement('div'); video.className = 'vd'; video.dataset.qual = q; video.setAttribute('role', 'dialog'); video.setAttribute('aria-label', VIDEOS[q].nome);
     video.innerHTML = `<video playsinline preload="auto"></video>
-      <div class="vd-carrega" ${videoUrl ? 'hidden' : ''}><span>Carregando a abertura…</span><b><i style="width:${Math.round(progresso * 100)}%"></i></b></div>
+      <div class="vd-carrega" ${d.url ? 'hidden' : ''}><span>Carregando ${VIDEOS[q].nome}…</span><b><i style="width:${Math.round(d.progresso * 100)}%"></i></b></div>
       <button class="vd-som" hidden>Toque para ligar o som</button>
-      <div class="vd-ui">${isGM() ? '<button class="btn sm" data-vd="pular">Pular e abrir a estrada</button>' : ''}</div>`;
+      <div class="vd-ui">${isGM() ? `<button class="btn sm" data-vd="pular">${VIDEOS[q].fim}</button>` : ''}</div>`;
     document.body.appendChild(video);
     encaixarVideo(); clearInterval(abrirVideo.t); abrirVideo.t = setInterval(encaixarVideo, 400);
     const el = video.querySelector('video'), somB = video.querySelector('.vd-som');
     document.body.classList.add('vendo-video');
     const caixa = video;
-    baixarVideo().then((url) => {
+    baixarVideo(q).then((url) => {
       if (video !== caixa) return;
       caixa.querySelector('.vd-carrega').hidden = true;
       el.src = url;
       // quem chegou atrasado (mais de 8 s) pula para onde os outros estão
       const atraso = (Date.now() - v.em) / 1000;
-      if (atraso > 8 && atraso < 70) el.addEventListener('loadedmetadata', () => { el.currentTime = atraso; }, { once: true });
+      if (atraso > 8 && atraso < (q === 'abertura' ? 70 : 12)) el.addEventListener('loadedmetadata', () => { el.currentTime = atraso; }, { once: true });
       el.play().catch(() => { el.muted = true; el.play().catch(() => {}); somB.hidden = false; });
     });
     somB.addEventListener('click', () => { el.muted = false; somB.hidden = true; el.play(); });
-    el.addEventListener('ended', () => fimVideo());
+    el.addEventListener('ended', () => fimVideo(v));
     video.querySelector('[data-vd="pular"]')?.addEventListener('click', async () => {
       await sb.from('breu_state').upsert({ key: 'video', value: { ...v, acao: 'parar' }, updated_at: new Date().toISOString() });
-      fimVideo();
+      fimVideo(v);
     });
   }
   function fecharVideo() { clearInterval(abrirVideo.t); document.body.classList.remove('vendo-video'); if (video) { video.querySelector('video')?.pause(); video.remove(); video = null; } }
-  async function fimVideo() {
+  async function fimVideo(v) {
     fecharVideo();
+    if (qualDe(v?.qual) !== 'abertura') { if (isGM()) repintar(); return; }
     if (isGM()) {
       const c = await A.garantirCena('estrada');
       if (c) await A.mostrarCena(c.id);
@@ -492,7 +501,7 @@ export function criarMesa(ctx) {
       if (a === 'add') { U.add = !U.add; const box = document.querySelector('[data-ms-add]'); if (box) box.hidden = !U.add; t.classList.toggle('on', U.add); return true; }
       if (a === 'livre') { U.livre = true; pintarPainel(); return true; }
       if (a === 'aba') { U.aba = v; if (v === 'rolagens') U.novas = 0; pintarPainel(); return true; }
-      if (a === 'video') { tocarVideo(); return true; }
+      if (a === 'video') { tocarVideo(v || 'abertura'); return true; }
       if (a === 'fase') { t.disabled = true; await virar(); return true; }
       if (a === 'circ') { ctx.garantirNoite(); const f = S.noite.circulo ?? 14, v = +t.dataset.v; S.noite.circulo = v === 0 ? 0 : Math.max(0, f + v); ctx.logNoite(v === 0 ? 'O círculo abriu uma brecha.' : `Força do círculo: ${S.noite.circulo}.`); await ctx.salvarNoite(); pintarPainel(); return true; }
       if (a === 'tela-preta') { await A.esconderCena(); pintarTopo(); toast('Os jogadores estão sem cena.'); return true; }

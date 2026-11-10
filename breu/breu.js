@@ -3,7 +3,7 @@ import * as R from './regras.js';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { criarMapa } from './mapa.js?v=32';
-import { criarMesa } from './mesa.js?v=18';
+import { criarMesa } from './mesa.js?v=19';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
