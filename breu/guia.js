@@ -323,7 +323,7 @@ function mapaHtml() {
       if (m.passos) h += passosHtml(m.passos, m.lugar ? 'Se acontecer' : 'Faça nesta ordem');
       if (m.hub) h += pistasHtml();
       if (m.recursos) h += `<section class="g-bloco"><h3 class="g-rot">Marque o que conseguiram aqui</h3>${recBotoes(m.recursos)}</section>`;
-      if (m.quem) h += `<section class="g-bloco"><h3 class="g-rot">Quem está aqui</h3><p class="g-nota">Clique numa pessoa para ver o que ela responde.</p>${genteHtml(m.quem)}</section>`;
+      if (m.quem) h += `<section class="g-bloco"><h3 class="g-rot">Quem está aqui</h3><p class="g-nota">Clique numa pessoa para ver o que ela responde. Se ela ainda não apareceu para os jogadores, use o botão para mostrar.</p><div class="g-acoes">${m.quem.map((k) => acaoBtn(['npc', GENTE[k].nome])).join('')}</div>${genteHtml(m.quem)}</section>`;
       if (m.opcoes) h += `<section class="g-bloco"><h3 class="g-rot">${m.hub ? 'Também dá para fazer' : 'O que eles podem fazer'}</h3>${opcoesHtml(m.opcoes, E.aqui)}</section>`;
       if (m.vila) h += `<section class="g-bloco"><h3 class="g-rot">A vila não espera</h3><div class="g-trava"><p>Se a mesa parar, faça uma destas coisas acontecer:</p><ul>${m.vila.map((v) => `<li>${v}</li>`).join('')}</ul></div></section>`;
       if (m.mestre) h += `<section class="g-bloco"><h3 class="g-rot">Só para você</h3><div class="g-mestre">${m.mestre.map((p) => `<p>${p}</p>`).join('')}</div></section>`;

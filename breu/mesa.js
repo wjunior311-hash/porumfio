@@ -5,7 +5,7 @@ import * as M from './mestre-dados.js';
 import { abrirTour, jaViu } from './tutorial.js?v=1';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=21';
+import { criarGuia, faixaDe } from './guia.js?v=22';
 import { ROLA, FX_C } from './guia-dados.js?v=14';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
@@ -45,7 +45,7 @@ export function criarMesa(ctx) {
     if (tipo === 'video') return `Passar ${(VIDEOS[v] || VIDEOS.abertura).nome} para todos`;
     if (tipo === 'cena') { const c = A.cenaDe(v); return c && A.ativa() === c.id ? `✓ No ar: ${nomeCena(v)}` : `Mostrar: ${nomeCena(v)}`; }
     if (tipo === 'grupo') { const n = A.grupoFalta(); return n ? `Colocar o grupo no mapa (${n})` : '✓ O grupo está no mapa'; }
-    if (tipo === 'npc') return A.temNpc(v) ? `✓ ${v} está no mapa` : `Pôr ${v} no mapa`;
+    if (tipo === 'npc') return A.npcEscondido?.(v) ? `Mostrar ${v} aos jogadores` : A.temNpc(v) ? `✓ ${v} está no mapa` : `Pôr ${v} no mapa`;
     if (tipo === 'assombro') return `Pôr ${nomeBest(v)} (escondido)`;
     if (tipo === 'revelar') return `Revelar ${nomeBest(v)} aos jogadores`;
     if (tipo === 'forma') return A.formaDe(v) ? `Mostrar a forma verdadeira de ${v}` : null;

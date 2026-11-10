@@ -10,9 +10,10 @@ const VENTOS = [[0.15, 'Vento calmo'], [0.45, 'Vento médio'], [0.85, 'Vento for
 
 // o elenco da one-shot: quem tem retrato entra no mapa com ele
 const ELENCO = [['Celeste', 'celeste'], ['Zeca', 'zeca'], ['Brás', 'bras'], ['Rosário', 'rosario'], ['Bento', 'bento'], ['Dona Lindalva', 'lindalva'], ['Dona Zuleide', 'zuleide', 1], ['Seu Orlando', 'orlando', 1], ['Joana', 'joana', 1], ['Dona Firmina', 'firmina', 1]];
-// onde cada pessoa da vila fica: entram sozinhas na primeira vez que a cena vai ao ar
+// onde cada pessoa da vila fica: entram sozinhas na primeira vez que a cena vai ao ar.
+// Quem tem 1 no fim entra escondido: ainda não foi apresentado na chegada.
 const NPC_LUGAR = {
-  'viva:vila': [['Dona Lindalva', 0.483, 0.349], ['Rosário', 0.457, 0.357], ['Celeste', 0.624, 0.385], ['Dona Zuleide', 0.6, 0.355], ['Zeca', 0.742, 0.401], ['Bento', 0.71, 0.421], ['Brás', 0.463, 0.56], ['Seu Orlando', 0.355, 0.512], ['Joana', 0.364, 0.611], ['Dona Firmina', 0.67, 0.707]],
+  'viva:vila': [['Dona Lindalva', 0.483, 0.349], ['Rosário', 0.457, 0.357], ['Celeste', 0.624, 0.385], ['Dona Zuleide', 0.6, 0.355, 1], ['Zeca', 0.742, 0.401], ['Bento', 0.71, 0.421], ['Brás', 0.463, 0.56], ['Seu Orlando', 0.355, 0.512, 1], ['Joana', 0.364, 0.611, 1], ['Dona Firmina', 0.67, 0.707, 1]],
   'viva:velorio': [['Dona Lindalva', 0.25, 0.38], ['Rosário', 0.42, 0.63]],
   'viva:zuleide': [['Dona Zuleide', 0.36, 0.64]],
 };
@@ -654,12 +655,13 @@ export function criarMapa(ctx) {
     const c = MP.cenas.find((x) => x.id === id); const lista = c && NPC_LUGAR[c.img];
     if (!lista || c.fog?.npcs) return;
     const tem = new Set(MP.tokens.filter((x) => x.cena_id === id && x.kind === 'npc').map((x) => semAcento(x.nome)));
-    const novos = lista.filter(([n]) => !tem.has(semAcento(n))).map(([nome, x, y]) => ({ cena_id: id, kind: 'npc', nome, img: fotoNpc(nome), x, y, ax: x, ay: y, visivel: true }));
+    const novos = lista.filter(([n]) => !tem.has(semAcento(n))).map(([nome, x, y, esc]) => ({ cena_id: id, kind: 'npc', nome, img: fotoNpc(nome), x, y, ax: x, ay: y, visivel: !esc }));
     if (novos.length) await sb.from('breu_tokens').insert(novos);
     c.fog = { ...(c.fog || {}), npcs: true };
     await sb.from('breu_cenas').update({ fog: c.fog }).eq('id', id);
     await loadTokens(); draw(); paintSide(); enviar('reload', {});
-    if (novos.length) toast(`${novos.length} pessoas da vila já estão no lugar delas. Os jogadores veem ??.`);
+    const esc = novos.filter((n) => !n.visivel).length;
+    if (novos.length) toast(`${novos.length} pessoas da vila já estão no lugar delas.${esc ? ` ${esc} entraram escondidas: só aparecem quando você apertar Mostrar.` : ''}`);
   }
   async function esconderCena() {
     await sb.from('breu_state').upsert({ key: 'cena', value: { ativa: null, por: {} }, updated_at: new Date().toISOString() });
@@ -694,6 +696,7 @@ export function criarMapa(ctx) {
   async function porNpc(nome) {
     const c = cena(); if (!c) return;
     const ja = MP.tokens.find((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(nome));
+    if (ja && !ja.visivel) { ja.visivel = true; await sb.from('breu_tokens').update({ visivel: true }).eq('id', ja.id); enviar('reload', {}); MP.sel = ja.id; draw(); paintSide(); toast(nome + ' apareceu para os jogadores.'); return; }
     if (ja) { MP.sel = ja.id; draw(); paintSide(); toast(nome + ' já está no mapa: selecionei a peça.'); return; }
     const { x, y } = lugarLivre(0.5, 0.42, 0.26);
     const { error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'npc', nome, img: fotoNpc(nome), x, y, ax: x, ay: y, visivel: true });
@@ -727,7 +730,7 @@ export function criarMapa(ctx) {
   }
   const api = {
     setMesa: (v) => { MP.mesa = v; }, efeitoTodos, levar, separados, minhaCena, cenas: () => MP.cenas, ativa: () => MP.ativa, ver: () => MP.ver, cena, cenaDe, garantirCena, verCena, mostrarCena, esconderCena,
-    porGrupo, porNpc, porAssombro, revelarAssombro, trocarForma, formaDe, tokens: () => MP.tokens,
+    porGrupo, porNpc, npcEscondido: (nome) => MP.tokens.some((x) => x.kind === 'npc' && !x.visivel && semAcento(x.nome) === semAcento(nome)), porAssombro, revelarAssombro, trocarForma, formaDe, tokens: () => MP.tokens,
     temNpc: (nome) => MP.tokens.some((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(nome)),
     grupoFalta: () => { const na = new Set(MP.tokens.filter((x) => x.kind === 'pc').map((x) => x.character_id)); return S.chars.filter((ch) => ch.status === 'aprovado' && !(S.mesa?.ausentes || []).includes(ch.id) && !na.has(ch.id)).length; },
     stageHtml, barHtml, sideHtml, addHtml, listaCenas, formNovaCena, paintBar, paintSide, loaded: () => MP.loaded,
