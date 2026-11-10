@@ -5,7 +5,7 @@ import * as M from './mestre-dados.js';
 import { abrirTour, jaViu } from './tutorial.js?v=1';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=17';
+import { criarGuia, faixaDe } from './guia.js?v=18';
 import { ROLA, FX_C } from './guia-dados.js?v=12';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
@@ -401,16 +401,28 @@ export function criarMesa(ctx) {
     } else if (e.tipo === 'forma') {
       tremer(1); solto('', 'fx-flash forte', 1400);
       solto(`<i style="background-image:url('${esc(e.img)}')"></i><span>${e.nome ? esc(e.nome) + ', de verdade' : 'O disfarce rasga'}</span>`, 'fx-ass fx-forma', 3600);
+    } else if (e.tipo === 'retrato') {
+      mostrarRetrato(e);
     } else if (e.tipo === 'vinte') {
       solto(`<span>${esc(e.nome)} tirou um 20</span>`, 'fx-faixa vinte', 2400);
     }
+  }
+  // a imagem grande de um NPC ou Assombro; toque em qualquer lugar para fechar
+  function mostrarRetrato(e) {
+    document.querySelector('.retrato')?.remove();
+    const r = document.createElement('div'); r.className = 'retrato'; r.setAttribute('role', 'dialog'); r.setAttribute('aria-label', e.nome || 'Imagem');
+    r.innerHTML = `<figure><img src="${esc(e.img)}" alt="" onerror="this.onerror=null;this.src='${esc(e.peq || '')}'"><figcaption><b>${e.nome ? esc(e.nome) : '??'}</b>${e.sub ? `<span>${esc(e.sub)}</span>` : ''}<small>Toque para fechar</small></figcaption></figure>`;
+    const fechar = () => { r.remove(); document.removeEventListener('keydown', tecla); };
+    const tecla = (ev) => { if (ev.key === 'Escape') fechar(); };
+    r.addEventListener('click', fechar); document.addEventListener('keydown', tecla);
+    document.body.appendChild(r);
   }
   // o estado do próprio personagem pinta a borda da tela do jogador
   function estadoProprio() {
     const app = document.getElementById('app'); if (!app) return;
     const c = !isGM() && meuChar(); const t = c && S.noite?.grupo?.[c.id];
     const b = c && R.barras(c.data);
-    app.classList.toggle('fx-ferido', !!(t && t.sangue > 0 && t.sangue <= b.sangue / 3));
+    app.classList.toggle('fx-ferido', !!(t && t.sangue > 0 && t.sangue <= b.sangue / 2));
     app.classList.toggle('fx-caido', !!(t && t.sangue <= 0));
     app.classList.toggle('fx-panico', !!(t && t.prumo <= 0));
     const p = Math.min(3, t?.pavor || 0); app.style.setProperty('--pavor', p); app.classList.toggle('fx-pavor', p > 0);

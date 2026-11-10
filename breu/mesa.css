@@ -568,3 +568,20 @@ div.g-rec b { font-family: var(--display); color: var(--claro); }
 .tour-flu { position: fixed; left: 14px; bottom: 14px; z-index: 40; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line2); background: rgba(16,21,27,.9); color: var(--brasa2); font-size: 18px; font-weight: 700; cursor: pointer; }
 .ms-cons { display: grid; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--linha); }
 .ms-cons .g-seg button.on { border-color: var(--brasa); color: var(--claro); background: rgba(196,90,54,.16); }
+
+/* como narrar o Assombro */
+.mp-narra { display: grid; gap: 6px; margin: 6px 0; padding: 10px 12px; border: 1px solid var(--line2); border-radius: 10px; background: rgba(196,90,54,.06); }
+.mp-narra summary { cursor: pointer; font-weight: 700; color: var(--brasa2); }
+.mp-narra .lbl { margin-top: 4px; }
+.mp-narra p { margin: 0; font-size: 14.5px; color: var(--osso2); }
+.mp-leia { font-style: italic; color: var(--claro) !important; border-left: 3px solid var(--brasa); padding-left: 10px; }
+.mp-ver { flex-wrap: wrap; gap: 6px; }
+/* imagem grande */
+.retrato { position: fixed; inset: 0; z-index: 250; background: rgba(4,6,8,.86); display: grid; place-items: center; padding: 16px; cursor: zoom-out; animation: ret-in .25s ease; }
+.retrato figure { margin: 0; display: grid; gap: 10px; justify-items: center; max-width: min(1000px, 100%); }
+.retrato img { max-width: 100%; max-height: calc(100vh - 140px); object-fit: contain; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+.retrato figcaption { display: grid; gap: 2px; text-align: center; }
+.retrato figcaption b { font-size: 22px; color: var(--claro); }
+.retrato figcaption span { color: var(--osso2); font-size: 14.5px; }
+.retrato figcaption small { color: var(--osso3); font-size: 12.5px; }
+@keyframes ret-in { from { opacity: 0; transform: scale(.97); } }

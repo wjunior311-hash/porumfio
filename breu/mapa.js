@@ -1,6 +1,7 @@
 // Mapa compartilhado da mesa: cena, peças, escuro, círculos e movimento limitado por rodada.
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
+import { ASS_TEXTO } from './ass-texto.js?v=1';
 import * as R from './regras.js?v=4';
 import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=22';
 
@@ -203,6 +204,8 @@ export function criarMapa(ctx) {
           <div class="mp-selh"><b>${esc(t.nome)}</b>${b ? `<span>Defesa ${b.defesa} · ${esc(b.sentido)}</span>` : ''}${oculto ? '<em>escondido</em>' : ''}</div>
           ${oculto ? `<button class="btn primary block" data-mp="visivel">Mostrar aos jogadores</button>` : ''}
           ${t.kind === 'assombro' && b && !oculto ? ataqueHtml(t, b) : ''}
+          ${t.kind === 'assombro' && b ? narraHtml(oculto, b) : ''}
+          ${t.kind !== 'pc' ? `<div class="mp-row mp-ver"><button class="btn sm" data-mp="ver">Ver a imagem grande</button>${oculto ? '' : '<button class="btn sm" data-mp="vertodos">Mostrar grande para todos</button>'}</div>` : ''}
           ${t.kind === 'npc' ? `<button class="btn sm block" data-g="npc" data-v="${semAcento(t.nome).replace(/^(dona|seu) /, '').split(' ')[0]}">O que ${esc(t.nome)} responde</button>` : ''}
           ${sangue}${levarHtml}
           <button class="mp-maisb" data-mp="mais" aria-expanded="${!!MP.mais}">${MP.mais ? 'Menos opções ▴' : 'Mais opções ▾'}</button>
@@ -210,6 +213,26 @@ export function criarMapa(ctx) {
       }
     }
     return sel;
+  }
+  // como narrar o Assombro: antes de aparecer, quando aparece, como luta, como morre
+  function narraHtml(oculto, b) {
+    const T = ASS_TEXTO[b.id] || {};
+    const leia = (rot, txt) => txt ? `<span class="lbl">${rot}</span><p class="mp-leia">${esc(txt)}</p>` : '';
+    if (oculto) return `<div class="mp-narra">${leia('Ele ainda não apareceu. Leia o que se ouve:', T.chega || 'Um som lá fora, no escuro. Alguma coisa se mexe e para. Ninguém vê o que é.')}${leia('Quando ele aparecer, aperte Mostrar e leia:', T.aparece || T.desc)}</div>`;
+    return `<details class="mp-narra"><summary>Como narrar ${esc(b.nome)}</summary>
+      ${leia('O que eles veem', T.aparece || T.desc)}
+      ${T.esp ? `<span class="lbl">Como ele luta (só para você)</span><p>${esc(T.esp)}</p>` : ''}
+      ${leia('Quando ele morrer, leia', T.morre || 'Ele se desfaz no chão, em pó e fumaça, e o silêncio volta.')}
+      ${T.despojos ? `<span class="lbl">O que dá para tirar dele</span><p>${esc(T.despojos)}</p>` : ''}</details>`;
+  }
+  // a imagem grande de uma peça
+  function grande(t) {
+    if (t.kind === 'assombro' && t.data?.best) return `img/ass-g/${t.data.best}.webp`;
+    return (t.img || '').replace('img/tok/', 'img/npc/');
+  }
+  function retratoDe(t, paraTodos = false) {
+    const vis = paraTodos ? t.data?.nomeVisto : isGM() || t.data?.nomeVisto, T = t.data?.best ? ASS_TEXTO[t.data.best] : null;
+    return { tipo: 'retrato', img: grande(t), peq: t.img, nome: vis ? t.nome : '', sub: T?.alt ? `${T.alt} (a sombra cinza é uma pessoa, para comparar)` : '' };
   }
   // o ataque do Assombro: contra a Defesa de um personagem ou contra a força de um círculo
   function ataqueHtml(t, b) {
@@ -396,7 +419,7 @@ export function criarMapa(ctx) {
     if (!n) { if (MP.sel) { MP.sel = null; draw(); paintSide(); } return; }
     const t = MP.tokens.find((x) => x.id === n.dataset.tok); if (!t) return;
     if (MP.sel !== t.id) { MP.sel = t.id; paintSide(); }
-    if (!podeMover(t)) { draw(); return; }
+    if (!podeMover(t)) { draw(); if (!isGM() && (t.kind === 'npc' || t.kind === 'assombro') && t.img) ctx.efeito?.(retratoDe(t)); return; }
     e.preventDefault(); stage.setPointerCapture(e.pointerId);
     const p0 = pos(e), o = { x: t.x, y: t.y };
     const limite = !isGM() && t.kind === 'pc';
@@ -520,11 +543,13 @@ export function criarMapa(ctx) {
     else if (a === 'forma') { await trocarForma(sel.nome); return; }
     else if (a === 'nome') { d.nomeVisto = !d.nomeVisto; sel.data = d; await sb.from('breu_tokens').update({ data: d }).eq('id', sel.id); enviar('reload', {}); draw(); paintSide(); return; }
     else if (a === 'passos') { const p = Math.max(0, sel.passos + +v); sel.passos = p; await sb.from('breu_tokens').update({ passos: p }).eq('id', sel.id); draw(); paintSide(); return; }
+    else if (a === 'ver') { ctx.efeito?.(retratoDe(sel)); return; }
+    else if (a === 'vertodos') { efeitoTodos(retratoDe(sel, true)); toast('A imagem abriu na tela de todos.'); return; }
     else if (a === 'visivel') {
       sel.visivel = !sel.visivel;
       await sb.from('breu_tokens').update({ visivel: sel.visivel }).eq('id', sel.id);
       enviar('reload', {}); draw(); paintSide();
-      if (sel.visivel && sel.kind === 'assombro') efeitoTodos({ tipo: 'assombro', nome: sel.data?.nomeVisto ? sel.nome : '', img: sel.img });
+      if (sel.visivel && sel.kind === 'assombro') efeitoTodos({ tipo: 'assombro', nome: sel.data?.nomeVisto ? sel.nome : '', img: grande(sel) });
       return;
     } else if (a === 'apagar') {
       const { error } = await sb.from('breu_tokens').delete().eq('id', sel.id);
@@ -662,14 +687,14 @@ export function criarMapa(ctx) {
     const sel = MP.tokens.find((x) => x.id === MP.sel);
     // sem peça escolhida, entra na borda do mapa, fora da vila
     const ang = Math.random() * Math.PI * 2, x = sel ? Math.min(0.97, sel.x + 0.05) : 0.5 + Math.cos(ang) * 0.44, y = sel ? sel.y : 0.5 + Math.sin(ang) * 0.42;
-    const { error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'assombro', nome: b.nome + (n ? ' ' + (n + 1) : ''), img: `img/ass/${b.id}.webp`, x, y, ax: x, ay: y, passos: 6, visivel: false, data: { best: b.id, sangue: b.sangue, max: b.sangue } });
-    if (error) toast('Não consegui pôr o Assombro.'); else { await loadTokens(); draw(); paintSide(); toast(b.nome + ' está no mapa, escondido. Arraste e revele quando aparecer.'); }
+    const { data: novo, error } = await sb.from('breu_tokens').insert({ cena_id: c.id, kind: 'assombro', nome: b.nome + (n ? ' ' + (n + 1) : ''), img: `img/ass/${b.id}.webp`, x, y, ax: x, ay: y, passos: 6, visivel: false, data: { best: b.id, sangue: b.sangue, max: b.sangue } }).select().single();
+    if (error) toast('Não consegui pôr o Assombro.'); else { await loadTokens(); MP.sel = novo?.id || MP.sel; draw(); paintSide(); toast(b.nome + ' está no mapa, escondido. Arraste e revele quando aparecer.'); }
   }
   async function revelarAssombro(id) {
     const t = MP.tokens.find((x) => x.kind === 'assombro' && x.data?.best === id && !x.visivel);
     if (!t) { toast('Não há ' + (M.BESTIARIO.find((b) => b.id === id)?.nome || 'Assombro') + ' escondido nesta cena. Ponha um primeiro.'); return; }
     t.visivel = true; await sb.from('breu_tokens').update({ visivel: true }).eq('id', t.id);
-    efeitoTodos({ tipo: 'assombro', nome: t.data?.nomeVisto ? t.nome : '', img: t.img });
+    efeitoTodos({ tipo: 'assombro', nome: t.data?.nomeVisto ? t.nome : '', img: grande(t) });
     enviar('reload', {}); MP.sel = t.id; draw(); paintSide(); toast(t.nome + ' apareceu para os jogadores.');
   }
   async function trocarForma(nome) {

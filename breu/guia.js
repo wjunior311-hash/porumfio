@@ -199,7 +199,7 @@ function noiteHtml() {
 
   ${passosHtml([
     { f: 'Leia', leia: [['', 'A luz vai embora devagar e depois de uma vez. O céu fica roxo, depois cinza, depois de nenhuma cor. Os grilos começam. Lá fora do círculo, no mato, alguma coisa fareja. Dá para ouvir: um fungado curto, repetido, que vai dando a volta na vila.'], ['', `E para sempre do mesmo lado. Do lado d${E.corpo === 'fechada' ? 'a casa fechada' : E.corpo === 'queimado' ? 'o trecho' : 'a casa do velório'}.`]] },
-    { f: `Revele: 2 Farejadores de Borralho${mais}`, d: `Eles caçam pelo cheiro e vão direto para ${alvo}. Os botões põem as peças escondidas fora do círculo; revele quando eles aparecerem.`, acoes: [['assombro', 'cinza-2'], ['assombro', 'cinza-2'], ...(corpoNaVila ? [['assombro', 'cinza-2']] : [])] },
+    { f: `Revele: 2 Farejadores de Borralho${mais}`, d: `Eles caçam pelo cheiro e vão direto para ${alvo}. Os botões põem as peças escondidas fora do círculo. Cada peça que entra fica selecionada, e o painel da direita mostra o que ler: primeiro o som que se ouve, depois, quando você apertar Mostrar, o que eles veem.`, acoes: [['assombro', 'cinza-2'], ['assombro', 'cinza-2'], ...(corpoNaVila ? [['assombro', 'cinza-2']] : [])] },
     investida, rodadas, fimFase,
   ], 'Crepúsculo')}
 
