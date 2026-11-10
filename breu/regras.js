@@ -25,11 +25,11 @@ export const PERICIAS = [
 ];
 
 export const SOTAQUES = {
-  Serra: 'Mais força em Barrar e em traços de Osso, mas leva o dobro do tempo.',
-  'Maré': 'Não se apaga com chuva nem água; mais força em Sopro e Lodo. Fraco em terra seca e pedra.',
-  'Terra seca': 'Traça na metade do tempo; mais força em Cinza. Gasta mais rápido.',
-  Mata: 'Mais força em Prender e em traços de Raiz. Não funciona no ar.',
-  Cidades: 'Qualquer um aprende sem perder dado; aceito em todo lugar. Sem bônus.',
+  Serra: '+2 de força em Barrar e em traços de Osso. Leva o dobro do tempo.',
+  'Maré': 'Não se apaga com chuva nem água; +2 em Sopro e Lodo. −2 de força em terra seca e pedra.',
+  'Terra seca': 'Traça na metade do tempo; +2 em Cinza. Perde 4 por investida, em vez de 3.',
+  Mata: '+2 em Prender e em traços de Raiz. Não funciona no modo No ar.',
+  Cidades: 'Qualquer um aprende sem perder dado; aceito em todo lugar. Nenhum bônus.',
 };
 
 export const ORIGENS = [
@@ -50,7 +50,7 @@ export const OFICIOS = [
     caminhos: [{ k: 'batedor', n: 'Batedor', d: 'Estradas e rapidez', habs: [['Antes do sol', '2 Sangue', 'Uma vez por viagem, encontra um abrigo seguro antes do Crepúsculo.'], ['Passo sem som', '', 'Andando devagar, nunca é percebido por Assombros que ouvem.']] },
       { k: 'embaixador', n: 'Embaixador', d: 'Acordos entre povos', habs: [['Palavra empenhada', '2 Prumo', '+2 dados em Lábia para convencer uma comunidade a abrigar ou ajudar o grupo.'], ['Muitos sotaques', '', 'Não perde dado com traços de sotaques que já viu de perto.']] }],
     armas: ['Faca', 'Funda'] },
-  { k: 'riscador', n: 'Riscador', d: 'Quem traça, lê e conserta as proteções. Em muitas vilas, é a pessoa mais importante depois do sol, e a primeira a ser culpada quando um círculo rompe.',
+  { k: 'riscador', n: 'Riscador', d: 'Quem traça, lê e conserta as proteções. Em muitas vilas, o Riscador é a pessoa mais importante depois do sol, e a primeira a ser culpada quando um círculo rompe.',
     pericias: ['Traços', 'Ofícios'], fortes: 'Juízo, Firmeza',
     hab: ['Mão firme', 'Uma vez por noite, você refaz uma rolagem de Traços e fica com o melhor resultado.'],
     equip: 'Carvão, giz de osso, vara de medir, cordão com nós, faca, saco de sal.', protecao: 0, essenciaExtra: true,
@@ -93,7 +93,7 @@ export const POS = C.POS;
 export const ARMAS = {
   ...C.ARMAS_EXTRA,
   Faca: ['d6', 'Perto ou arremesso', 'Discreta. Cabe na bota.'],
-  Facão: ['d8', 'Perto', '+1 dado para atravessar vegetação fechada.'],
+  Facão: ['d8', 'Perto', 'Abre mato: +1 dado para atravessar vegetação fechada.'],
   Funda: ['d6', 'Longe', 'Munição em qualquer chão.'],
   'Arco (6 flechas marcadas)': ['d8', 'Longe', 'Silencioso. As flechas marcadas ferem Assombros.'],
   'Lança marcada (ponta de osso)': ['d8', 'Dois passos', 'Ataca por cima de um aliado. Marcada: fere Assombros.'],
@@ -117,12 +117,12 @@ export const KIT = 'Roupa de tecido grosso, cobertor, cantil, carvão para traç
 export const RAIZES = [
   { n: 'Barrar', grau: 'básica', d: 'Fecha a passagem. O Assombro precisa superar a força para atravessar.' },
   { n: 'Repelir', grau: 'básica', d: 'Empurra. Quem não supera a força recua e perde a ação.' },
-  { n: 'Revelar', grau: 'básica', d: 'Mostra o escondido: Assombros parados, rastros, fendas prestes a abrir, traços apagados.' },
+  { n: 'Revelar', grau: 'básica', d: 'Mostra o escondido: Assombros parados, rastros, fendas prestes a abrir, traços apagados. +1 dado em Percepção na área.' },
   { n: 'Ferir', grau: 'avançada', d: 'Num objeto, a arma fere Assombros. No chão, quem atravessa sofre d6.' },
   { n: 'Calar', grau: 'avançada', d: 'Abafa som, luz e cheiro. Assombros que ouvem ou farejam não percebem quem está dentro.' },
   { n: 'Prender', grau: 'avançada', d: 'Quem toca fica preso até vencer a força numa ação.' },
-  { n: 'Som', grau: 'mestra', d: 'Num tambor de pele de Assombro: o círculo ganha +4 e quem ouve não se aproxima.' },
-  { n: 'Ocultar', grau: 'mestra', d: 'Quem está dentro some para todos os sentidos dos Assombros, parado e em silêncio.' },
+  { n: 'Som', grau: 'mestra', d: 'Num tambor de pele de Assombro: enquanto tocado, o círculo ganha +4 e quem ouve não se aproxima.' },
+  { n: 'Ocultar', grau: 'mestra', d: 'Quem está dentro some para todos os sentidos dos Assombros, enquanto ficar parado e em silêncio.' },
 ];
 
 export const DOM = [
