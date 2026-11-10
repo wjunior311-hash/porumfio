@@ -205,7 +205,7 @@ export function criarMapa(ctx) {
           ${oculto ? `<button class="btn primary block" data-mp="visivel">Mostrar aos jogadores</button>` : ''}
           ${t.kind === 'assombro' && b && !oculto ? ataqueHtml(t, b) : ''}
           ${t.kind === 'assombro' && b ? narraHtml(oculto, b) : ''}
-          ${t.kind !== 'pc' ? `<div class="mp-row mp-ver"><button class="btn sm" data-mp="ver">Ver a imagem grande</button>${oculto ? '' : '<button class="btn sm" data-mp="vertodos">Mostrar grande para todos</button>'}</div>` : ''}
+          ${t.kind !== 'pc' ? `<div class="mp-row mp-ver"><button class="btn sm" data-mp="retrato">Ver a imagem grande</button>${oculto ? '' : '<button class="btn sm" data-mp="retodos">Mostrar grande para todos</button>'}</div>` : ''}
           ${t.kind === 'npc' ? `<button class="btn sm block" data-g="npc" data-v="${semAcento(t.nome).replace(/^(dona|seu) /, '').split(' ')[0]}">O que ${esc(t.nome)} responde</button>` : ''}
           ${sangue}${levarHtml}
           <button class="mp-maisb" data-mp="mais" aria-expanded="${!!MP.mais}">${MP.mais ? 'Menos opções ▴' : 'Mais opções ▾'}</button>
@@ -543,8 +543,8 @@ export function criarMapa(ctx) {
     else if (a === 'forma') { await trocarForma(sel.nome); return; }
     else if (a === 'nome') { d.nomeVisto = !d.nomeVisto; sel.data = d; await sb.from('breu_tokens').update({ data: d }).eq('id', sel.id); enviar('reload', {}); draw(); paintSide(); return; }
     else if (a === 'passos') { const p = Math.max(0, sel.passos + +v); sel.passos = p; await sb.from('breu_tokens').update({ passos: p }).eq('id', sel.id); draw(); paintSide(); return; }
-    else if (a === 'ver') { ctx.efeito?.(retratoDe(sel)); return; }
-    else if (a === 'vertodos') { efeitoTodos(retratoDe(sel, true)); toast('A imagem abriu na tela de todos.'); return; }
+    else if (a === 'retrato') { ctx.efeito?.(retratoDe(sel)); return; }
+    else if (a === 'retodos') { efeitoTodos(retratoDe(sel, true)); toast('A imagem abriu na tela de todos.'); return; }
     else if (a === 'visivel') {
       sel.visivel = !sel.visivel;
       await sb.from('breu_tokens').update({ visivel: sel.visivel }).eq('id', sel.id);
