@@ -1,7 +1,9 @@
 // A mesa ao vivo: a tela do mestre no computador (guia, mapa e painel juntos),
 // o pedido de rolagem, os dados que rolam no meio do mapa e o vídeo de abertura.
-import * as R from './regras.js';
+import * as R from './regras.js?v=2';
 import * as M from './mestre-dados.js';
+import { abrirTour, jaViu } from './tutorial.js?v=1';
+import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
 import { criarGuia, faixaDe } from './guia.js?v=13';
 import { ROLA, FX_C } from './guia-dados.js?v=9';
@@ -175,7 +177,7 @@ export function criarMesa(ctx) {
     const c = ctx.charById(r.character_id), d = r.detail || {};
     const f = d.tipo === 'dano' ? 'dano' : 'f' + faixaDe(r.total);
     const hora = new Date(r.created_at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    return `<div class="ms-rl ${f}">${c ? `<img src="${esc(ctx.picChar(c))}" alt="">` : '<span></span>'}<div><b>${esc(c?.data?.nome || 'Alguém')}</b><span>${esc(r.label)}${d.dif ? (d.passou ? ' · passou' : ' · falhou') : ''}</span><small>${esc((d.dados || []).join(' · '))}${d.bonus ? ' + ' + d.bonus : ''} · ${hora}</small></div><strong>${r.total}</strong></div>`;
+    return `<div class="ms-rl ${f}">${c ? `<img src="${esc(ctx.picChar(c))}" alt="">` : '<span></span>'}<div><b>${esc(c?.data?.nome || 'Alguém')}</b><span>${esc(r.label)}${d.dif ? (d.passou ? ' · passou' : ' · falhou') : ''}</span><small>${esc((d.dados || []).join(' · '))}${d.bonus ? ' + ' + d.bonus : ''}${d.fisico ? ' · dado de verdade' : ''} · ${hora}</small></div><strong>${r.total}</strong></div>`;
   }
 
   function grupoHtml() {
@@ -216,6 +218,7 @@ export function criarMesa(ctx) {
     if (g) { g.scrollTop = U.scroll; g.addEventListener('scroll', () => { U.scroll = g.scrollTop; }, { passive: true }); }
     if (noMapa()) preCarregarVideo();
     estadoProprio();
+    if (!isGM() && meuChar() && !jaViu()) setTimeout(() => { if (noMapa() && !document.querySelector('.vd')) abrirTour(); }, 1800);
   }
 
   // ---------- o jogador: pedido e dados ----------
@@ -241,7 +244,7 @@ export function criarMesa(ctx) {
   function dockHtml(lateral) {
     if (isGM() && desktop()) return '';
     const c = meuChar(); if (!c || c.owner !== uid()) return lateral ? '<p class="ms-dica">Seu personagem ainda não foi aprovado pelo mestre.</p>' : '';
-    let h = lateral ? fichaMini(c) : '';
+    let h = (lateral ? fichaMini(c) : '') + fisicoHtml(c.id);
     const aberto = lateral || U.dk;
     const meus = pedidosPara(c), ultimo = meus.at(-1);
     for (const p of meus) {
@@ -266,7 +269,8 @@ export function criarMesa(ctx) {
     if (lateral) h += `<div class="jg-feed"><span class="lbl">Rolagens da mesa</span>${S.rolls.slice(0, 8).map(linhaRoll).join('') || '<p class="ms-dica">Ninguém rolou ainda.</p>'}</div>`;
     return h;
   }
-  const dockWrap = () => `<div class="dock" data-dock>${dockHtml()}</div>`;
+  const dockWrap = () => `<div class="dock" data-dock>${dockHtml()}</div>${isGM() ? '' : '<button class="tour-flu" data-tour aria-label="Como usar">?</button>'}`;
+  quandoMudar(() => pintarDock());
   function pintarDock() { const d = document.querySelector('[data-dock]'); if (d) d.innerHTML = dockHtml(d.classList.contains('lateral')); const r = document.querySelector('.jog [data-ms-rel]'); if (r) r.innerHTML = relogioHtml(true); }
 
   // ---------- a tela do jogador no computador: mapa grande e a ficha ao lado ----------
@@ -280,7 +284,7 @@ export function criarMesa(ctx) {
       <header class="ms-top"><a class="ms-logo" href="#/" aria-label="Início"><img src="img/logo-horizontal.webp" alt="Breu"></a>
         <div class="jg-titulo">${c ? `<span class="lbl">Cena</span><b>${esc(c.nome)}</b>` : ''}</div>
         <div class="ms-rel" data-ms-rel>${relogioHtml(true)}</div>
-        <div class="ms-links">${c ? `<span class="jg-rod">Rodada <b data-mp-rodada>${c.rodada}</b></span>` : ''}<a class="ms-link" href="#/">Fichas</a><button class="ms-link" data-act="logout">Sair</button></div></header>
+        <div class="ms-links">${c ? `<span class="jg-rod">Rodada <b data-mp-rodada>${c.rodada}</b></span>` : ''}<button class="ms-link tour-bt" data-tour>Como usar</button><a class="ms-link" href="#/">Fichas</a><button class="ms-link" data-act="logout">Sair</button></div></header>
       <section class="ms-centro">${c ? `<div class="mp-bar" data-mpbar>${A.barHtml()}</div>${A.stageHtml()}` : `<div class="ms-vazio"><h1>Aguardando o mestre</h1><p class="muted">Quando ele mostrar uma cena, ela aparece aqui sozinha.</p></div>`}</section>
       <aside class="ms-painel jg-painel"><div class="dock lateral" data-dock>${dockHtml(true)}</div>${c ? `<div class="ms-sel mp-side" data-mpside>${A.sideHtml()}</div>` : ''}</aside>
     </div>`;
@@ -291,10 +295,16 @@ export function criarMesa(ctx) {
     const p = pedId ? (S.pedidos || []).find((x) => x.id === pedId) || null : null;
     const ajuste = -pavorDe(c);
     const dif = p?.dif || 0;
-    const res = R.rolar(c.data, { attr, pericia, ajuste, dif });
     const label = p ? p.label : pericia ? `${per} (${ATN[attr]})` : per;
+    let dadosFisicos = null;
+    if (fisico(c.id)) {
+      const m = maoDe(c, per);
+      dadosFisicos = await pedirDados({ n: m.n <= 0 ? 2 : m.n, titulo: label, como: `${m.n <= 0 ? 'Mão vazia: vale o <b>menor</b> deles.' : m.n > 1 ? 'Vale o <b>maior</b>.' : ''}${m.b ? ` O app soma +${m.b} da perícia.` : ''}${p?.dif ? ` Precisa chegar a ${p.dif}.` : ''}` });
+      if (!dadosFisicos) { pintarDock(); return; }
+    }
+    const res = R.rolar(c.data, { attr, pericia, ajuste, dif, dadosFisicos });
     U.dk = false;
-    const row = await ctx.registrar(c, label, res, { tipo: 'teste', dados: res.dados, fica: res.fica, bonus: res.bonus, mao: res.mao, ajuste, dif, passou: dif ? res.passou : undefined, marcante: res.marcante, desastre: res.desastre, vazia: res.vazia, per, ...(p ? { pedido: p.id } : {}) });
+    const row = await ctx.registrar(c, label, res, { tipo: 'teste', dados: res.dados, fica: res.fica, bonus: res.bonus, mao: res.mao, ajuste, dif, passou: dif ? res.passou : undefined, marcante: res.marcante, desastre: res.desastre, vazia: res.vazia, per, ...(dadosFisicos ? { fisico: true } : {}), ...(p ? { pedido: p.id } : {}) });
     animar(row || { character_id: c.id, label, total: res.total, detail: { dados: res.dados, fica: res.fica, bonus: res.bonus, vazia: res.vazia, marcante: res.marcante, desastre: res.desastre } });
     pintarDock();
   }

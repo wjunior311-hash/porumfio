@@ -404,11 +404,12 @@ export const DIFICULDADES = [[10, 'Fácil'], [15, 'Normal'], [20, 'Difícil'], [
 const d = (n) => { const a = new Uint32Array(1); crypto.getRandomValues(a); return 1 + (a[0] % n); };
 
 // mão de d20: atributo ± ajustes (máx. 5). Mão vazia: 2d20, fica com o pior.
-export function rolar(p, { attr, pericia = '', ajuste = 0, dif = 0 }) {
+// dadosFisicos: os números que o jogador tirou na mesa, com dado de verdade
+export function rolar(p, { attr, pericia = '', ajuste = 0, dif = 0, dadosFisicos = null }) {
   const a = atrib(p)[attr] || 1;
   const mao = Math.min(5, a + ajuste);
   const vazia = mao <= 0;
-  const dados = Array.from({ length: vazia ? 2 : mao }, () => d(20));
+  const dados = dadosFisicos?.length ? dadosFisicos.slice() : Array.from({ length: vazia ? 2 : mao }, () => d(20));
   const fica = vazia ? Math.min(...dados) : Math.max(...dados);
   const bonus = pericia ? bonusPericia(grauPericia(p, pericia)) : 0;
   const total = fica + bonus;
@@ -417,9 +418,10 @@ export function rolar(p, { attr, pericia = '', ajuste = 0, dif = 0 }) {
     marcante: !vazia && dados.includes(20),
     desastre: dados.every((x) => x === 1) };
 }
-export function rolarDano(expr) {
+export function dadosDe(expr) { const m = String(expr).match(/^(\d*)d(\d+)$/); return m ? { n: +(m[1] || 1), f: +m[2] } : null; }
+export function rolarDano(expr, dadosFisicos = null) {
   const m = String(expr).match(/^(\d*)d(\d+)$/); if (!m) return null;
-  const n = +(m[1] || 1), f = +m[2], dados = Array.from({ length: n }, () => d(f));
+  const n = +(m[1] || 1), f = +m[2], dados = dadosFisicos?.length ? dadosFisicos.slice() : Array.from({ length: n }, () => d(f));
   return { expr, dados, total: dados.reduce((s, x) => s + x, 0) };
 }
 

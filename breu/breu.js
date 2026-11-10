@@ -1,9 +1,10 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import * as R from './regras.js';
+import * as R from './regras.js?v=2';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
-import { criarMapa } from './mapa.js?v=32';
-import { criarMesa } from './mesa.js?v=20';
+import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
+import { criarMapa } from './mapa.js?v=33';
+import { criarMesa } from './mesa.js?v=22';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -37,6 +38,7 @@ const MAPA = criarMapa({ sb, S, isGM: () => isGM(), esc, toast, picOf: (p) => pi
   ferir: (c, dano, txt) => { S.noite ||= novaNoite(); const t = trackerDe(c); t.sangue = Math.max(0, t.sangue - dano); logNoite(txt); salvarNoite(); MESA?.repintar(); },
   forcaCirculo: (v, txt) => { S.noite ||= novaNoite(); S.noite.circulo = v; if (txt) logNoite(txt); salvarNoite(); MESA?.repintar(); } });
 let MESA = null;
+quandoMudar(() => { if (route().name === 'ficha') rerender(); });
 function criarAMesa() {
   MESA = criarMesa({ sb, S, esc, toast, isGM: () => isGM(), MAPA, route: () => route(), go: (p) => go(p), rerender: () => rerender(),
     charById: (id) => charById(id), picChar: (c) => picChar(c), estCls: (c) => estCls(c), estadoDe: (c) => estadoDe(c), ESTADOS,
@@ -738,7 +740,8 @@ function viewRoller(c) {
     <div class="ro-adj"><div><span class="flab">Regra de ouro</span><p class="fhelp" style="margin:0">Pavor, ferida, cansaço tiram; ajuda, canto, calma devolvem.</p></div>
       <div class="stepper"><button data-ro-adj="-1" aria-label="Tirar um dado">−</button><span class="v">${ro.ajuste > 0 ? '+' + ro.ajuste : ro.ajuste}</span><button data-ro-adj="1" aria-label="Devolver um dado">+</button></div></div>
     <div><span class="flab">Dificuldade (o mestre diz)</span><div class="sub-opts">${R.DIFICULDADES.map(([n, t]) => `<button class="pill${ro.dif === n ? ' sel' : ''}" data-ro-dif="${n}">${n} <span class="dim small">${t}</span></button>`).join('')}</div></div>
-    <button class="btn primary block ro-go" data-act="rolar">Rolar ${mao <= 0 ? '2d20 (mão vazia, fica o pior)' : `${mao}d20`}${bonus ? ` + ${bonus}` : ''}</button>
+    ${fisicoHtml(ro.cid)}
+    <button class="btn primary block ro-go" data-act="rolar">${fisico(ro.cid) ? 'Digitar os dados: ' : 'Rolar '}${mao <= 0 ? '2d20 (mão vazia, fica o pior)' : `${mao}d20`}${bonus ? ` + ${bonus}` : ''}</button>
   </section>`;
 }
 async function registrar(c, label, res, detail) {
@@ -859,9 +862,11 @@ document.addEventListener('click', async (e) => {
     rerender(); return;
   }
   if (fc && t.dataset.rollDmg) {
-    const r = R.rolarDano(t.dataset.rollDmg); if (!r) return;
+    let df = null;
+    if (fisico(fc.id)) { const q = R.dadosDe(t.dataset.rollDmg); df = await pedirDados({ n: q.n, faces: q.f, titulo: `Dano: ${t.dataset.arma}`, como: q.n > 1 ? 'O app soma todos.' : '' }); if (!df) return; }
+    const r = R.rolarDano(t.dataset.rollDmg, df); if (!r) return;
     toast(`${t.dataset.arma}: ${r.total} de dano (${t.dataset.rollDmg})`);
-    registrar(fc, `Dano: ${t.dataset.arma}`, r, { tipo: 'dano', dados: r.dados, expr: r.expr }); return;
+    registrar(fc, `Dano: ${t.dataset.arma}`, r, { tipo: 'dano', dados: r.dados, expr: r.expr, ...(df ? { fisico: true } : {}) }); return;
   }
   if (ui.roller && t.dataset.roAttr) { ui.roller.attr = t.dataset.roAttr; ui.roller.res = null; rerender(); return; }
   if (ui.roller && t.dataset.roAdj) { ui.roller.ajuste = Math.max(-5, Math.min(4, ui.roller.ajuste + +t.dataset.roAdj)); ui.roller.res = null; rerender(); return; }
@@ -923,10 +928,13 @@ document.addEventListener('click', async (e) => {
   }
   if (act === 'fecharRoll') { ui.roller = null; rerender(); return; }
   if (act === 'rolar' && fc && ui.roller) {
-    const ro = ui.roller, res = R.rolar(fc.data, ro);
+    const ro = ui.roller;
+    let df = null;
+    if (fisico(fc.id)) { const n = Math.min(5, (R.atrib(fc.data)[ro.attr] || 1) + ro.ajuste); df = await pedirDados({ n: n <= 0 ? 2 : n, titulo: [ATN[ro.attr], ro.pericia].filter(Boolean).join(' + '), como: n <= 0 ? 'Mão vazia: vale o <b>menor</b> deles.' : n > 1 ? 'Vale o <b>maior</b>.' : '' }); if (!df) return; }
+    const res = R.rolar(fc.data, { ...ro, dadosFisicos: df });
     ro.res = res; rerender();
     const label = [ATN[ro.attr], ro.pericia].filter(Boolean).join(' + ');
-    registrar(fc, label, res, { tipo: 'teste', dados: res.dados, fica: res.fica, bonus: res.bonus, mao: res.mao, ajuste: ro.ajuste, dif: ro.dif, passou: res.passou, marcante: res.marcante, desastre: res.desastre, vazia: res.vazia });
+    registrar(fc, label, res, { tipo: 'teste', dados: res.dados, fica: res.fica, bonus: res.bonus, mao: res.mao, ajuste: ro.ajuste, dif: ro.dif, passou: res.passou, marcante: res.marcante, desastre: res.desastre, vazia: res.vazia, ...(df ? { fisico: true } : {}) });
     return;
   }
   if (act === 'sugerir') {
