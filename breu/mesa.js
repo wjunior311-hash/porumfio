@@ -33,7 +33,7 @@ export function criarMesa(ctx) {
   let salvarT = null;
   const G = criarGuia({
     S, R, esc,
-    salvar: (E) => { S.guia = E; MAPA.redraw(); clearTimeout(salvarT); salvarT = setTimeout(() => sb.from('breu_state').upsert({ key: 'guia', value: E, updated_at: new Date().toISOString() }), 500); },
+    salvar: (E) => { S.guia = E; MAPA.redraw(); clearTimeout(salvarT); salvarT = setTimeout(() => sb.from('breu_state').upsert({ key: 'guia', value: E, updated_at: new Date().toISOString() }).then(({ error }) => { if (error) toast('Não consegui salvar o guia. Confira a internet.'); }), 500); },
     repintar: (topo) => { pintarGuia(topo); pintarPainel(); MAPA.redraw(); },
     nomeAcao, acao: (t, v) => acao(t, v), pedir: (p) => pedir(p), encerrar: (id) => encerrar(id),
   });

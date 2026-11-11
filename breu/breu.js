@@ -4,7 +4,7 @@ import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { criarMapa } from './mapa.js?v=43';
-import { criarMesa } from './mesa.js?v=36';
+import { criarMesa } from './mesa.js?v=37';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -1045,7 +1045,7 @@ document.addEventListener('input', (e) => {
   if (t.dataset.gmnote) {
     const id = t.dataset.gmnote; S.notes[id] = t.value;
     clearTimeout(pending['gm' + id]);
-    pending['gm' + id] = setTimeout(() => sb.from('breu_gm_notes').upsert({ character_id: id, note: S.notes[id], updated_at: new Date().toISOString() }), 800);
+    pending['gm' + id] = setTimeout(() => sb.from('breu_gm_notes').upsert({ character_id: id, note: S.notes[id], updated_at: new Date().toISOString() }).then(({ error }) => { if (error) toast('Não consegui salvar a anotação.'); }), 800);
   }
 });
 
