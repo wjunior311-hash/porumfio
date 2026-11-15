@@ -456,3 +456,48 @@ export function tracosProntos(p) {
   const r = tracosConhecidos(p);
   return C.TRACOS_PRONTOS.filter((t) => r.includes(t[1]));
 }
+
+// ---------- a luta ----------
+// o que qualquer personagem pode fazer na vez dele, com ou sem arma marcada
+export const ACOES_LUTA = [
+  { k: 'atacar', n: 'Atacar', per: 'Luta', d: 'Contra a Defesa do bicho. Arma marcada fere: role o dano. Arma sem marca não fere, mas ele perde o próximo movimento. De longe, use Pontaria.' },
+  { k: 'empurrar', n: 'Empurrar', per: 'Luta', d: 'Contra a Defesa. Joga o bicho 2 passos. Se cair numa armadilha ou atravessar um traço Ferir, ela dispara.' },
+  { k: 'prender', n: 'Prender', per: 'Atletismo', d: 'Com corda, forcado ou rede, contra a Defesa. Ele perde o próximo movimento.' },
+  { k: 'chamar', n: 'Chamar para si', per: 'Lábia', d: 'Dificuldade 12. O bicho muda de alvo e vem em você. Serve para tirar ele de cima de quem está caído.' },
+  { k: 'enganar', n: 'Enganar o sentido', per: 'Furtividade', d: 'Dificuldade 12. Ele perde o alvo por uma rodada. Quem fareja: sal ou erva forte (Sobrevivência). Quem ouve: barulho longe. Quem vê movimento: ficar imóvel. Quem sente medo: cantar (Canto).' },
+  { k: 'ler', n: 'Ler o bicho', per: 'Saberes', d: 'Dificuldade 15 (ou Percepção 15). Revela a família e o sentido dele: todos passam a saber qual arma e qual traço servem.' },
+  { k: 'riscar', n: 'Riscar na hora', per: 'Traços', d: 'Um traço pequeno, numa rodada, com metade da força. Tapa um buraco ou arma uma armadilha no chão.' },
+  { k: 'tratar', n: 'Tratar', per: 'Ervas e Cura', d: 'Dificuldade 15. Quem está caído volta com 1 de Sangue e ferido.' },
+  { k: 'encorajar', n: 'Encorajar', per: 'Lábia', d: 'Uma palavra ou um canto do lado de alguém: ele perde 1 Pavor.' },
+];
+
+// as armadilhas que se preparam antes da luta (cada uma leva uma rodada de preparação)
+export const ARMADILHAS = [
+  { n: 'Traço Ferir no chão', per: 'Traços', d: 'A força é o resultado (metade sem o Dom). Quem atravessa sofre d6, ou 2d6 se a essência vence a dele.' },
+  { n: 'Linha de sal', per: 'Sobrevivência', d: 'Numa soleira ou janela. Força 12 contra quem fareja e 8 contra os outros. Vento e passo descuidado desfazem.' },
+  { n: 'Isca', per: 'Sobrevivência', d: 'Carne ou sangue chama quem fareja para o lugar que você escolher, de preferência uma armadilha.' },
+  { n: 'Laço ou rede', per: 'Atletismo', d: 'Prende o primeiro bicho que passar até ele vencer Atletismo 15.' },
+];
+
+// o arsenal que Antero guardou debaixo do tablado da casa de farinha: mais peças do que gente
+export const ARSENAL = [
+  { k: 'faca', n: 'Faca de Antero', ess: 'Lodo', dano: 'd6', per: 'Luta', d: 'O nome dele riscado no cabo. Discreta, cabe na bota.' },
+  { k: 'facao', n: 'Facão de lâmina escura', ess: 'Lodo', dano: 'd8', per: 'Luta', d: 'Abre mato: +1 dado para atravessar vegetação fechada.' },
+  { k: 'forcado', n: 'Forcado de três dentes', ess: 'Lodo', dano: 'd6', per: 'Luta', d: 'Alcance de 2 passos. Quando acerta, prende: o bicho perde o próximo movimento.' },
+  { k: 'lanca', n: 'Lança de vigília', ess: 'Cinza', dano: 'd8', per: 'Luta', d: 'Alcance de 2 passos, ataca por cima de um aliado. A arma de quem segura brecha.' },
+  { k: 'machado', n: 'Machado de rachar', ess: 'Osso', dano: 'd10', per: 'Luta', d: 'Duas mãos. Quebra carapaça: contra bicho enrolado ou de casca, ignora o bônus de Defesa.' },
+  { k: 'funda', n: 'Funda com dez pedras marcadas', ess: 'Sopro', dano: 'd6', per: 'Pontaria', d: 'De longe. As pedras se recolhem de manhã.' },
+  { k: 'arco', n: 'Arco curto com seis flechas', ess: 'Raiz', dano: 'd8', per: 'Pontaria', d: 'De longe e em silêncio. Só seis flechas marcadas.' },
+  { k: 'foice', n: 'Foice de cabo curto', ess: 'Raiz', dano: 'd8', per: 'Luta', d: 'Varre: um ataque acerta até dois bichos miúdos lado a lado.' },
+  { k: 'pandeiro', n: 'Pandeiro de couro de Assombro', ess: 'Som', dano: '', per: 'Canto', d: 'Tocar é a ação da vez: role Canto. 10 a 14: o círculo ganha +2 até a sua próxima vez. 15 ou mais: +4. Abaixo de 10, o som chama: o bicho mais perto muda o alvo para você.' },
+  { k: 'rabeca', n: 'Rabeca de crina', ess: 'Som e Sopro', dano: '', per: 'Canto', d: 'Tocar é a ação da vez: role Canto. 10 a 14: os bichos a até 5 passos perdem 1 dado no próximo ataque. 15 ou mais: perdem 1 dado, e os que sentem medo perdem você de vista. Abaixo de 10, desafina: o bicho mais perto vem em você.' },
+];
+// quem vence quem: Cinza > Raiz > Osso > Sopro > Lodo > Cinza
+const VENCE = { Cinza: 'Raiz', Raiz: 'Osso', Osso: 'Sopro', Sopro: 'Lodo', Lodo: 'Cinza' };
+export function contraFamilia(ess, familia) {
+  const e = String(ess || '').split(' ')[0];
+  if (VENCE[e] === familia) return { t: 'vence', d: '+1 dado no ataque e no dano' };
+  if (VENCE[familia] === e) return { t: 'perde', d: '−1 dado no ataque' };
+  return { t: 'neutra', d: '' };
+}
+export const armaDe = (p) => ARSENAL.find((a) => a.k === p?.armaMarcada) || null;

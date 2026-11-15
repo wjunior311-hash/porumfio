@@ -1,8 +1,8 @@
 // Mapa compartilhado da mesa: cena, peças, escuro, círculos e movimento limitado por rodada.
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
-import { ASS_TEXTO } from './ass-texto.js?v=1';
-import * as R from './regras.js?v=5';
+import { ASS_TEXTO, JOGADAS, JOGADA_BASE } from './ass-texto.js?v=2';
+import * as R from './regras.js?v=6';
 import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=22';
 
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
@@ -211,7 +211,7 @@ export function criarMapa(ctx) {
           <div class="mp-selh"><b>${esc(t.nome)}</b>${b ? `<span>Defesa ${b.defesa} · ${esc(b.sentido)}</span>` : ''}${oculto ? '<em>escondido</em>' : ''}</div>
           ${oculto ? `<button class="btn primary block" data-mp="visivel">Mostrar aos jogadores</button>` : ''}
           ${t.kind === 'assombro' && b && !oculto ? ataqueHtml(t, b) : ''}
-          ${t.kind === 'assombro' && b ? narraHtml(oculto, b) : ''}
+          ${t.kind === 'assombro' && b ? narraHtml(oculto, b) + jogadasHtml(b) : ''}
           ${t.kind !== 'pc' ? `<div class="mp-row mp-ver"><button class="btn sm" data-mp="retrato">Ver a imagem grande</button>${oculto ? '' : '<button class="btn sm" data-mp="retodos">Mostrar grande para todos</button>'}</div>` : ''}
           ${t.kind === 'npc' ? `<button class="btn sm block" data-g="npc" data-v="${semAcento(t.nome).replace(/^(dona|seu) /, '').split(' ')[0]}">O que ${esc(t.nome)} responde</button>` : ''}
           ${sangue}${levarHtml}
@@ -231,6 +231,13 @@ export function criarMapa(ctx) {
       ${T.esp ? `<span class="lbl">Como ele luta (só para você)</span><p>${esc(T.esp)}</p>` : ''}
       ${leia('Quando ele morrer, leia', T.morre || 'Ele se desfaz no chão, em pó e fumaça, e o silêncio volta.')}
       ${T.despojos ? `<span class="lbl">O que dá para tirar dele</span><p>${esc(T.despojos)}</p>` : ''}</details>`;
+  }
+  // o que o bicho pode fazer: você anuncia a intenção no começo da rodada, e ele age depois dos jogadores
+  function jogadasHtml(b) {
+    const js = JOGADAS[b.id] || JOGADA_BASE;
+    return `<div class="mp-jogadas"><span class="lbl">O que ele pode fazer nesta rodada</span>
+      <p class="mp-jn">No começo da rodada, escolha uma e leia a intenção. Os jogadores reagem, e ele age depois.</p>
+      ${js.map((j) => `<details class="mp-jog"><summary><b>${esc(j.n)}</b><small>${esc(j.quando)}</small></summary><p class="mp-leia">${esc(j.diga)}</p><p>${esc(j.faz)}</p></details>`).join('')}</div>`;
   }
   // a imagem grande de uma peça
   function grande(t) {

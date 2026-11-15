@@ -392,3 +392,6 @@ details.prontos summary { cursor: pointer; font-family: var(--label); letter-spa
 .gen-tg span { color: var(--osso3, #7a7a76); }
 .gen-tg button { border: 1px solid var(--line2, #2a313b); background: transparent; color: inherit; border-radius: 999px; padding: 3px 10px; font: inherit; cursor: pointer; opacity: .75; }
 .gen-tg button.on { border-color: var(--brasa, #c2552f); opacity: 1; }
+.arma-marcada { border: 1px solid var(--brasa, #c2552f); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; background: rgba(194,85,47,.07); }
+.arma-marcada .lbl { display: block; margin-bottom: 4px; }
+.arma-marcada .dmg { margin-top: 8px; }

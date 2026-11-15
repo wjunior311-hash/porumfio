@@ -161,3 +161,36 @@ export const ASS_TEXTO = {
   "alt": "6,0 m de altura"
  }
 };
+
+// as jogadas de cada bicho: o que você anuncia no começo da rodada (intenção) e o que acontece na vez dele
+export const JOGADAS = {
+  'cinza-2': [
+    { n: 'Seguir o rastro', quando: 'Quando ainda não achou ninguém', diga: 'O focinho cola no chão. Ele vira de uma vez na direção de quem acendeu fogo ou está sangrando.', faz: 'Anda até 6 passos direto para essa pessoa. Se chegar, ataca na mesma vez.' },
+    { n: 'Mordida que queima', quando: 'Quando está colado em alguém', diga: 'Ele abaixa a cabeça e mostra os dentes em brasa.', faz: 'Ataque 1d20+2 contra a Defesa. Acertou: d6 de dano e a pessoa perde 1 Prumo.' },
+    { n: 'Rodear o círculo', quando: 'Quando a linha está inteira', diga: 'Ele dá a volta na linha, farejando cada palmo, procurando onde o cheiro de gente passa.', faz: 'Investe contra o trecho mais fraco: 1d20+2 contra a força. Não superou: a linha perde 3.' },
+    { n: 'Fugir ferido', quando: 'Com metade do Sangue ou menos', diga: 'Ele gane, um som de brasa molhada, e recua para o escuro.', faz: 'Foge 6 passos. Volta na próxima fase, com o Sangue que tem.' },
+  ],
+  'cinza-1': [
+    { n: 'Pelas frestas', quando: 'Quando há parede ou porta', diga: 'O chiado vem de dentro das paredes. Pelos buracos do tamanho de um punho, começam a entrar.', faz: 'O bando ignora sal e entra por qualquer fresta. Aparece do lado de dentro, perto de quem tem mais Pavor.' },
+    { n: 'Cobrir', quando: 'Quando chega em alguém', diga: 'O bando sobe pelas pernas de quem está mais perto, como formiga em brasa.', faz: 'Ataque 1d20+2 (1d20 se o bando estiver pela metade). Acertou: d6 de dano. Cada 4 de dano que o bando sofre derruba um deles.' },
+    { n: 'Caçar o medo', quando: 'Sempre que alguém falha no Pavor', diga: 'O bando inteiro para, e todas as cabecinhas viram na mesma direção.', faz: 'Muda o alvo para quem tem mais Pavor, mesmo que esteja longe.' },
+  ],
+  'osso-1': [
+    { n: 'Rolar contra a linha', quando: 'Quando o círculo está de pé', diga: 'Ele se enrola numa bola de espinhos e pega embalo, toc, toc, toc, cada vez mais rápido.', faz: 'Enrolado: Defesa 16. Investe contra o círculo, 1d20+2 contra a força. Não superou: a linha perde 4 (e não 3).' },
+    { n: 'Arrombar', quando: 'Quando há uma porta no caminho', diga: 'A bola bate na porta e a madeira estala.', faz: '1d20+2 contra a porta (tranca de ferro vale 14, porta comum 10). Superou: a porta abre.' },
+    { n: 'Desenrolar', quando: 'Quando a linha cai ou ele é preso', diga: 'As placas se abrem com um estalo de osso, e lá dentro tem dentes.', faz: 'Volta à Defesa 13 e passa a atacar gente: 1d20+2, d6 de dano.' },
+  ],
+  'cinza-4': [
+    { n: 'Escutar', quando: 'Antes de achar alguém', diga: 'A cabeça baixa vai de um lado para o outro. Ela parou. Está escutando.', faz: 'Quem fizer barulho nesta rodada vira o alvo. Um grupo em silêncio total não é achado.' },
+    { n: 'Pisão', quando: 'Quando está perto de alguém', diga: 'Ela levanta a pata da frente, e o chão inteiro espera.', faz: 'Ataque 2d20+3 contra a Defesa. Acertou: d8 de dano, e quem tiver Sangue baixo cai no chão.' },
+    { n: 'Nuvem de fuligem (anuncie uma rodada antes)', quando: 'Uma vez na noite', diga: 'A corcunda incha. Ela está enchendo o peito de cinza.', faz: 'Na vez seguinte, sacode a corcunda: todos a até 5 passos perdem 1 dado na próxima rolagem.' },
+    { n: 'Derrubar a linha', quando: 'Quando há círculo entre ela e o barulho', diga: 'Ela abaixa a cabeça e anda contra a linha como quem anda contra o vento.', faz: '2d20+3 contra a força do círculo. Não superou: a linha perde 3. Superou: abre uma brecha do tamanho dela.' },
+  ],
+};
+// para os bichos sem jogadas escritas: o básico
+export const JOGADA_BASE = [
+  { n: 'Caçar', quando: 'Antes de achar alguém', diga: 'Ele procura pelo sentido dele: fareja, escuta, espera alguém se mexer ou sente o medo.', faz: 'Anda até o alvo mais fácil para o sentido dele.' },
+  { n: 'Atacar', quando: 'Quando está colado em alguém', diga: 'Ele se prepara para o bote.', faz: 'Rola o ataque dele contra a Defesa. Acertou: dano.' },
+  { n: 'Investir contra a linha', quando: 'Quando há círculo no caminho', diga: 'Ele mede a linha e investe.', faz: 'Ataque contra a força do círculo. Não superou: perde 3.' },
+  { n: 'Fugir ferido', quando: 'Com metade do Sangue ou menos', diga: 'Ele recua para o escuro.', faz: 'Foge e volta na próxima fase.' },
+];

@@ -1,10 +1,10 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import * as R from './regras.js?v=5';
+import * as R from './regras.js?v=6';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
-import { criarMapa } from './mapa.js?v=43';
-import { criarMesa } from './mesa.js?v=37';
+import { criarMapa } from './mapa.js?v=44';
+import { criarMesa } from './mesa.js?v=38';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -43,7 +43,7 @@ function criarAMesa() {
   MESA = criarMesa({ sb, S, esc, toast, isGM: () => isGM(), MAPA, route: () => route(), go: (p) => go(p), rerender: () => rerender(),
     charById: (id) => charById(id), picChar: (c) => picChar(c), estCls: (c) => estCls(c), estadoDe: (c) => estadoDe(c), ESTADOS,
     trackerDe: (c) => trackerDe(c), garantirNoite: () => { S.noite ||= novaNoite(); }, virarFase: () => virarFase(), salvarNoite: () => salvarNoite(),
-    registrar: (c, l, r, d) => registrar(c, l, r, d), logNoite: (t) => logNoite(t) });
+    registrar: (c, l, r, d) => registrar(c, l, r, d), logNoite: (t) => logNoite(t), salvarChar: (c) => saveNow(c) });
 }
 // repinta a tela certa: a mesa do mestre se repinta por partes, o resto recarrega
 function rr() { if (route().name === 'mapa' && MESA) { MESA.repintar(); MAPA.redraw(); } else rerender(); }
@@ -103,7 +103,7 @@ function subscribe() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_tokens' }, (p) => MAPA.onToken(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_state' }, (p) => {
       if (p.new?.key === 'cena') { MAPA.onAtiva(p.new.value); return; }
-      if (p.new?.key === 'mesa') { S.mesa = p.new.value || {}; return; }
+      if (p.new?.key === 'mesa') { S.mesa = p.new.value || {}; if (route().name === 'mapa' && MESA) { if (isGM()) MESA.repintar(); else MESA.pintarDock(); } return; }
       if (p.new?.key === 'pedido') { MESA.onPedido(p.new.value); return; }
       if (p.new?.key === 'guia') { MESA.onGuia(p.new.value); return; }
       if (p.new?.key === 'video') { MESA.onVideo(p.new.value); return; }
@@ -639,6 +639,7 @@ function sheetBody(p, c = null) {
       <table class="weap"><tbody>${R.tracosProntos(p).map(([n, r, m, d]) => `<tr><td>${n}<div class="small dim">${r} · ${m}</div></td><td>${d}</td></tr>`).join('')}</tbody></table>
       <p class="small dim">Às pressas: numa ação, com metade da força, some na próxima virada de fase.</p></details>
     <h2>Equipamento</h2>
+    ${(() => { const am = R.armaDe(p); return am ? `<div class="arma-marcada"><span class="lbl">Arma marcada, do arsenal de Antero</span><b>${esc(am.n)}</b> <span class="chip">${esc(am.ess)}</span>${am.dano ? ` <span class="small dim">dano ${am.dano}, ${am.per}</span>` : ''}<p class="small dim" style="margin:4px 0 0">${esc(am.d)}</p>${podeRolar(c) && am.dano ? `<button class="dmg" data-roll-dmg="${am.dano}" data-arma="${esc(am.n)}">Rolar dano ${am.dano}</button>` : ''}</div>` : ''; })()}
     ${armas.length ? `<table class="weap"><thead><tr><th>Arma</th><th>Dano</th><th>Alcance</th></tr></thead><tbody>${armas.map((a) => `<tr><td>${esc(a)}<div class="small dim">${esc(R.ARMAS[a]?.[2] || '')}</div></td><td>${podeRolar(c) && R.ARMAS[a]?.[0] ? `<button class="dmg" data-roll-dmg="${R.ARMAS[a][0]}" data-arma="${esc(a)}">${R.ARMAS[a][0]}</button>` : R.ARMAS[a]?.[0] || ''}</td><td>${R.ARMAS[a]?.[1] || ''}</td></tr>`).join('')}</tbody></table>` : ''}
     <dl class="kv" style="margin-top:12px">
       ${of ? `<div><dt>Do ofício</dt><dd>${esc(of.equip)}</dd></div>` : ''}

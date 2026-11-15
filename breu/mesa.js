@@ -1,12 +1,12 @@
 // A mesa ao vivo: a tela do mestre no computador (guia, mapa e painel juntos),
 // o pedido de rolagem, os dados que rolam no meio do mapa e o vídeo de abertura.
-import * as R from './regras.js?v=5';
+import * as R from './regras.js?v=6';
 import * as M from './mestre-dados.js';
 import { abrirTour, jaViu } from './tutorial.js?v=1';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=24';
-import { ROLA, FX_C } from './guia-dados.js?v=16';
+import { criarGuia, faixaDe } from './guia.js?v=25';
+import { ROLA, FX_C } from './guia-dados.js?v=17';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
 const ATN = Object.fromEntries(R.ATRIBUTOS.map((a) => [a.k, a.n]));
@@ -42,6 +42,7 @@ export function criarMesa(ctx) {
   function nomeCena(key) { return A.cenaDe(key)?.nome || CENAS_VIVAS[key]?.nome || key; }
   function nomeBest(id) { return M.BESTIARIO.find((b) => b.id === id)?.nome || 'Assombro'; }
   function nomeAcao(tipo, v) {
+    if (tipo === 'arsenal') return S.mesa?.arsenal ? '✓ O arsenal está aberto nas telas deles' : 'Abrir o arsenal nas telas dos jogadores';
     if (tipo === 'video') return `Passar ${(VIDEOS[v] || VIDEOS.abertura).nome} para todos`;
     if (tipo === 'cena') { const c = A.cenaDe(v); return c && A.ativa() === c.id ? `✓ No ar: ${nomeCena(v)}` : `Mostrar: ${nomeCena(v)}`; }
     if (tipo === 'grupo') { const n = A.grupoFalta(); return n ? `Colocar o grupo no mapa (${n})` : '✓ O grupo está no mapa'; }
@@ -57,6 +58,7 @@ export function criarMesa(ctx) {
     return null;
   }
   async function acao(tipo, v) {
+    if (tipo === 'arsenal') { S.mesa = { ...(S.mesa || {}), arsenal: !S.mesa?.arsenal }; await sb.from('breu_state').upsert({ key: 'mesa', value: S.mesa, updated_at: new Date().toISOString() }); toast(S.mesa.arsenal ? 'Cada jogador vê o arsenal e escolhe uma peça.' : 'Arsenal fechado.'); repintar(); return; }
     if (tipo === 'video') { tocarVideo(v); return; }
     if (tipo === 'cena') { const c = await A.garantirCena(v); if (c) await A.mostrarCena(c.id); }
     else if (tipo === 'grupo') await A.porGrupo();
@@ -267,6 +269,7 @@ export function criarMesa(ctx) {
       }
     }
     const pers = [...Object.keys(ATR).map((n) => ({ n, a: true })), ...R.PERICIAS.map(([n]) => ({ n, g: R.grauPericia(c.data, n) }))];
+    h += arsenalHtml(c) + lutaHtml(c);
     h += `<div class="dk-livre ${aberto ? 'aberto' : ''}">
       ${aberto ? `<div class="dk-folha"><div class="dk-fh"><b>${lateral ? 'Rolar dados' : 'Rolar como ' + esc(c.data.nome)}</b>${lateral ? '' : '<button class="btn sm ghost" data-dk="fechar">Fechar</button>'}</div>
         <span class="lbl">Atributos</span><div class="dk-grid">${pers.filter((x) => x.a).map((x) => `<button data-dk="rolar" data-per="${x.n}"><b>${x.n}</b><small>${maoDe(c, x.n).txt}</small></button>`).join('')}</div>
@@ -297,12 +300,30 @@ export function criarMesa(ctx) {
     </div>`;
   }
 
-  async function rolarComo(c, per, pedId) {
+  // o arsenal de Antero: aparece quando o mestre abre, cada um pega uma peça
+  function arsenalHtml(c) {
+    if (!S.mesa?.arsenal || c.data.armaMarcada) return '';
+    const dono = (k) => S.chars.find((o) => o.id !== c.id && o.data.armaMarcada === k);
+    return `<div class="dk-card arsenal"><span class="lbl">O arsenal de Antero</span><b class="dk-t">Escolha uma peça</b>
+      <p class="dk-nota">Cada uma tem um símbolo riscado: a essência. Contra o bicho certo, a essência faz toda a diferença. Pergunte ao mestre se não souber ler.</p>
+      ${R.ARSENAL.map((x) => { const o = dono(x.k); return `<div class="ars ${o ? 'tomada' : ''}"><div><b>${esc(x.n)}</b><small>${esc(x.ess)}${x.dano ? ' · dano ' + x.dano : ''}</small><p>${esc(x.d)}</p></div>${o ? `<span class="ars-dono">com ${esc(o.data.nome)}</span>` : `<button class="btn sm" data-dk="pegar" data-v="${x.k}">Pegar</button>`}</div>`; }).join('')}</div>`;
+  }
+  // o que dá para fazer na luta: aparece à noite, com a arma marcada de quem tem
+  function lutaHtml(c) {
+    const arma = R.armaDe(c.data), noite = S.noite && S.noite.fase != null;
+    if (!noite && !arma) return '';
+    let h = '';
+    if (arma) h += `<div class="dk-arma"><span class="lbl">Sua arma marcada</span><b>${esc(arma.n)}</b><small>${esc(arma.ess)}${arma.dano ? ' · dano ' + arma.dano : ''}</small><p>${esc(arma.d)}</p>
+      <div class="dk-bts">${arma.dano ? `<button class="btn sm primary" data-dk="rolar" data-per="${arma.per}" data-rot="Atacar com ${esc(arma.n)}">Atacar (${arma.per})</button><button class="btn sm" data-dk="dano">Dano ${arma.dano}</button>` : `<button class="btn sm primary" data-dk="rolar" data-per="Canto" data-rot="Tocar: ${esc(arma.n)}">Tocar (Canto)</button>`}${S.mesa?.arsenal ? '<button class="btn sm ghost" data-dk="soltar">Trocar</button>' : ''}</div></div>`;
+    if (noite) h += `<span class="lbl">Na luta, na sua vez</span><div class="dk-luta">${R.ACOES_LUTA.filter((x) => !(arma?.dano && x.k === 'atacar')).map((x) => `<button data-dk="rolar" data-per="${x.per}" data-rot="${esc(x.n)}" title="${esc(x.d)}"><b>${esc(x.n)}</b><small>${esc(x.d)}</small></button>`).join('')}</div>`;
+    return h;
+  }
+  async function rolarComo(c, per, pedId, rotulo) {
     const attr = ATR[per] || R.PERICIA_ATRIB[per], pericia = ATR[per] ? '' : per;
     const p = pedId ? (S.pedidos || []).find((x) => x.id === pedId) || null : null;
     const ajuste = -pavorDe(c) - feridoDe(c);
     const dif = p?.dif || 0;
-    const label = p ? p.label : pericia ? `${per} (${ATN[attr]})` : per;
+    const label = rotulo || (p ? p.label : pericia ? `${per} (${ATN[attr]})` : per);
     let dadosFisicos = null;
     if (fisico(c.id)) {
       const m = maoDe(c, per);
@@ -547,7 +568,10 @@ export function criarMesa(ctx) {
     }
     if (a === 'abrir') { U.dk = !U.dk; pintarDock(); return true; }
     if (a === 'fechar') { U.dk = false; pintarDock(); return true; }
-    if (a === 'rolar') { const c = meuChar(); if (!c) return true; t.disabled = true; await rolarComo(c, t.dataset.per, t.dataset.ped || null); return true; }
+    if (a === 'rolar') { const c = meuChar(); if (!c) return true; t.disabled = true; await rolarComo(c, t.dataset.per, t.dataset.ped || null, t.dataset.rot || null); return true; }
+    if (a === 'pegar') { const c = meuChar(); if (!c) return true; const arma = R.ARSENAL.find((x) => x.k === t.dataset.v); if (!arma || S.chars.some((o) => o.id !== c.id && o.data.armaMarcada === arma.k)) { toast('Alguém já pegou essa.'); pintarDock(); return true; } c.data.armaMarcada = arma.k; await ctx.salvarChar(c); toast(`${arma.n} agora é sua.`); pintarDock(); return true; }
+    if (a === 'soltar') { const c = meuChar(); if (!c) return true; delete c.data.armaMarcada; await ctx.salvarChar(c); pintarDock(); return true; }
+    if (a === 'dano') { const c = meuChar(), arma = R.armaDe(c?.data); if (!arma?.dano) return true; let df = null; if (fisico(c.id)) { const q = R.dadosDe(arma.dano); df = await pedirDados({ n: q.n, faces: q.f, titulo: `Dano: ${arma.n}` }); if (!df) return true; } const r = R.rolarDano(arma.dano, df); const row = await ctx.registrar(c, `Dano: ${arma.n} (${arma.ess})`, r, { tipo: 'dano', dados: r.dados, expr: r.expr, ...(df ? { fisico: true } : {}) }); animar(row || { character_id: c.id, label: `Dano: ${arma.n}`, total: r.total, detail: { dados: r.dados } }); return true; }
     return true;
   }
   async function onChange(t) {
