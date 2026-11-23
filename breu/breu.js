@@ -1,11 +1,11 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import * as R from './regras.js?v=7';
-import * as AR from './armas.js?v=1';
+import * as R from './regras.js?v=8';
+import * as AR from './armas.js?v=2';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
-import { criarMapa } from './mapa.js?v=46';
-import { criarMesa } from './mesa.js?v=40';
+import { criarMapa } from './mapa.js?v=47';
+import { criarMesa } from './mesa.js?v=41';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';

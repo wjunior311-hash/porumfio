@@ -82,7 +82,7 @@ export const OFICIOS = [
     hab: ['Firme na linha', 'Enquanto você defende uma brecha, nenhum Assombro passa por ela sem antes derrubar você.'],
     equip: 'Lança marcada com ponta de osso, couraça de couro cru (+2), escudo de madeira (+1), facão.', protecao: 3,
     caminhos: [{ k: 'muralha', n: 'Muralha', d: 'Proteger', habs: [['Escudo vivo', '1 Sangue', 'Recebe no lugar de um aliado ao seu lado o ataque que era para ele.'], ['Não recuo', '', 'Não recebe Pavor enquanto estiver numa brecha.']] },
-      { k: 'lanca', img: 'img/armas/lanca.webp', tags: ['Alcance 2', 'Por cima de aliado'], n: 'Lança', d: 'Atacar', habs: [['Investida', '2 Sangue', 'Ataca dois Assombros na mesma ação.'], ['Contragolpe', '', 'Quando um Assombro erra um ataque contra você, você ataca de volta na hora.']] }],
+      { k: 'lanca', curto: 'Lança', img: 'img/armas/lanca.webp', tags: ['Alcance 2', 'Por cima de aliado'], n: 'Lança', d: 'Atacar', habs: [['Investida', '2 Sangue', 'Ataca dois Assombros na mesma ação.'], ['Contragolpe', '', 'Quando um Assombro erra um ataque contra você, você ataca de volta na hora.']] }],
     armas: ['Lança marcada (ponta de osso)', 'Facão'] },
 ];
 
@@ -481,16 +481,16 @@ export const ARMADILHAS = [
 
 // o arsenal que Antero guardou debaixo do tablado da casa de farinha: mais peças do que gente
 export const ARSENAL = [
-  { k: 'faca', img: 'img/armas/faca.webp', tags: ['Uma mão', 'Escondida'], n: 'Faca de Antero', ess: 'Cinza', dano: 'd6', per: 'Luta', d: 'O nome dele riscado no cabo. Discreta, cabe na bota.' },
-  { k: 'facao', img: 'img/armas/facao.webp', tags: ['Uma mão', '+1 dado no mato'], n: 'Facão de lâmina escura', ess: 'Lodo', dano: 'd8', per: 'Luta', d: 'Abre mato: +1 dado para atravessar vegetação fechada.' },
-  { k: 'forcado', img: 'img/armas/forcado.webp', tags: ['Alcance 2', 'Prende'], n: 'Forcado de três dentes', ess: 'Raiz', dano: 'd6', per: 'Luta', d: 'Alcance de 2 passos. Quando acerta, prende: o bicho perde o próximo movimento.' },
+  { k: 'faca', curto: 'Faca', img: 'img/armas/faca.webp', tags: ['Uma mão', 'Escondida'], n: 'Faca de Antero', ess: 'Cinza', dano: 'd6', per: 'Luta', d: 'O nome dele riscado no cabo. Discreta, cabe na bota.' },
+  { k: 'facao', curto: 'Facão', img: 'img/armas/facao.webp', tags: ['Uma mão', '+1 dado no mato'], n: 'Facão de lâmina escura', ess: 'Lodo', dano: 'd8', per: 'Luta', d: 'Abre mato: +1 dado para atravessar vegetação fechada.' },
+  { k: 'forcado', curto: 'Forcado', img: 'img/armas/forcado.webp', tags: ['Alcance 2', 'Prende'], n: 'Forcado de três dentes', ess: 'Raiz', dano: 'd6', per: 'Luta', d: 'Alcance de 2 passos. Quando acerta, prende: o bicho perde o próximo movimento.' },
   { k: 'lanca', n: 'Lança de vigília', ess: 'Sopro', dano: 'd8', per: 'Luta', d: 'Alcance de 2 passos, ataca por cima de um aliado. A arma de quem segura brecha.' },
-  { k: 'machado', img: 'img/armas/machado.webp', tags: ['Duas mãos', 'Quebra casca'], n: 'Machado de rachar', ess: 'Osso', dano: 'd10', per: 'Luta', d: 'Duas mãos. Quebra carapaça: contra bicho enrolado ou de casca, ignora o bônus de Defesa.' },
-  { k: 'funda', img: 'img/armas/funda.webp', tags: ['De longe'], mun: 10, n: 'Funda com dez pedras marcadas', ess: 'Lodo', dano: 'd6', per: 'Pontaria', d: 'De longe. As pedras se recolhem de manhã.' },
-  { k: 'arco', img: 'img/armas/arco.webp', tags: ['De longe', 'Silencioso'], mun: 6, n: 'Arco curto com seis flechas', ess: 'Cinza', dano: 'd8', per: 'Pontaria', d: 'De longe e em silêncio. Só seis flechas marcadas.' },
-  { k: 'foice', img: 'img/armas/foice.webp', tags: ['Varre 2 miúdos'], n: 'Foice de cabo curto', ess: 'Raiz', dano: 'd8', per: 'Luta', d: 'Varre: um ataque acerta até dois bichos miúdos lado a lado.' },
-  { k: 'pandeiro', img: 'img/armas/pandeiro.webp', tags: ['Ajuda o círculo'], n: 'Pandeiro de couro de Assombro', ess: 'Som e Sopro', dano: '', per: 'Canto', d: 'Tocar é a ação da vez: role Canto. 10 a 14: o círculo ganha +2 até a sua próxima vez. 15 ou mais: +4. Abaixo de 10, o som chama: o bicho mais perto muda o alvo para você.' },
-  { k: 'rabeca', img: 'img/armas/rabeca.webp', tags: ['Enfraquece os bichos'], n: 'Rabeca de crina', ess: 'Som e Osso', dano: '', per: 'Canto', d: 'Tocar é a ação da vez: role Canto. 10 a 14: os bichos a até 5 passos perdem 1 dado no próximo ataque. 15 ou mais: perdem 1 dado, e os que sentem medo perdem você de vista. Abaixo de 10, desafina: o bicho mais perto vem em você.' },
+  { k: 'machado', curto: 'Machado', img: 'img/armas/machado.webp', tags: ['Duas mãos', 'Quebra casca'], n: 'Machado de rachar', ess: 'Osso', dano: 'd10', per: 'Luta', d: 'Duas mãos. Quebra carapaça: contra bicho enrolado ou de casca, ignora o bônus de Defesa.' },
+  { k: 'funda', curto: 'Funda', img: 'img/armas/funda.webp', tags: ['De longe'], mun: 10, n: 'Funda com dez pedras marcadas', ess: 'Lodo', dano: 'd6', per: 'Pontaria', d: 'De longe. As pedras se recolhem de manhã.' },
+  { k: 'arco', curto: 'Arco', img: 'img/armas/arco.webp', tags: ['De longe', 'Silencioso'], mun: 6, n: 'Arco curto com seis flechas', ess: 'Cinza', dano: 'd8', per: 'Pontaria', d: 'De longe e em silêncio. Só seis flechas marcadas.' },
+  { k: 'foice', curto: 'Foice', img: 'img/armas/foice.webp', tags: ['Varre 2 miúdos'], n: 'Foice de cabo curto', ess: 'Raiz', dano: 'd8', per: 'Luta', d: 'Varre: um ataque acerta até dois bichos miúdos lado a lado.' },
+  { k: 'pandeiro', curto: 'Pandeiro', img: 'img/armas/pandeiro.webp', tags: ['Ajuda o círculo'], n: 'Pandeiro de couro de Assombro', ess: 'Som e Sopro', dano: '', per: 'Canto', d: 'Tocar é a ação da vez: role Canto. 10 a 14: o círculo ganha +2 até a sua próxima vez. 15 ou mais: +4. Abaixo de 10, o som chama: o bicho mais perto muda o alvo para você.' },
+  { k: 'rabeca', curto: 'Rabeca', img: 'img/armas/rabeca.webp', tags: ['Enfraquece os bichos'], n: 'Rabeca de crina', ess: 'Som e Osso', dano: '', per: 'Canto', d: 'Tocar é a ação da vez: role Canto. 10 a 14: os bichos a até 5 passos perdem 1 dado no próximo ataque. 15 ou mais: perdem 1 dado, e os que sentem medo perdem você de vista. Abaixo de 10, desafina: o bicho mais perto vem em você.' },
 ];
 // quem vence quem: Cinza > Raiz > Osso > Sopro > Lodo > Cinza
 const VENCE = { Cinza: 'Raiz', Raiz: 'Osso', Osso: 'Sopro', Sopro: 'Lodo', Lodo: 'Cinza' };

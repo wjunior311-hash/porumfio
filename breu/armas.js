@@ -1,6 +1,6 @@
 // As cartas do arsenal de Antero: o desenho, o símbolo riscado, o que a peça faz.
 // Quem não leu o símbolo vê o risco, mas não sabe a essência.
-import * as R from './regras.js?v=7';
+import * as R from './regras.js?v=8';
 
 const T = 'stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';
 // os riscos de Antero, como estão no couro: triângulo, círculo, losango, cruz e xis
@@ -42,16 +42,15 @@ export function contraHtml(a) {
 // a carta. opts: { p (a ficha de quem vê), botoes (html), dono (nome de quem pegou), mini }
 export function cartaHtml(a, { p = null, botoes = '', dono = '', mini = false } = {}) {
   const leu = lido(p, a.k), mun = municaoDe(p?.armaMarcada === a.k ? p : null, a);
-  const arte = a.img ? `<img src="${a.img}" alt="" loading="lazy">` : `<span class="ct-arte-simb">${simbolo(a.ess)}</span>`;
+  const arte = a.img ? `<img src="${a.img}" alt="">` : `<span class="ct-arte-simb">${simbolo(a.ess)}</span>`;
   return `<article class="carta ${dono ? 'tomada' : ''} ${mini ? 'mini' : ''}" data-carta="${a.k}">
-    <div class="ct-arte">${arte}<span class="ct-risco" title="O símbolo riscado na peça">${simbolo(a.ess)}</span></div>
+    <div class="ct-arte">${arte}<b class="ct-nome">${a.curto || a.n}</b></div>
     <div class="ct-corpo">
-      <b class="ct-nome">${a.n}</b>
       <div class="ct-chips">${a.dano ? `<span>Dano ${a.dano}</span>` : '<span>Instrumento</span>'}<span>${a.per}</span>${(a.tags || []).map((t) => `<span>${t}</span>`).join('')}${mun != null ? `<span class="ct-mun">${mun} de ${a.mun}</span>` : ''}</div>
-      <p class="ct-txt">${a.d}</p>
+      ${dono ? `<span class="ct-dono">Com ${dono}</span>` : `<p class="ct-txt">${a.d}</p>
       ${leu ? `<div class="ct-ess"><span class="lbl">Essência: ${a.ess}</span><ul>${contraHtml(a)}</ul></div>`
         : `<div class="ct-ess nao"><span class="lbl">Essência: você não sabe ler este risco</span>${tentouLer(p, a.k) ? '<small>Você tentou e não entendeu. Pergunte a quem sabe.</small>' : ''}</div>`}
-      ${dono ? `<span class="ct-dono">Com ${dono}</span>` : botoes ? `<div class="ct-bts">${botoes}</div>` : ''}
+      ${botoes ? `<div class="ct-bts">${botoes}</div>` : ''}`}
     </div>
   </article>`;
 }

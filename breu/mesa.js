@@ -1,7 +1,7 @@
 // A mesa ao vivo: a tela do mestre no computador (guia, mapa e painel juntos),
 // o pedido de rolagem, os dados que rolam no meio do mapa e o vídeo de abertura.
-import * as R from './regras.js?v=7';
-import * as AR from './armas.js?v=1';
+import * as R from './regras.js?v=8';
+import * as AR from './armas.js?v=2';
 import * as M from './mestre-dados.js';
 import { abrirTour, jaViu } from './tutorial.js?v=1';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
