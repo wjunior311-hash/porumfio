@@ -165,22 +165,28 @@ export const ASS_TEXTO = {
 // as jogadas de cada bicho: o que você anuncia no começo da rodada (intenção) e o que acontece na vez dele
 export const JOGADAS = {
   'cinza-2': [
+    { n: 'Bafo de borralho (poder)', quando: 'Quando há gente a até 3 passos', diga: 'O peito dele incha. Pelas rachaduras da pele, a brasa morta acende um instante.', faz: 'Cospe brasa morta num cone de 3 passos: cada um ali rola Atletismo contra 1d20+2 ou sofre d6. Quem foi atingido fica com a fuligem colada: até se lavar (uma ação, com água), todos os Farejadores sabem onde ele está.' },
     { n: 'Seguir o rastro', quando: 'Quando ainda não achou ninguém', diga: 'O focinho cola no chão. Ele vira de uma vez na direção de quem acendeu fogo ou está sangrando.', faz: 'Anda até 6 passos direto para essa pessoa. Se chegar, ataca na mesma vez.' },
     { n: 'Mordida que queima', quando: 'Quando está colado em alguém', diga: 'Ele abaixa a cabeça e mostra os dentes em brasa.', faz: 'Ataque 1d20+2 contra a Defesa. Acertou: d6 de dano e a pessoa perde 1 Prumo.' },
     { n: 'Rodear o círculo', quando: 'Quando a linha está inteira', diga: 'Ele dá a volta na linha, farejando cada palmo, procurando onde o cheiro de gente passa.', faz: 'Investe contra o trecho mais fraco: 1d20+2 contra a força. Não superou: a linha perde 3.' },
     { n: 'Fugir ferido', quando: 'Com metade do Sangue ou menos', diga: 'Ele gane, um som de brasa molhada, e recua para o escuro.', faz: 'Foge 6 passos. Volta na próxima fase, com o Sangue que tem.' },
   ],
   'cinza-1': [
+    { n: 'Enxame de fagulhas (poder)', quando: 'Quando acerta alguém', diga: 'As fagulhas sobem pela roupa como formiga, por dentro da manga, pela gola.', faz: 'Quem foi coberto sofre d4 por rodada até rolar no chão (gasta o movimento) ou alguém bater nas fagulhas (uma ação).' },
+    { n: 'Entrar pela boca (poder)', quando: 'Quando alguém grita, canta ou fala alto perto dele', diga: 'O bando inteiro vira para o som.', faz: 'Quem fez barulho a até 2 passos rola Firmeza 12 ou engole fagulha: perde a voz na próxima vez (sem Canto, sem Lábia, sem encorajar).' },
     { n: 'Pelas frestas', quando: 'Quando há parede ou porta', diga: 'O chiado vem de dentro das paredes. Pelos buracos do tamanho de um punho, começam a entrar.', faz: 'O bando ignora sal e entra por qualquer fresta. Aparece do lado de dentro, perto de quem tem mais Pavor.' },
     { n: 'Cobrir', quando: 'Quando chega em alguém', diga: 'O bando sobe pelas pernas de quem está mais perto, como formiga em brasa.', faz: 'Ataque 1d20+2 (1d20 se o bando estiver pela metade). Acertou: d6 de dano. Cada 4 de dano que o bando sofre derruba um deles.' },
     { n: 'Caçar o medo', quando: 'Sempre que alguém falha no Pavor', diga: 'O bando inteiro para, e todas as cabecinhas viram na mesma direção.', faz: 'Muda o alvo para quem tem mais Pavor, mesmo que esteja longe.' },
   ],
   'osso-1': [
+    { n: 'Chuva de espinhos (poder)', quando: 'Quando está cercado ou preso', diga: 'As placas tremem. Um estalo seco, como galho quebrando, e ele se abre de uma vez.', faz: 'Dispara espinhos de osso em todos até 3 passos: um ataque 1d20+2 contra cada um, d4 de dano. O espinho fica cravado: −1 dado até alguém arrancar (uma ação, mais d4 de dano).' },
+    { n: 'Tampão (poder)', quando: 'Quando a linha abriu uma brecha', diga: 'Ele rola até a brecha e se enrola dentro dela, encaixado como pedra em muro.', faz: 'Ninguém passa pela brecha, nem para dentro nem para fora, enquanto ele estiver lá. Fechar a brecha com cal fica impossível até tirarem ele (Empurrar contra a Defesa 16).' },
     { n: 'Rolar contra a linha', quando: 'Quando o círculo está de pé', diga: 'Ele se enrola numa bola de espinhos e pega embalo, toc, toc, toc, cada vez mais rápido.', faz: 'Enrolado: Defesa 16. Investe contra o círculo, 1d20+2 contra a força. Não superou: a linha perde 4 (e não 3).' },
     { n: 'Arrombar', quando: 'Quando há uma porta no caminho', diga: 'A bola bate na porta e a madeira estala.', faz: '1d20+2 contra a porta (tranca de ferro vale 14, porta comum 10). Superou: a porta abre.' },
     { n: 'Desenrolar', quando: 'Quando a linha cai ou ele é preso', diga: 'As placas se abrem com um estalo de osso, e lá dentro tem dentes.', faz: 'Volta à Defesa 13 e passa a atacar gente: 1d20+2, d6 de dano.' },
   ],
   'cinza-4': [
+    { n: 'Soterrar (poder)', quando: 'Quando pisa perto de alguém', diga: 'A pata desce, e o chão em volta vira uma onda de cinza quente.', faz: 'Todos a até 2 passos rolam Atletismo 15 ou ficam enterrados até a cintura: presos, sem andar, e −1 dado em tudo até alguém cavar (uma ação) ou vencerem Atletismo 15 na própria vez.' },
     { n: 'Escutar', quando: 'Antes de achar alguém', diga: 'A cabeça baixa vai de um lado para o outro. Ela parou. Está escutando.', faz: 'Quem fizer barulho nesta rodada vira o alvo. Um grupo em silêncio total não é achado.' },
     { n: 'Pisão', quando: 'Quando está perto de alguém', diga: 'Ela levanta a pata da frente, e o chão inteiro espera.', faz: 'Ataque 2d20+3 contra a Defesa. Acertou: d8 de dano, e quem tiver Sangue baixo cai no chão.' },
     { n: 'Nuvem de fuligem (anuncie uma rodada antes)', quando: 'Uma vez na noite', diga: 'A corcunda incha. Ela está enchendo o peito de cinza.', faz: 'Na vez seguinte, sacode a corcunda: todos a até 5 passos perdem 1 dado na próxima rolagem.' },
@@ -194,3 +200,32 @@ export const JOGADA_BASE = [
   { n: 'Investir contra a linha', quando: 'Quando há círculo no caminho', diga: 'Ele mede a linha e investe.', faz: 'Ataque contra a força do círculo. Não superou: perde 3.' },
   { n: 'Fugir ferido', quando: 'Com metade do Sangue ou menos', diga: 'Ele recua para o escuro.', faz: 'Foge e volta na próxima fase.' },
 ];
+
+// o poder de cada família, para os bichos sem jogadas escritas
+export const FAMILIA = {
+  cinza: { n: 'Brasa morta (poder da família)', quando: 'Quando está perto de alguém', diga: 'Pelas rachaduras da pele, uma brasa sem luz acende.', faz: 'Cospe ou espalha brasa morta: d6 em quem estiver a até 2 passos (Atletismo 12 para escapar). Apaga qualquer chama pequena por perto.' },
+  osso: { n: 'Espinhos (poder da família)', quando: 'Quando é atacado de perto', diga: 'Os ossos por baixo da pele se mexem, como dedos procurando saída.', faz: 'Quem o atacou corpo a corpo leva d4 dos espinhos, acertando ou não.' },
+  lodo: { n: 'Chão que engole (poder da família)', quando: 'Quando alguém está em terra molhada ou baixa', diga: 'A terra amolece debaixo dos pés, como se respirasse.', faz: 'Quem está a até 3 passos rola Atletismo 12 ou afunda até o joelho: perde o movimento até sair.' },
+  raiz: { n: 'Raízes (poder da família)', quando: 'Quando alguém corre ou foge', diga: 'O chão estala, e raízes sobem como mãos.', faz: 'Prende quem estiver a até 4 passos (Atletismo 15 para escapar) e puxa um passo para perto dele.' },
+  sopro: { n: 'Levar o fôlego (poder da família)', quando: 'Quando alguém fala, canta ou risca', diga: 'O ar fica frio de repente, e a respiração de todo mundo vira fumaça.', faz: 'Quem está a até 3 passos rola Firmeza 12 ou perde o fôlego: −1 dado na próxima rolagem. Apaga traços frescos: −2 na força do último traço riscado.' },
+};
+
+// a bordadeira e o moço dos baldes: Rasgados que estudaram com quem saiu do Almofariz. Podem matar todos; escolhem não matar.
+export const RASGADOS = {
+  celeste: { ficha: 'Pregadora. Sangue 20, Defesa 13, ataque 2d20+3, tesoura d6. Não rola Pavor. Os bichos só a atacam se ela estiver sangrando (Sangue abaixo da metade). Ela não quer matar: morto não abre porta. Ela fere, marca e sussurra.', jogadas: [
+    { n: 'Tesoura que sangra', quando: 'Quando alguém chega perto', diga: 'Ela sorri e abre os braços, como quem vai abraçar.', faz: '2d20+3 contra a Defesa, d6. Quem foi cortado sangra: perde 1 Sangue por rodada até alguém tratar (Ervas e Cura 10). E sangue chama: os bichos vão primeiro em quem sangra.' },
+    { n: 'Linha vermelha', quando: 'Quando alguém canta, reza ou fala alto', diga: 'Ela tira do xale um carretel de linha vermelha e lambe a ponta.', faz: 'Pontaria 2d20+3 contra a Defesa: a linha costura a boca da pessoa. Sem falar, sem cantar, sem encorajar, até alguém cortar a linha (uma ação, com lâmina).' },
+    { n: 'Pó de lume na pele', quando: 'Quando alguém se esconde no escuro', diga: 'Ela sopra um punhado de pó da palma da mão, devagar, como quem sopra um beijo.', faz: 'Pontaria contra a Defesa: a pessoa brilha fraquinho até o amanhecer. É a única luz da noite: todo bicho enxerga ela, e esconder fica impossível.' },
+    { n: 'Voz da fenda', quando: 'Uma vez por fase', diga: 'Ela fecha os olhos e começa a pregar, sem gritar, numa voz que chega dentro do ouvido de cada um.', faz: 'Todos que ouvem rolam Firmeza 15 ou ganham 1 Pavor. "Vocês riscam o mundo como quem costura ferida aberta. E se a gente deixasse sarar?"' },
+    { n: 'Lanterna de chamado', quando: 'Quando a fase está acabando', diga: 'Ela abre a portinha da lanterna. A luz amarela sai para o escuro.', faz: 'Na próxima fase chega um Assombro Comum a mais, atraído pela luz.' },
+    { n: 'Xale de couro de Assombro', quando: 'Sempre', diga: 'O golpe pega no xale e escorrega, como em couro molhado.', faz: 'O primeiro golpe de arma marcada contra ela, a cada rodada, perde 1 dado.' },
+  ] },
+  zeca: { ficha: 'Rasgado, o cão de guarda dela. Sangue 16, Defesa 13, ataque 1d20+4, vara d8 (alcance de 2 passos). Não rola Pavor. Era mensageiro: mira boa. Tem a Marca da rédea nas palmas.', jogadas: [
+    { n: 'Vara de ponta de osso', quando: 'Quando alguém ameaça a tia', diga: 'Ele gira a vara dos baldes, e da ponta sai um osso afiado.', faz: '1d20+4 contra a Defesa, d8, alcance de 2 passos.' },
+    { n: 'Batizar', quando: 'Quando alguém está perto', diga: 'Ele pega um dos baldes. Dentro, um líquido escuro que fede a ferro e a fenda.', faz: 'Joga sangue de Assombro em alguém (Pontaria contra a Defesa). Até lavar com água (uma ação), todo bicho ataca essa pessoa com +1 dado.' },
+    { n: 'Dardo de sono', quando: 'Quando alguém corre para a tia', diga: 'Ele leva um caniço fino à boca.', faz: 'Pontaria contra a Defesa: a pessoa resiste com Firmeza contra 14 ou perde a próxima ação.' },
+    { n: 'Proteger', quando: 'Sempre que ela é atacada', diga: 'Ele se joga na frente, sem pensar.', faz: 'Leva o golpe no lugar dela.' },
+    { n: 'Pó de silêncio', quando: 'Na fuga', diga: 'Ele quebra um frasco no chão. O mundo some de som.', faz: 'Numa roda de 3 passos, nada faz barulho até a fase virar: quem está dentro não é ouvido.' },
+    { n: 'A rédea', quando: 'Na saída da Hora Morta', diga: 'Ele encosta as palmas marcadas na corcunda do bicho. A Corcunda abaixa, como cavalo manso.', faz: 'Monta a Corcunda. Montado, age junto com ela: os dois atacam na mesma rodada, e ela corre o dobro.' },
+  ] },
+};

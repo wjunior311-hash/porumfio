@@ -1,7 +1,7 @@
 // Mapa compartilhado da mesa: cena, peças, escuro, círculos e movimento limitado por rodada.
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
-import { ASS_TEXTO, JOGADAS, JOGADA_BASE } from './ass-texto.js?v=2';
+import { ASS_TEXTO, JOGADAS, JOGADA_BASE, FAMILIA, RASGADOS } from './ass-texto.js?v=3';
 import * as R from './regras.js?v=6';
 import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=22';
 
@@ -213,6 +213,7 @@ export function criarMapa(ctx) {
           ${t.kind === 'assombro' && b && !oculto ? ataqueHtml(t, b) : ''}
           ${t.kind === 'assombro' && b ? narraHtml(oculto, b) + jogadasHtml(b) : ''}
           ${t.kind !== 'pc' ? `<div class="mp-row mp-ver"><button class="btn sm" data-mp="retrato">Ver a imagem grande</button>${oculto ? '' : '<button class="btn sm" data-mp="retodos">Mostrar grande para todos</button>'}</div>` : ''}
+          ${t.kind === 'npc' ? rasgadoHtml(t) : ''}
           ${t.kind === 'npc' ? `<button class="btn sm block" data-g="npc" data-v="${semAcento(t.nome).replace(/^(dona|seu) /, '').split(' ')[0]}">O que ${esc(t.nome)} responde</button>` : ''}
           ${sangue}${levarHtml}
           <button class="mp-maisb" data-mp="mais" aria-expanded="${!!MP.mais}">${MP.mais ? 'Menos opções ▴' : 'Mais opções ▾'}</button>
@@ -234,10 +235,20 @@ export function criarMapa(ctx) {
   }
   // o que o bicho pode fazer: você anuncia a intenção no começo da rodada, e ele age depois dos jogadores
   function jogadasHtml(b) {
-    const js = JOGADAS[b.id] || JOGADA_BASE;
+    const js = JOGADAS[b.id] || [...JOGADA_BASE, FAMILIA[String(b.id).split('-')[0]]].filter(Boolean);
     return `<div class="mp-jogadas"><span class="lbl">O que ele pode fazer nesta rodada</span>
       <p class="mp-jn">No começo da rodada, escolha uma e leia a intenção. Os jogadores reagem, e ele age depois.</p>
-      ${js.map((j) => `<details class="mp-jog"><summary><b>${esc(j.n)}</b><small>${esc(j.quando)}</small></summary><p class="mp-leia">${esc(j.diga)}</p><p>${esc(j.faz)}</p></details>`).join('')}</div>`;
+      ${listaJog(js)}</div>`;
+  }
+  function listaJog(js) {
+    return `${js.map((j) => `<details class="mp-jog${/poder/.test(j.n) ? ' poder' : ''}"><summary><b>${esc(j.n)}</b><small>${esc(j.quando)}</small></summary><p class="mp-leia">${esc(j.diga)}</p><p>${esc(j.faz)}</p></details>`).join('')}`;
+  }
+  // a bordadeira e o moço: a ficha de luta aparece na peça deles
+  function rasgadoHtml(t) {
+    const k = semAcento(t.nome || '').includes('celeste') ? 'celeste' : semAcento(t.nome || '').includes('zeca') ? 'zeca' : null;
+    if (!k) return '';
+    const R2 = RASGADOS[k];
+    return `<details class="mp-jogadas mp-rasg"><summary><b>Se lutarem com ${k === 'celeste' ? 'ela' : 'ele'}</b></summary><p class="mp-jn">${esc(R2.ficha)}</p>${listaJog(R2.jogadas)}</details>`;
   }
   // a imagem grande de uma peça
   function grande(t) {
