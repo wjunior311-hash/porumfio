@@ -1,10 +1,11 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import * as R from './regras.js?v=6';
+import * as R from './regras.js?v=7';
+import * as AR from './armas.js?v=1';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
-import { criarMapa } from './mapa.js?v=45';
-import { criarMesa } from './mesa.js?v=39';
+import { criarMapa } from './mapa.js?v=46';
+import { criarMesa } from './mesa.js?v=40';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -639,7 +640,7 @@ function sheetBody(p, c = null) {
       <table class="weap"><tbody>${R.tracosProntos(p).map(([n, r, m, d]) => `<tr><td>${n}<div class="small dim">${r} · ${m}</div></td><td>${d}</td></tr>`).join('')}</tbody></table>
       <p class="small dim">Às pressas: numa ação, com metade da força, some na próxima virada de fase.</p></details>
     <h2>Equipamento</h2>
-    ${(() => { const am = R.armaDe(p); return am ? `<div class="arma-marcada"><span class="lbl">Arma marcada, do arsenal de Antero</span><b>${esc(am.n)}</b> <span class="chip">${esc(am.ess)}</span>${am.dano ? ` <span class="small dim">dano ${am.dano}, ${am.per}</span>` : ''}<p class="small dim" style="margin:4px 0 0">${esc(am.d)}</p>${podeRolar(c) && am.dano ? `<button class="dmg" data-roll-dmg="${am.dano}" data-arma="${esc(am.n)}">Rolar dano ${am.dano}</button>` : ''}</div>` : ''; })()}
+    ${(() => { const am = R.armaDe(p); return am ? `<div class="arma-marcada"><span class="lbl">Arma marcada, do arsenal de Antero</span>${AR.cartaHtml(am, { p, mini: true, botoes: podeRolar(c) && am.dano ? `<button class="btn sm dmg" data-roll-dmg="${am.dano}" data-arma="${esc(am.n)}">Rolar dano ${am.dano}</button>` : '' })}<p class="small dim" style="margin:6px 0 0">Na luta, ataque pela mesa: lá o app escolhe o bicho e conta a essência sozinho.</p></div>` : ''; })()}
     ${armas.length ? `<table class="weap"><thead><tr><th>Arma</th><th>Dano</th><th>Alcance</th></tr></thead><tbody>${armas.map((a) => `<tr><td>${esc(a)}<div class="small dim">${esc(R.ARMAS[a]?.[2] || '')}</div></td><td>${podeRolar(c) && R.ARMAS[a]?.[0] ? `<button class="dmg" data-roll-dmg="${R.ARMAS[a][0]}" data-arma="${esc(a)}">${R.ARMAS[a][0]}</button>` : R.ARMAS[a]?.[0] || ''}</td><td>${R.ARMAS[a]?.[1] || ''}</td></tr>`).join('')}</tbody></table>` : ''}
     <dl class="kv" style="margin-top:12px">
       ${of ? `<div><dt>Do ofício</dt><dd>${esc(of.equip)}</dd></div>` : ''}

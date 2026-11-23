@@ -2,7 +2,7 @@
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
 import * as M from './mestre-dados.js';
 import { ASS_TEXTO, JOGADAS, JOGADA_BASE, FAMILIA, RASGADOS } from './ass-texto.js?v=3';
-import * as R from './regras.js?v=6';
+import * as R from './regras.js?v=7';
 import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=22';
 
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
@@ -746,7 +746,19 @@ export function criarMapa(ctx) {
     // a revelação: o retrato grande abre na tela de todo mundo, rasgando
     if (t.img === alt) efeitoTodos({ tipo: 'forma', img: alt.replace('img/tok/', 'img/npc/'), nome: t.data?.nomeVisto ? t.nome : '' });
   }
+  // o golpe de um jogador chega pela rolagem: o app do mestre tira o Sangue do bicho (uma vez por golpe)
+  async function ferirAssombro(id, n, rid) {
+    const t = MP.tokens.find((x) => x.id === id); if (!t) return null;
+    const d = { ...(t.data || {}) }, golpes = d.golpes || [];
+    if (rid && golpes.includes(rid)) return null;
+    if (rid) d.golpes = [...golpes.slice(-30), rid];
+    const antes = d.sangue ?? d.max ?? 0; d.sangue = Math.max(0, antes - n); t.data = d;
+    await sb.from('breu_tokens').update({ data: d }).eq('id', id);
+    draw(); paintSide();
+    return { t, antes, sangue: d.sangue, max: d.max };
+  }
   const api = {
+    ferirAssombro,
     setMesa: (v) => { MP.mesa = v; }, efeitoTodos, levar, separados, minhaCena, cenas: () => MP.cenas, ativa: () => MP.ativa, ver: () => MP.ver, cena, cenaDe, garantirCena, verCena, mostrarCena, esconderCena,
     porGrupo, porNpc, npcEscondido: (nome) => MP.tokens.some((x) => x.kind === 'npc' && !x.visivel && semAcento(x.nome) === semAcento(nome)), porAssombro, revelarAssombro, trocarForma, formaDe, tokens: () => MP.tokens,
     temNpc: (nome) => MP.tokens.some((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(nome)),
