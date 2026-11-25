@@ -21,7 +21,10 @@ const VIDEOS = {
   celeste: { src: 'video/celeste.mp4', nome: 'a bordadeira se revelando', fim: 'Fechar o vídeo' },
   rasgados: { src: 'video/rasgados.mp4', nome: 'a lenda dos Rasgados', fim: 'Fechar o vídeo' },
 };
+const RODA_SVG = `<svg viewBox="0 0 340 360" xmlns="http://www.w3.org/2000/svg" style="width:min(80vw,420px);background:#2a2018;border-radius:10px"><g transform="translate(170 50)"><path d="M0 -13 L13 12 H-13 Z" stroke="#f3ead8" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text y="34" text-anchor="middle" font-size="15" fill="#d9ccb0" font-family="Georgia,serif" font-style="italic">cinza</text></g><path d="M208 56 A120 120 0 0 1 267 99" stroke="#c9a87a" stroke-width="2" fill="none" stroke-dasharray="5 4"/><path d="M257 95 L267 99 L265 89" stroke="#c9a87a" stroke-width="2" fill="none"/><g transform="translate(284 133)"><path d="M0 -14 L12 0 L0 14 L-12 0 Z" stroke="#f3ead8" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text y="34" text-anchor="middle" font-size="15" fill="#d9ccb0" font-family="Georgia,serif" font-style="italic">raiz</text></g><path d="M290 171 A120 120 0 0 1 267 240" stroke="#c9a87a" stroke-width="2" fill="none" stroke-dasharray="5 4"/><path d="M269 230 L267 240 L277 236" stroke="#c9a87a" stroke-width="2" fill="none"/><g transform="translate(241 267)"><path d="M-11 -11 L11 11 M11 -11 L-11 11" stroke="#f3ead8" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text y="34" text-anchor="middle" font-size="15" fill="#d9ccb0" font-family="Georgia,serif" font-style="italic">osso</text></g><path d="M206 284 A120 120 0 0 1 134 284" stroke="#c9a87a" stroke-width="2" fill="none" stroke-dasharray="5 4"/><path d="M144 282 L134 284 L141 292" stroke="#c9a87a" stroke-width="2" fill="none"/><g transform="translate(99 267)"><path d="M0 -13 V13 M-13 0 H13" stroke="#f3ead8" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text y="34" text-anchor="middle" font-size="15" fill="#d9ccb0" font-family="Georgia,serif" font-style="italic">sopro</text></g><path d="M73 240 A120 120 0 0 1 50 171" stroke="#c9a87a" stroke-width="2" fill="none" stroke-dasharray="5 4"/><path d="M55 180 L50 171 L45 180" stroke="#c9a87a" stroke-width="2" fill="none"/><g transform="translate(56 133)"><circle r="11" stroke="#f3ead8" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text y="34" text-anchor="middle" font-size="15" fill="#d9ccb0" font-family="Georgia,serif" font-style="italic">lodo</text></g><path d="M73 99 A120 120 0 0 1 132 56" stroke="#c9a87a" stroke-width="2" fill="none" stroke-dasharray="5 4"/><path d="M125 64 L132 56 L122 54" stroke="#c9a87a" stroke-width="2" fill="none"/></svg>`;
 const PROVAS = {
+  bilhete: { texto: 'Primeiro vem quem come o morto. Depois, quem rola na estrada. Por último, quem não enxerga. Para cada um, o risco que vence.', nome: 'O papel no cabo do pincel', sub: 'A letra é do Antero' },
+  roda: { svg: 'roda', nome: 'A roda riscada embaixo da tábua', sub: 'Ao lado, na letra dele: "quem aponta, apaga."' },
   caderno: { img: 'img/prova/caderno.webp', nome: 'O caderno de Antero', sub: '"O bicho vem pelo nariz, pelo ouvido ou pelo medo. Escolhe por onde ele vem, e espera ele lá."' },
   arsenal: { img: 'img/prova/arsenal.webp', nome: 'O arsenal de Antero', sub: 'Dez peças, cada uma com o seu risco' },
 };
@@ -50,6 +53,7 @@ export function criarMesa(ctx) {
   function nomeBest(id) { return M.BESTIARIO.find((b) => b.id === id)?.nome || 'Assombro'; }
   function nomeAcao(tipo, v) {
     if (tipo === 'prova') return PROVAS[v] ? `Mostrar ${PROVAS[v].nome.replace(/^O /, 'o ')} na tela de todos` : null;
+    if (tipo === 'cadeado') { const k = S.mesa?.cadeado || {}; return k.aberto ? `✓ O cadeado abriu (${k.erros || 0} erro${k.erros === 1 ? '' : 's'})` : k.on ? `✓ Cadeado nas telas deles (${k.erros || 0} erro${k.erros === 1 ? '' : 's'}). Apertar de novo esconde` : 'Mostrar o cadeado no celular deles'; }
     if (tipo === 'arsenal') return S.mesa?.arsenal ? '✓ O arsenal está aberto nas telas deles' : 'Abrir o arsenal nas telas dos jogadores';
     if (tipo === 'video') return `Passar ${(VIDEOS[v] || VIDEOS.abertura).nome} para todos`;
     if (tipo === 'cena') { const c = A.cenaDe(v); return c && A.ativa() === c.id ? `✓ No ar: ${nomeCena(v)}` : `Mostrar: ${nomeCena(v)}`; }
@@ -75,6 +79,7 @@ export function criarMesa(ctx) {
     return null;
   }
   async function acao(tipo, v) {
+    if (tipo === 'cadeado') { const k = S.mesa?.cadeado || {}; if (k.aberto) { toast('O cadeado já abriu.'); return; } await salvaMesa({ cadeado: { ...k, on: !k.on } }); toast(!k.on ? 'O cadeado apareceu no celular de todos.' : 'O cadeado sumiu das telas.'); return; }
     if (tipo === 'arsenal') { S.mesa = { ...(S.mesa || {}), arsenal: !S.mesa?.arsenal }; await sb.from('breu_state').upsert({ key: 'mesa', value: S.mesa, updated_at: new Date().toISOString() }); toast(S.mesa.arsenal ? 'Cada jogador vê o arsenal e escolhe uma peça.' : 'Arsenal fechado.'); repintar(); return; }
     if (tipo === 'prova') { const pv = PROVAS[v]; if (pv) { A.efeitoTodos({ tipo: 'retrato', ...pv }); toast('A imagem abriu na tela de todos.'); } return; }
     if (tipo === 'video') { tocarVideo(v); return; }
@@ -306,7 +311,7 @@ export function criarMesa(ctx) {
     }
     for (const o of meusChars().filter((o) => o.id !== c.id && pendente(o))) h += `<div class="dk-card pede outro"><span class="lbl">O mestre também pede para ${esc(o.data.nome)}</span><b class="dk-t">${esc(pedidoPara(o).label)}</b><div class="dk-bts"><button class="btn primary melhor" data-dk="trocar" data-v="${o.id}"><span>Trocar para ${esc(o.data.nome)} e rolar</span></button></div></div>`;
     const pers = [...Object.keys(ATR).map((n) => ({ n, a: true })), ...R.PERICIAS.map(([n]) => ({ n, g: R.grauPericia(c.data, n) }))];
-    if (lateral || !aberto) h += arsenalHtml(c) + lutaHtml(c, lateral);
+    if (lateral || !aberto) h += cadeadoHtml() + arsenalHtml(c) + lutaHtml(c, lateral);
     h += `<div class="dk-livre ${aberto ? 'aberto' : ''}">
       ${aberto ? `<div class="dk-folha"><div class="dk-fh"><b>${lateral ? 'Rolar dados' : 'Rolar como ' + esc(c.data.nome)}</b>${lateral ? '' : '<button class="btn sm ghost" data-dk="fechar">Fechar</button>'}</div>
         <span class="lbl">Atributos</span><div class="dk-grid">${pers.filter((x) => x.a).map((x) => `<button data-dk="rolar" data-per="${x.n}"><b>${x.n}</b><small>${maoDe(c, x.n).txt}</small></button>`).join('')}</div>
@@ -338,6 +343,15 @@ export function criarMesa(ctx) {
   }
 
   // o arsenal de Antero: aparece quando o mestre abre, cada um pega uma carta
+  const SIMB_CAD = [['triângulo', '<path d="M20 7 L33 32 H7 Z"/>'], ['círculo', '<circle cx="20" cy="20" r="11"/>'], ['losango', '<path d="M20 6 L32 20 L20 34 L8 20 Z"/>'], ['cruz', '<path d="M20 7 V33 M7 20 H33"/>'], ['xis', '<path d="M9 9 L31 31 M31 9 L9 31"/>']];
+  function cadeadoHtml() {
+    const k = S.mesa?.cadeado; if (!k?.on || k.aberto) return '';
+    U.disco ||= [0, 0, 0];
+    return `<div class="dk-card cadeado"><span class="lbl">O cadeado do alçapão</span><b class="dk-t">Toque num disco para girar</b>
+      <div class="cad-dks">${U.disco.map((x, i) => `<button type="button" data-dk="disco" data-i="${i}" aria-label="Disco ${i + 1}: ${SIMB_CAD[x][0]}"><svg viewBox="0 0 40 40" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round">${SIMB_CAD[x][1]}</svg></button>`).join('')}</div>
+      <button class="btn primary block" data-dk="cadeado">Tentar abrir</button>
+      ${k.ultima ? `<p class="cad-fala">${esc(k.ultima)}</p>` : ''}${k.erros ? `<small class="cad-n">Tentativas erradas: ${k.erros}</small>` : ''}</div>`;
+  }
   function arsenalHtml(c) {
     if (!S.mesa?.arsenal || c.data.armaMarcada) return '';
     const dono = (k) => S.chars.find((o) => o.id !== c.id && o.data.armaMarcada === k);
@@ -523,7 +537,7 @@ export function criarMesa(ctx) {
   function mostrarRetrato(e) {
     document.querySelector('.retrato')?.remove();
     const r = document.createElement('div'); r.className = 'retrato'; r.setAttribute('role', 'dialog'); r.setAttribute('aria-label', e.nome || 'Imagem');
-    r.innerHTML = `<figure><img src="${esc(e.img)}" alt="" onerror="this.onerror=null;this.src='${esc(e.peq || '')}'"><figcaption><b>${e.nome ? esc(e.nome) : '??'}</b>${e.sub ? `<span>${esc(e.sub)}</span>` : ''}<small>Toque para fechar</small></figcaption></figure>`;
+    r.innerHTML = `<figure>${e.texto ? `<blockquote class="rt-papel">"${esc(e.texto)}"</blockquote>` : e.svg === 'roda' ? RODA_SVG : `<img src="${esc(e.img)}" alt="" onerror="this.onerror=null;this.src='${esc(e.peq || '')}'">`}<figcaption><b>${e.nome ? esc(e.nome) : '??'}</b>${e.sub ? `<span>${esc(e.sub)}</span>` : ''}<small>Toque para fechar</small></figcaption></figure>`;
     const fechar = () => { r.remove(); document.removeEventListener('keydown', tecla); };
     const tecla = (ev) => { if (ev.key === 'Escape') fechar(); };
     r.addEventListener('click', fechar); document.addEventListener('keydown', tecla);
@@ -657,6 +671,8 @@ export function criarMesa(ctx) {
     }
     if (a === 'abrir') { U.dk = !U.dk; pintarDock(); return true; }
     if (a === 'fechar') { U.dk = false; pintarDock(); return true; }
+    if (a === 'disco') { U.disco ||= [0, 0, 0]; const i = +t.dataset.i; U.disco[i] = (U.disco[i] + 1) % 5; pintarDock(); return true; }
+    if (a === 'cadeado') { const c = meuChar(); if (!c) return true; t.disabled = true; const cod = [...(U.disco || [0, 0, 0])]; await ctx.registrar(c, `Girou o cadeado: ${cod.map((x) => SIMB_CAD[x][0]).join(', ')}`, { total: 0 }, { tipo: 'cadeado', cod }); document.querySelector('.cad-dks')?.classList.add('tremeu'); return true; }
     if (a === 'trocar') { S.atual = t.dataset.v; try { localStorage.setItem('breu-atual', S.atual); } catch {} U.dk = false; pintarDock(); MAPA.redraw(); estadoProprio(); toast('Agora você joga como ' + (ctx.charById(S.atual)?.data.nome || '') + '.'); return true; }
     if (a === 'rolar') { const c = meuChar(); if (!c) return true; t.disabled = true; await rolarComo(c, t.dataset.per, t.dataset.ped || null, t.dataset.rot || null); return true; }
     if (a === 'pegar') { const c = meuChar(); if (!c) return true; const arma = R.ARSENAL.find((x) => x.k === t.dataset.v); if (!arma || S.chars.some((o) => o.id !== c.id && o.data.armaMarcada === arma.k)) { toast('Alguém já pegou essa.'); pintarDock(); return true; } c.data.armaMarcada = arma.k; if (arma.mun) c.data.municao = arma.mun; else delete c.data.municao; await ctx.salvarChar(c); toast(`${arma.n} agora é sua.`); pintarDock(); return true; }
@@ -716,6 +732,23 @@ export function criarMesa(ctx) {
     ctx.salvarNoite();
   }
   async function pedirPavor(fase, dif) { await pedir({ label: `O Pavor: ${fase}`, per: 'Firmeza', dif, pavor: true, quem: [] }); }
+  async function salvaMesa(patch) { S.mesa = { ...(S.mesa || {}), ...patch }; await sb.from('breu_state').upsert({ key: 'mesa', value: S.mesa, updated_at: new Date().toISOString() }); repintar(); }
+  // o cadeado do alçapão: o jogador gira, o app do mestre confere
+  const CADEADO_CERTO = '1,2,1';
+  const FALAS_CADEADO = ['Clac. O ferro estala alto na sala quieta. Do canto, a bordadeira levanta os olhos da costura. Volta a costurar.', 'Clac. A bordadeira para a agulha no meio do ponto. O moço dos baldes vira a cabeça para vocês.', 'Clac. A bordadeira sorri, sem levantar: "Achou alguma coisa, meu bem?" O moço já está de pé.', 'Clac. A bordadeira se levanta e vem devagar na direção do tablado, oferecendo chá.'];
+  async function avaliarCadeado(r) {
+    const k = S.mesa?.cadeado || {}; if (k.aberto || (k.vistas || []).includes(r.id)) return;
+    const vistas = [...(k.vistas || []).slice(-20), r.id];
+    if ((r.detail.cod || []).join(',') === CADEADO_CERTO) {
+      await salvaMesa({ cadeado: { ...k, vistas, aberto: true, on: false }, arsenal: true });
+      A.efeitoTodos({ tipo: 'retrato', ...PROVAS.arsenal, sub: 'O cadeado cede. Embaixo da tábua, embrulhado em couro: o arsenal de Antero e o caderno de armadilhas.' });
+      toast('O cadeado abriu. O arsenal apareceu no celular de todos.');
+    } else {
+      const erros = (k.erros || 0) + 1, ultima = FALAS_CADEADO[Math.min(erros, FALAS_CADEADO.length) - 1];
+      await salvaMesa({ cadeado: { ...k, vistas, erros, ultima } });
+      toast(`Erro ${erros} no cadeado. Leia: ${ultima}${erros === 3 ? ' (Ela agora sabe do esconderijo: na Hora Morta, leva o caderno.)' : ''}`);
+    }
+  }
   async function aplicarGolpe(r) {
     const x = await A.ferirAssombro?.(r.detail.alvo, r.total, r.id);
     if (!x) { if (!A.tokens().some((t) => t.id === r.detail.alvo)) toast(`${r.label}: ${r.total}. Tire o Sangue do bicho à mão (ele está em outra cena).`); return; }
@@ -725,6 +758,7 @@ export function criarMesa(ctx) {
   }
   function onRoll(r) {
     if (isGM() && r.detail?.tipo === 'dano' && r.detail?.alvo) aplicarGolpe(r);
+    if (isGM() && r.detail?.tipo === 'cadeado') avaliarCadeado(r);
     if (isGM()) { aplicarPavor(r); if (U.aba !== 'rolagens') U.novas++; pintarPainel(); if (r.detail?.pedido) pintarGuia(); }
     pintarDock();
     animar(r);
