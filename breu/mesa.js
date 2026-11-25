@@ -6,8 +6,8 @@ import * as M from './mestre-dados.js';
 import { abrirTour, jaViu } from './tutorial.js?v=3';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=33';
-import { ROLA, FX_C } from './guia-dados.js?v=17';
+import { criarGuia, faixaDe } from './guia.js?v=34';
+import { ROLA, FX_C } from './guia-dados.js?v=18';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
 const ATN = Object.fromEntries(R.ATRIBUTOS.map((a) => [a.k, a.n]));
@@ -52,7 +52,7 @@ export function criarMesa(ctx) {
   function nomeCena(key) { return A.cenaDe(key)?.nome || CENAS_VIVAS[key]?.nome || key; }
   function nomeBest(id) { return M.BESTIARIO.find((b) => b.id === id)?.nome || 'Assombro'; }
   function nomeAcao(tipo, v) {
-    if (tipo === 'prova') return PROVAS[v] ? `Mostrar ${PROVAS[v].nome.replace(/^O /, 'o ')} na tela de todos` : null;
+    if (tipo === 'prova') return PROVAS[v] ? `Mostrar ${PROVAS[v].nome.replace(/^(O|A) /, (m) => m.toLowerCase())} na tela de todos` : null;
     if (tipo === 'cadeado') { const k = S.mesa?.cadeado || {}; return k.aberto ? `✓ O cadeado abriu (${k.erros || 0} erro${k.erros === 1 ? '' : 's'})` : k.on ? `✓ Cadeado nas telas deles (${k.erros || 0} erro${k.erros === 1 ? '' : 's'}). Apertar de novo esconde` : 'Mostrar o cadeado no celular deles'; }
     if (tipo === 'arsenal') return S.mesa?.arsenal ? '✓ O arsenal está aberto nas telas deles' : 'Abrir o arsenal nas telas dos jogadores';
     if (tipo === 'video') return `Passar ${(VIDEOS[v] || VIDEOS.abertura).nome} para todos`;
