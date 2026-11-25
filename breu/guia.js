@@ -1,7 +1,7 @@
 // O guia da mesa, dentro do app: o mestre segue a sessão por aqui e aperta os botões que mexem no mapa.
 import { GENTE, VISTO, ROLA, FX_C, PISTAS, PISTA_ONDE, MUNDO, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=17';
 
-export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {} };
+export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {}, armado: [] };
 // o que o grupo conseguiu durante o dia; muda o conserto, o corpo e a noite
 export const RECURSOS = [
   ['cal', 'Saco de cal', 'do mocó', 'Sem ele, o conserto do círculo tem −2.'],
@@ -22,7 +22,7 @@ export function criarGuia(ctx) {
   const { S, R, esc } = ctx;
   let E = { ...PADRAO_GUIA };
   const estado = () => E;
-  function setEstado(v) { E = { ...PADRAO_GUIA, ...(v || {}) }; E.rec ||= {}; }
+  function setEstado(v) { E = { ...PADRAO_GUIA, ...(v || {}) }; E.rec ||= {}; E.armado ||= []; }
   const rec = (k) => E.rec?.[k] || 0;
   // o que vale agora no conserto do círculo, pelo que o grupo juntou
   function bonusConserto() {
@@ -108,7 +108,22 @@ export function criarGuia(ctx) {
       ${p.pergunte ? `<p class="g-pperg"><span>Pergunte</span>${p.pergunte}</p>` : ''}
       ${p.leia ? leiaHtml(p.leia) : ''}
       ${p.ganchos ? ganchosHtml(p.ganchos) : ''}
-      ${p.rola ? rolaHtml(p.rola) : ''}</li>`).join('')}</ol></section>`;
+      ${p.rola ? rolaHtml(p.rola) : ''}
+      ${p.arm ? armBtn(p.arm) : ''}</li>`).join('')}</ol></section>`;
+  }
+
+  // o que ficou armado na preparação: o mestre marca, e cada fase lembra o que acontece
+  const ARMADO = {
+    ferir: ['Traço Ferir no caminho', 'O bicho que atravessar o traço toma <b>d6</b> de dano (2d6 se a essência do traço vencer a dele). Se saiu fraco na rolagem, apaga depois do primeiro.'],
+    sal: ['Sal na porta e nas janelas', 'Quem fareja (Farejador, Corcunda) não passa por onde tem sal: força 12. <b>O bando de Tisnados passa</b>: entra pelas frestas.'],
+    isca: ['A isca', 'Quem fareja vai primeiro até a isca e <b>perde uma rodada lá</b>. Se a isca está em cima do traço Ferir, toma o dano do traço também.'],
+    laco: ['O laço ou a rede', 'O primeiro bicho que passar por ali <b>fica preso</b> até vencer Atletismo 15 (role pelo bicho no painel dele).'],
+    criancas: ['As crianças escondidas', 'No Breu, o bando de Tisnados <b>não vai até elas</b>. Se a rolagem foi ruim, elas choram e o bando vai direto para lá.'],
+  };
+  const armBtn = (k) => { const on = E.armado.includes(k); return `<button class="g-pista-m ${on ? 'on' : ''}" data-g="arm" data-v="${k}">${on ? '✓ Ficou armado' : 'Marcar: ficou armado'} (${ARMADO[k][0].toLowerCase()})</button>`; };
+  function armadoHtml() {
+    const ks = E.armado.filter((k) => ARMADO[k]);
+    return { f: ks.length ? 'O que eles armaram (lembre na hora)' : 'Eles não armaram nada', d: ks.length ? `<ul class="g-armado">${ks.map((k) => `<li><b>${ARMADO[k][0]}:</b> ${ARMADO[k][1]}</li>`).join('')}</ul>Quando um bicho passar por uma dessas coisas, aplique na hora e conte o que acontece.` : 'Os bichos chegam direto, sem nada no caminho. Se marcou errado, volte ao Último sol e marque o que ficou armado.' };
   }
 
   const nomePista = (k) => PISTAS.find((p) => p[0] === k)[1];
@@ -137,7 +152,7 @@ function noiteHtml() {
   const ondeCorpo = E.corpo === 'fechada' ? 'a casa fechada' : 'a casa do velório';
   const mais = corpoNaVila ? ' + 1 Farejador (o morto chama)' : '';
   const rodadas = { f: 'Como corre cada rodada', d: '<b>1. Você anuncia a intenção de cada bicho.</b> Clique na peça: o painel da direita mostra o que ele pode fazer. Escolha uma jogada e leia a intenção em voz alta. <b>2. Os jogadores agem</b>, na ordem que quiserem: cada um anda e faz uma ação. No celular deles tem a lista do que dá para fazer (atacar, empurrar, prender, chamar para si, enganar o sentido, ler o bicho, riscar na hora, tratar, encorajar). <b>3. Os bichos agem</b>: faça a jogada que você anunciou, a não ser que os jogadores tenham mudado tudo. Aperte <b>Nova rodada</b> a cada volta.' };
-  const armaRegra = { f: 'Quem ataca, como fica o dano', d: 'Arma marcada fere: o jogador rola o ataque e, se passar da Defesa, rola o dano no celular. <b>Essência certa</b> (a que vence a do bicho): +1 dado no ataque e no dano. <b>Essência errada</b>: −1 dado no ataque. Arma sem marca não fere, mas o bicho perde o próximo movimento. Esta noite: Lodo vence Cinza (Farejador, Tisnado, Corcunda), Raiz vence Osso (Rolador), e Cinza vence Raiz.' };
+  const armaRegra = { f: 'Quando um jogador ataca com a arma marcada', d: 'Ele aperta <b>Atacar</b> no celular e escolhe o bicho. <b>O app faz a conta sozinho</b>: soma ou tira 1 dado pela essência, compara com a Defesa do bicho, rola o dano e <b>tira o Sangue do bicho no seu mapa</b>. Você só recebe o aviso ("Farejador: −7 de Sangue") e narra o golpe. Quando o bicho cai pela metade, o aviso diz que ele foge. <b>Se o jogador disser só "eu bato nele"</b>, peça para usar o botão Atacar. Arma sem marca não fere, mas o bicho perde o próximo movimento. Esta noite: Lodo vence Cinza (Farejador, Tisnado, Corcunda), Raiz vence Osso (Rolador), e Cinza vence Raiz.' };
   const fimFase = { f: 'Quando a fase acaba', d: 'Bicho morto vira cinza e despojo. Bicho com metade do Sangue ou menos <b>foge ferido</b> para o escuro e volta na fase seguinte com o Sangue que tem. A fase acaba quando não sobra bicho de pé deste lado da linha.' };
   const terror = (itens) => ({ f: 'Se a mesa esfriar, solte um destes', d: 'Um por vez, sem pressa. Depois, silêncio.', leia: itens.map((t) => ['', t]) });
   const investida = aberto
@@ -149,30 +164,32 @@ function noiteHtml() {
   <p class="g-instr" style="margin-top:0">Esta noite foi montada pelo que você marcou na aba A história: <b>trecho ${aberto ? 'aberto' : E.trecho === 'forte' ? 'consertado forte' : 'consertado fino'}</b>, <b>corpo ${E.corpo === 'queimado' ? 'queimado' : E.corpo === 'fechada' ? 'na casa fechada' : 'no velório'}</b>. A bordadeira ainda não foi descoberta.</p>
 
   ${passosHtml([
+    { f: 'Antes de falar qualquer coisa: confira a mesa', d: '<b>1. Quem veio?</b> Quem faltou: na aba <b>Grupo</b>, no cartão da pessoa, aperte <b>O jogador saiu: tirar da sessão</b>. Se chegar no meio, aperte <b>Chegou: pôr na mesa</b>, no mesmo lugar. <b>2.</b> Peça para todo mundo abrir o app no celular e entrar na mesa. Quem nunca abriu vê um tutorial rápido; quem quiser rever, toca no <b>?</b> no canto da tela. <b>3.</b> Quem vai usar dado de verdade toca em <b>Tenho dados aqui</b> na própria mesa: o app pede o número e faz a conta. <b>4.</b> A cena aberta tem que ser a casa de farinha (botão logo abaixo).' },
     { f: 'Comece lembrando onde pararam', d: 'Conte em poucas frases: o corpo de Antero queimou no Entardecer, e a viúva, chorando, contou o que a bordadeira sussurrou (que Antero volta se a porta ficar aberta). O trecho foi consertado, mas fino. O caçador chegou pela estrada seguindo um rastro. E agora o sol está indo embora.' },
-    { f: 'Leia: a vila se junta', acoes: [['cena', 'farinha']], leia: [['', 'A vila inteira se espreme na casa de farinha: crianças no colo, velhos no chão, o cheiro de mandioca e de medo. Alguém tranca a porta. Ninguém acende nada.'], ['Dona Firmina, para vocês', '"O Antero dizia: círculo só segura. Quem quer ver o sol tem que fazer o bicho sangrar." Ela bate o cajado no tablado do forno, duas vezes. "Rosário. Mostra para eles."']] },
+    { f: 'Leia: a vila se junta', d: 'Mostre a casa de farinha e, se as peças do grupo não estiverem nela, aperte o segundo botão.', acoes: [['cena', 'farinha'], ['grupo']], leia: [['', 'A vila inteira se espreme na casa de farinha: crianças no colo, velhos no chão, o cheiro de mandioca e de medo. Alguém tranca a porta. Ninguém acende nada.'], ['Dona Firmina, para vocês', '"O Antero dizia: círculo só segura. Quem quer ver o sol tem que fazer o bicho sangrar." Ela bate o cajado no tablado do forno, duas vezes. "Rosário. Mostra para eles."']] },
     { f: 'O arsenal de Antero', d: 'A Rosário levanta as tábuas do tablado. Embaixo, embrulhado em couro: dez peças marcadas pelo pai dela, a vida inteira de trabalho. Aperte o botão: cada jogador vê o arsenal no celular e pega <b>uma</b> peça. São 10 peças para 6 pessoas: deixe eles discutirem.', acoes: [['arsenal'], ['prova', 'arsenal']], leia: [['Rosário', '"Meu pai marcou uma por ano. Cada risco é de uma noite que ele não deixou ninguém morrer. Escolham direito: tem marca que serve para um bicho e não serve para outro."']] },
-    { f: 'Se perguntarem qual serve', d: 'Cada peça tem um símbolo riscado: a essência. <b>O Tião reconhece todos de cara</b> (é riscador). Os outros rolam Traços ou Saberes 10. No celular, cada carta tem o botão <b>Ler o símbolo</b>: o app rola e conta a essência para quem acertar. Os riscos: <b>círculo é Lodo</b> (facão e funda, as certas: Lodo vence Cinza, e os bichos da vila até agora eram todos de Cinza; o Brás sabe disso, se perguntarem), <b>losango é Raiz</b> (forcado e foice, as erradas: Cinza vence Raiz), triângulo é Cinza (faca e arco), cruz é Sopro (lança e pandeiro), xis é Osso (machado e rabeca). Se alguém pegar sem perguntar, deixe pegar: na luta, o app mostra o erro na hora.' },
-    { f: 'O caderno de armadilhas', d: 'É assim que os jogadores descobrem que dá para se preparar. Aperte o botão: a página aparece grande na tela de todos. Leia e mostre que cada desenho é uma ação.', acoes: [['prova', 'caderno']], leia: [['Rosário abre um caderninho de capa de couro', '"Isso aqui era a cabeça do meu pai." Nas páginas, desenhos a carvão: um traço riscado atravessando um caminho, com um bicho caído no meio. Um pedaço de carne amarrado num pau, e setas levando até o traço. Uma linha de sal numa janela. Um laço de corda no chão. Embaixo de tudo, na letra torta dele: <i>o bicho vem pelo nariz, pelo ouvido ou pelo medo. Escolhe por onde ele vem, e espera ele lá.</i>']] },
-    { f: 'A preparação: 3 rodadas antes da noite', d: 'Diga: "Vocês têm até o sol sumir. Três rodadas: cada um faz uma coisa por rodada." Peça a rolagem de quem escolher cada coisa. Anote onde cada armadilha ficou (arraste uma peça ou só lembre).', pergunte: '"O que cada um faz agora, antes de escurecer?"' },
-    { f: 'Armar um traço Ferir no caminho', rola: 'prepFerir' },
-    { f: 'Linha de sal nas janelas e na porta', rola: 'prepSal' },
-    { f: 'Montar uma isca', rola: 'prepIsca' },
-    { f: 'Armar um laço ou uma rede', rola: 'prepLaco' },
+    { f: 'Se perguntarem qual serve', d: 'Cada peça tem um símbolo riscado: a essência. <b>O Tião reconhece todos de cara</b> (é riscador). Os outros rolam Traços ou Saberes 10. No celular, cada carta tem o botão <b>Ler o risco</b>: o app rola e conta a essência para quem acertar. Os riscos: <b>círculo é Lodo</b> (facão e funda, as certas: Lodo vence Cinza, e os bichos da vila até agora eram todos de Cinza; o Brás sabe disso, se perguntarem), <b>losango é Raiz</b> (forcado e foice, as erradas: Cinza vence Raiz), triângulo é Cinza (faca e arco), cruz é Sopro (lança e pandeiro), xis é Osso (machado e rabeca). Se alguém pegar sem perguntar, deixe pegar: na luta, o app mostra o erro na hora.' },
+    { f: 'O caderno de armadilhas', d: 'É assim que os jogadores descobrem que dá para se preparar. Aperte o botão: a página aparece grande na tela de todos. Leia e mostre que cada desenho é uma ação.', acoes: [['prova', 'caderno']], leia: [['Rosário abre um caderninho de capa de couro', '"Isso aqui era a cabeça do meu pai." Nas páginas, desenhos a carvão: um traço riscado atravessando um caminho, com um bicho caído no meio. Um pedaço de carne amarrado num pau, e setas levando até o traço. Uma linha de sal numa janela. Um laço de corda no chão. Embaixo de tudo, na letra torta dele: "o bicho vem pelo nariz, pelo ouvido ou pelo medo. Escolhe por onde ele vem, e espera ele lá."']] },
+    { f: 'A preparação: 3 rodadas antes da noite', d: 'Diga: "Vocês têm até o sol sumir. Três rodadas: cada um faz uma coisa por rodada." Abaixo está cada coisa que dá para fazer. Para cada uma: aperte <b>Pedir</b> no nome de quem vai fazer, leia o resultado que aparece e, se deu certo, aperte <b>Marcar: ficou armado</b>. Na noite, o guia lembra você do que cada armadilha faz. <b>Se ninguém tiver ideia</b>, a Rosário aponta para o caderno: "Meu pai começava pelo nariz deles." Se quiserem fazer outra coisa que não está na lista, deixe: escolha a perícia que faz sentido e peça a rolagem pelo painel do personagem.', pergunte: '"O que cada um faz agora, antes de escurecer?"' },
+    { f: 'Armar um traço Ferir no caminho', rola: 'prepFerir', arm: 'ferir' },
+    { f: 'Linha de sal nas janelas e na porta', rola: 'prepSal', arm: 'sal' },
+    { f: 'Montar uma isca', rola: 'prepIsca', arm: 'isca' },
+    { f: 'Armar um laço ou uma rede', rola: 'prepLaco', arm: 'laco' },
     { f: 'Reforçar o trecho (agora tem cal)', rola: 'conserto', d: 'É o mesmo conserto de antes. Digite o novo resultado na aba A história, se for maior.' },
-    { f: 'Acalmar e esconder as crianças', rola: 'prepCriancas' },
+    { f: 'Acalmar e esconder as crianças', rola: 'prepCriancas', arm: 'criancas' },
     { f: 'Explique a noite (é a primeira vez deles)', d: 'Antes do vídeo. Leia com calma:', leia: [
       ['A noite anda em rodadas', 'Agora a noite anda em rodadas. No começo de cada uma, eu conto o que cada bicho vai fazer. Vocês têm a vez de vocês para reagir: cada um anda e faz uma coisa. Depois os bichos agem.'],
       ['Todo mundo tem o que fazer', 'No celular de vocês tem a lista: atacar, empurrar o bicho para uma armadilha, prender, chamar ele para si para salvar alguém, enganar o nariz ou o ouvido dele, ler que bicho é, riscar um traço na hora, tratar quem caiu, encorajar quem está com medo.'],
-      ['A arma marcada', 'Só arma marcada fere. A marca certa contra o bicho certo dá um dado a mais. A errada, um a menos. Arma comum só faz ele perder o passo.'],
+      ['A arma marcada', 'Só arma marcada fere. Para bater, toquem em Atacar na carta da arma e escolham o bicho: o app conta tudo. A marca certa contra o bicho certo dá um dado a mais. A errada, um a menos. Arma comum só faz ele perder o passo.'],
       ['O corpo e a cabeça', 'O Sangue é o corpo: zerou, cai, e tem até a fase virar para alguém socorrer. O Prumo é a cabeça: zerou, pânico. E cada vez que a noite muda de fase, todo mundo rola Firmeza: quem falha ganha 1 Pavor, um dado a menos em tudo até o amanhecer. O app desconta sozinho.']] },
     { f: 'Comece a noite: Crepúsculo', d: 'Primeiro o vídeo da noite caindo (22 segundos). Quando acabar, aperte o segundo: as cenas escurecem e o app pede o Pavor a todos.', acoes: [['video', 'noite'], ['fase', 0]] },
   ], 'O último sol')}
 
   ${passosHtml([
-    { f: 'Leia', acoes: [['cena', 'vila']], leia: [['', 'A luz vai embora devagar e depois de uma vez. E os bichos da vila calam todos ao mesmo tempo: as galinhas, o cachorro, os grilos. Um silêncio de quem prendeu a respiração.'], ['', `Lá fora, perto ${E.corpo === 'queimado' ? 'da pira, onde o corpo de Antero queimou' : 'de ' + ondeCorpo}, alguma coisa fareja. Pela fresta da porta dá para ver: dois bichos do tamanho de cachorro, com a pele em brasa morta, fuçando ${E.corpo === 'queimado' ? 'a cinza da pira. Um deles levanta a cabeça com alguma coisa na boca. É um osso. É do Antero.' : 'a porta.'}`]] },
-    { f: `Revele: 2 Farejadores de Borralho${mais}`, d: 'Eles comem primeiro e só depois sentem o cheiro de gente. Isso dá uma rodada para quem quiser agir antes deles (atirar de longe, mexer na isca).', acoes: [['assombro', 'cinza-2'], ['assombro', 'cinza-2'], ...(corpoNaVila ? [['assombro', 'cinza-2']] : [])] },
-    rodadas, investida, armaRegra,
+    { f: 'Leia', d: 'Mostre a vila: é o mapa da noite inteira. Ponha o grupo no mapa e <b>arraste as peças deles para dentro da casa de farinha</b> (ou para onde cada um disse que ficaria na preparação).', acoes: [['cena', 'vila'], ['grupo']], leia: [['', 'A luz vai embora devagar e depois de uma vez. E os bichos da vila calam todos ao mesmo tempo: as galinhas, o cachorro, os grilos. Um silêncio de quem prendeu a respiração.'], ['', `Lá fora, perto ${E.corpo === 'queimado' ? 'da pira, onde o corpo de Antero queimou' : 'de ' + ondeCorpo}, alguma coisa fareja. Pela fresta da porta dá para ver: dois bichos do tamanho de cachorro, com a pele em brasa morta, fuçando ${E.corpo === 'queimado' ? 'a cinza da pira. Um deles levanta a cabeça com alguma coisa na boca. É um osso. É do Antero.' : 'a porta.'}`]] },
+    { f: `Ponha no mapa: 2 Farejadores de Borralho${mais}`, d: `Aperte uma vez para cada um. Eles entram <b>escondidos</b>: só você vê (aparecem apagados no seu mapa). Arraste cada um para perto ${E.corpo === 'queimado' ? 'da pira' : 'de ' + ondeCorpo}, do lado de fora do círculo.`, acoes: [['assombro', corpoNaVila ? 'cinza-2:3' : 'cinza-2:2']] },
+    { f: 'Revele os Farejadores', d: 'Quando terminar de ler, aperte: a imagem do bicho aparece grande na tela de todos e a peça fica visível no mapa deles. Eles comem primeiro e só depois sentem o cheiro de gente: isso dá <b>uma rodada</b> para quem quiser agir antes deles (atirar de longe, mexer na isca, se esconder).', acoes: [['revelar', 'cinza-2']] },
+    armadoHtml(), rodadas, investida, armaRegra,
     terror(['A cinza da pira se mexe sem vento.', 'Alguém lá dentro começa a rezar baixinho, e outra pessoa manda calar.', 'O fungado para. Ninguém sabe onde o bicho está. Depois, bem devagar, alguma coisa roça a parede, do lado de fora, bem onde alguém encostou a cabeça.']),
     fimFase,
   ], 'Crepúsculo')}
@@ -180,10 +197,11 @@ function noiteHtml() {
   ${passosHtml([
     { f: 'Vire para o Breu', d: 'Cada jogador rola o Pavor no celular.', acoes: [['fase', 1]] },
     { f: 'Leia', leia: [['', 'A noite fechou de vez. Agora não existe nada além do escuro, e do escuro vêm os barulhos: pedra rolando sem pedra, toc, toc, toc. E de dentro das paredes da casa de farinha, um chiado, como brasa caindo na água.']] },
-    { f: `Revele: o bando de Tisnados e 1 Rolador${mais}`, d: 'O bando entra <b>pelas frestas, por dentro</b>: sal não segura ele. O Rolador rola contra o trecho fino.', acoes: [['assombro', 'cinza-1'], ['assombro', 'osso-1'], ...(corpoNaVila ? [['assombro', 'cinza-2']] : [])] },
+    { f: `Ponha no mapa: o bando de Tisnados e 1 Rolador${mais}`, d: 'Entram escondidos. Arraste o <b>bando de Tisnados</b> para colado na parede da casa de farinha (ele entra pelas frestas, por dentro: sal não segura). Arraste o <b>Rolador</b> para a estrada, de frente para o trecho fino. Os Farejadores que fugiram feridos no Crepúsculo voltam agora, com o Sangue que tinham: arraste as peças deles de volta para perto.', acoes: [['assombro', 'cinza-1'], ['assombro', 'osso-1']] },
+    { f: 'Revele quando aparecerem', d: 'O Rolador primeiro (o toc, toc, toc vira um bicho de casca rolando na estrada). O bando por último, quando o chiado sair de dentro da parede.', acoes: [['revelar', 'osso-1'], ['revelar', 'cinza-1']] },
     { f: 'O bando caça o medo', d: 'Quem falhou no Pavor vira o alvo. As crianças, se ninguém as acalmou na preparação, choram: o bando vai para o canto delas.' },
     { f: 'Bento pode morrer aqui', d: 'Se o bando chegar nas crianças, ou se a linha abrir uma brecha e ninguém segurar na mesma rodada, o Bento se joga na frente: <i>"P-para trás, vocês!"</i> Ele leva o ataque no lugar delas. <b>Ele só sobrevive se alguém, na mesma rodada, chamar o bicho para si, empurrar, ou tratar ele depois que cair.</b> Se o grupo errar tudo, o Bento morre com uma criança no colo.' },
-    rodadas, investida,
+    armadoHtml(), rodadas, investida, armaRegra,
     { f: 'Se a linha falhar, a cena é do Tião', d: 'É o pesadelo dele: um círculo malfeito destruindo uma comunidade. Pergunte: "Tião, o que passa pela sua cabeça agora?"' },
     terror(['Uma criança tosse. Todo mundo prende o ar. O chiado para.', 'Alguma coisa fareja pela fresta debaixo da porta, devagar, de um lado para o outro.', 'Priya ouve, lá fora, a cantiga que só ela e a irmã sabiam. Do jeito que a irmã cantava.', 'Flecha ouve uma voz chamando o nome dela, igualzinha a alguém de casa. "Abre. Sou eu."']),
     fimFase,
@@ -192,14 +210,15 @@ function noiteHtml() {
   ${passosHtml([
     { f: 'Vire para a Hora Morta', d: 'Cada jogador rola o Pavor no celular. Não revele a Corcunda ainda: ela entra pela linha, ao lado da bordadeira.', acoes: [['fase', 2]] },
     { f: 'Leia o silêncio', leia: [['', 'É o meio da noite, a hora em que até o escuro para. Nenhum barulho. Nenhum fungado. E então, pela fresta da porta, vocês veem uma coisa que não veem há horas.'], ['', 'Luz. Uma lanterna amarela, lá fora, no trecho. A única luz da noite inteira.']] },
-    { f: 'A bordadeira recebe visita', d: 'Primeiro o vídeo da fenda (13 segundos). Depois leia. A linha perde força: <b>' + (E.trecho === 'forte' ? '−2, porque o conserto foi 20 ou mais' : '−4') + '</b>.', acoes: [['video', 'fenda']], leia: [['', 'A bordadeira está ajoelhada em cima da linha de cal, com a lanterna acesa do lado. O moço dos baldes, de pé atrás dela, segura o chapéu no peito. Ela passa a mão na cal em meia-lua, devagar, como quem alisa um lençol, e canta baixinho. Onde a mão passa, a linha some.'], ['', 'Do escuro, por cima dela, sai uma coisa curvada, de costas de cinza, maior que um homem agachado. Passa a um palmo do rosto dela. Fareja. E segue em frente. Não toca nela.']] },
+    { f: 'A bordadeira recebe visita', d: 'Antes, no mapa, <b>arraste a bordadeira e o moço dos baldes para o trecho</b> do círculo, do lado da estrada. Depois o vídeo da fenda (13 segundos). Depois leia. A linha perde força: <b>' + (E.trecho === 'forte' ? '−2, porque o conserto foi 20 ou mais' : '−4') + '</b>.', acoes: [['video', 'fenda']], leia: [['', 'A bordadeira está ajoelhada em cima da linha de cal, com a lanterna acesa do lado. O moço dos baldes, de pé atrás dela, segura o chapéu no peito. Ela passa a mão na cal em meia-lua, devagar, como quem alisa um lençol, e canta baixinho. Onde a mão passa, a linha some.'], ['', 'Do escuro, por cima dela, sai uma coisa curvada, de costas de cinza, maior que um homem agachado. Passa a um palmo do rosto dela. Fareja. E segue em frente. Não toca nela.']] },
     { f: 'Revele a Corcunda e as formas verdadeiras', d: 'Os jogadores agora entendem tudo. Passe o vídeo da bordadeira se revelando e mostre as formas deles no mapa.', acoes: [['assombro', 'cinza-4'], ['revelar', 'cinza-4'], ['video', 'celeste'], ['forma', 'Celeste'], ['forma', 'Zeca']] },
     { f: 'Rosário corre para a linha', d: 'Isso acontece antes de qualquer jogador alcançar o trecho. É a cena que faz deles inimigos.', leia: [['', 'A porta da casa de farinha bate. É a Rosário, correndo para o trecho com o pincel quebrado do pai na mão, gritando para a bordadeira sair de cima da linha.'], ['', 'A bordadeira levanta. Abraça a Rosário como quem consola. E vocês veem, à luz da lanterna, a tesoura de bordar entrando nas costas dela. Devagar.'], ['Celeste, no ouvido dela', '"Shhh. Seu pai está te esperando do outro lado."'], ['', 'A Rosário cai em cima da linha do pai.']] },
     { f: 'A viúva vai com eles', leia: [['', 'Lá de dentro, alguém grita. A senhora de luto passou pela porta e está andando para o escuro, descalça, sem olhar para trás. A bordadeira estende a mão para ela.'], ['Lindalva', '"Ela disse que ele está esperando. Me deixem ir."']], d: 'Se tentarem segurar, deixe tentar (Prender, Lábia 15): ela hesita, mas escapa quando a Corcunda investe contra a linha e todo mundo olha para lá. Ela vai.' },
     { f: 'Se lutarem com a bordadeira e o moço', d: 'Eles são fortes de verdade, e <b>escolhem</b> não matar: morto não abre porta, e quem fica vivo e assustado pode ser recrutado. Clique na peça de cada um: o painel da direita tem a ficha e as jogadas. <b>A bordadeira</b> (Pregadora, Sangue 20, Defesa 13): tesoura que faz sangrar, linha vermelha que costura a boca de quem canta, pó de lume que faz alguém brilhar no escuro, a voz que dá Pavor, a lanterna que chama mais bichos. <b>O moço</b> (Sangue 16, Defesa 13): a vara de ponta de osso, o balde de sangue que batiza alguém para os bichos, o dardo de sono, e se joga na frente dela. Ele <b>não hesita</b>: a conversa com o Damião não deu certo.' },
-    { f: 'Eles vão embora montados', leia: [['', 'O moço dos baldes encosta as palmas das mãos na corcunda do bicho. As palmas têm marcas escuras, frescas. A Corcunda abaixa devagar, como cavalo manso.'], ['', 'Ele sobe. A bordadeira pega a lanterna e dá a mão para a viúva. Os três vão embora pela estrada: ele montado no bicho, as duas andando do lado, a luz amarela balançando. Os outros bichos abrem caminho, como gado para o dono. A lanterna vai ficando pequena no escuro, até virar um ponto. E apaga.']], d: 'Ninguém consegue seguir esta noite: fora do círculo, os bichos atacam quem não é Rasgado, e montado o moço corre o dobro. Se alguém ferir a bordadeira até sangrar (metade do Sangue), os bichos se viram contra ela, e o moço a puxa para cima da Corcunda. Se a Corcunda ainda estiver lá dentro quando ele montar, ela sai com eles: a Hora Morta fica só com os bichos menores.' },
     { f: 'A Corcunda, dentro da linha (antes de o moço montar)', d: 'Ela escuta: um grupo em silêncio total não é achado. Ela tem dois poderes: <b>Soterrar</b> (enterra quem está perto até a cintura) e a <b>Nuvem de fuligem</b> (anuncie uma rodada antes). Clique nela para ver as jogadas.' },
-    rodadas, investida, fimFase,
+    armadoHtml(), rodadas, investida, armaRegra,
+    { f: 'Eles vão embora montados', leia: [['', 'O moço dos baldes encosta as palmas das mãos na corcunda do bicho. As palmas têm marcas escuras, frescas. A Corcunda abaixa devagar, como cavalo manso.'], ['', 'Ele sobe. A bordadeira pega a lanterna e dá a mão para a viúva. Os três vão embora pela estrada: ele montado no bicho, as duas andando do lado, a luz amarela balançando. Os outros bichos abrem caminho, como gado para o dono. A lanterna vai ficando pequena no escuro, até virar um ponto. E apaga.']], d: 'Ninguém consegue seguir esta noite: fora do círculo, os bichos atacam quem não é Rasgado, e montado o moço corre o dobro. Se alguém ferir a bordadeira até sangrar (metade do Sangue), os bichos se viram contra ela, e o moço a puxa para cima da Corcunda. Se a Corcunda ainda estiver lá dentro quando ele montar, ela sai com eles: a Hora Morta fica só com os bichos menores.' },
+    fimFase,
   ], 'Hora Morta')}
 
   ${passosHtml([
@@ -378,6 +397,7 @@ function mapaHtml() {
       const novo = v === 't' ? (n ? 0 : 1) : Math.max(0, Math.min(r[4] || 1, n + +v));
       mudar({ rec: { ...E.rec, [k]: novo } }); ctx.repintar(); return true;
     }
+    if (g === 'arm') { mudar({ armado: E.armado.includes(v) ? E.armado.filter((x) => x !== v) : [...E.armado, v] }); ctx.repintar(); return true; }
     if (g === 'pista') { mudar({ pistas: E.pistas.includes(v) ? E.pistas.filter((x) => x !== v) : [...E.pistas, v] }); ctx.repintar(); return true; }
     if (g === 'set') { const k = t.dataset.k; mudar({ [k]: E[k] === v && v ? '' : v }); ctx.repintar(); return true; }
     if (g === 'zerar') { if (t.dataset.certo) { E = { ...PADRAO_GUIA }; ctx.salvar(E); ctx.repintar(true); } else { t.dataset.certo = '1'; t.textContent = 'Clique de novo para zerar tudo'; } return true; }

@@ -5,7 +5,7 @@ import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { criarMapa } from './mapa.js?v=47';
-import { criarMesa } from './mesa.js?v=41';
+import { criarMesa } from './mesa.js?v=43';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -72,6 +72,7 @@ async function loadAll() {
   const nt = await sb.from('breu_state').select('*').in('key', ['noite', 'mesa', 'pedido', 'guia', 'video']);
   const est = Object.fromEntries((nt.data || []).map((r) => [r.key, r.value]));
   S.noite = est.noite || null; S.mesa = est.mesa || {}; S.pedidos = est.pedido?.lista || (est.pedido?.id ? [est.pedido] : []); S.guia = est.guia || null; S.video = est.video || null;
+  MESA?.onGuia(S.guia); // o guia foi criado antes de os dados chegarem: entrega o estado salvo
   if (S.video?.id) S.videoVisto = S.video.id; // um vídeo que já passou não volta a tocar ao abrir o app
   const rl = await sb.from('breu_rolls').select('*').order('created_at', { ascending: false }).limit(30);
   S.rolls = rl.data || [];

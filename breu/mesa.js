@@ -3,10 +3,10 @@
 import * as R from './regras.js?v=8';
 import * as AR from './armas.js?v=2';
 import * as M from './mestre-dados.js';
-import { abrirTour, jaViu } from './tutorial.js?v=1';
+import { abrirTour, jaViu } from './tutorial.js?v=2';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=27';
+import { criarGuia, faixaDe } from './guia.js?v=29';
 import { ROLA, FX_C } from './guia-dados.js?v=17';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
@@ -47,15 +47,24 @@ export function criarMesa(ctx) {
   function nomeCena(key) { return A.cenaDe(key)?.nome || CENAS_VIVAS[key]?.nome || key; }
   function nomeBest(id) { return M.BESTIARIO.find((b) => b.id === id)?.nome || 'Assombro'; }
   function nomeAcao(tipo, v) {
-    if (tipo === 'prova') return `Mostrar ${PROVAS[v]?.nome.toLowerCase()} na tela de todos`;
+    if (tipo === 'prova') return PROVAS[v] ? `Mostrar ${PROVAS[v].nome.replace(/^O /, 'o ')} na tela de todos` : null;
     if (tipo === 'arsenal') return S.mesa?.arsenal ? '✓ O arsenal está aberto nas telas deles' : 'Abrir o arsenal nas telas dos jogadores';
     if (tipo === 'video') return `Passar ${(VIDEOS[v] || VIDEOS.abertura).nome} para todos`;
     if (tipo === 'cena') { const c = A.cenaDe(v); return c && A.ativa() === c.id ? `✓ No ar: ${nomeCena(v)}` : `Mostrar: ${nomeCena(v)}`; }
     if (tipo === 'grupo') { const n = A.grupoFalta(); return n ? `Colocar o grupo no mapa (${n})` : '✓ O grupo está no mapa'; }
     if (tipo === 'npc') return A.npcEscondido?.(v) ? `Mostrar ${v} aos jogadores` : A.temNpc(v) ? `✓ ${v} está no mapa` : `Pôr ${v} no mapa`;
-    if (tipo === 'assombro') return `Pôr ${nomeBest(v)} (escondido)`;
-    if (tipo === 'revelar') return `Revelar ${nomeBest(v)} aos jogadores`;
-    if (tipo === 'forma') return A.formaDe(v) ? `Mostrar a forma verdadeira de ${v}` : null;
+    if (tipo === 'assombro') {
+      const [id, q] = String(v).split(':'), quer = +q || 1, nome = nomeBest(id);
+      const tem = A.tokens().filter((t) => t.kind === 'assombro' && t.data?.best === id).length;
+      if (tem >= quer) return `✓ ${tem > 1 ? tem + ' × ' : ''}${nome} no mapa (aperte de novo para pôr mais um)`;
+      return quer > 1 ? `Pôr ${quer} × ${nome} no mapa, escondidos` : `Pôr ${nome} no mapa, escondido`;
+    }
+    if (tipo === 'revelar') {
+      const ts = A.tokens().filter((t) => t.kind === 'assombro' && t.data?.best === v), esc_ = ts.filter((t) => !t.visivel).length;
+      if (ts.length && !esc_) return `✓ ${nomeBest(v)} à vista de todos`;
+      return `Revelar ${nomeBest(v)} aos jogadores${esc_ > 1 ? ` (${esc_} escondidos: um por clique)` : ''}`;
+    }
+    if (tipo === 'forma') { if (!A.formaDe(v)) return null; const t = A.tokens().find((x) => x.kind === 'npc' && x.nome === v); return t && t.img === A.formaDe(v) ? `✓ ${v} na forma verdadeira` : `Mostrar a forma verdadeira de ${v}`; }
     if (tipo === 'fase') {
       const i = +v, f = M.FASES[i], agora = S.noite?.fase ?? -1;
       if (!f) return null;
@@ -70,9 +79,13 @@ export function criarMesa(ctx) {
     if (tipo === 'cena') { const c = await A.garantirCena(v); if (c) await A.mostrarCena(c.id); }
     else if (tipo === 'grupo') await A.porGrupo();
     else if (tipo === 'npc') await A.porNpc(v);
-    else if (tipo === 'assombro') await A.porAssombro(v);
+    else if (tipo === 'assombro') {
+      const [id, q] = String(v).split(':'), quer = +q || 1;
+      const tem = A.tokens().filter((t) => t.kind === 'assombro' && t.data?.best === id).length;
+      for (let i = 0; i < Math.max(1, quer - tem); i++) await A.porAssombro(id);
+    }
     else if (tipo === 'revelar') await A.revelarAssombro(v);
-    else if (tipo === 'forma') await A.trocarForma(v);
+    else if (tipo === 'forma') { const t = A.tokens().find((x) => x.kind === 'npc' && x.nome === v); if (t && t.img === A.formaDe(v)) toast(`${v} já está na forma verdadeira. Para voltar ao disfarce, use o painel da peça.`); else await A.trocarForma(v); }
     else if (tipo === 'fase') {
       const i = +v, agora = S.noite?.fase ?? -1;
       if (agora >= i) { toast('Esta fase já começou.'); return; }
@@ -314,7 +327,7 @@ export function criarMesa(ctx) {
     const per = AR.periciaLer(c.data);
     return `<div class="dk-card arsenal"><span class="lbl">O arsenal de Antero</span><b class="dk-t">Escolha uma peça</b>
       <button class="ars-foto" data-dk="foto-arsenal" aria-label="Ver o arsenal grande"><img src="img/prova/arsenal.webp" alt=""></button>
-      <p class="dk-nota">Cada peça tem um risco a giz: a essência. Contra o bicho certo, ela fere mais; contra o errado, resvala. Quem não sabe ler pode tentar, ou perguntar a quem sabe. <b>Deslize para o lado</b> para ver as dez.</p>
+      <p class="dk-nota">Cada peça tem um risco a giz: a essência. Contra o bicho certo, ela fere mais; contra o errado, quase não entra. Quem não sabe ler pode tentar, ou perguntar a quem sabe. <b>Deslize para o lado</b> para ver as dez.</p>
       <div class="cartas">${R.ARSENAL.map((x) => { const o = dono(x.k); return AR.cartaHtml(x, { p: c.data, dono: o ? esc(o.data.nome) : '',
         botoes: `${!AR.lido(c.data, x.k) && !AR.tentouLer(c.data, x.k) ? `<button class="btn sm" data-dk="ler" data-v="${x.k}">Ler o risco (${per} 10)</button>` : ''}<button class="btn sm primary" data-dk="pegar" data-v="${x.k}">Pegar esta</button>` }); }).join('')}</div></div>`;
   }
@@ -345,18 +358,18 @@ export function criarMesa(ctx) {
     const bichos = A.tokens().filter((x) => x.kind === 'assombro' && x.visivel && (x.data?.sangue ?? 1) > 0).sort((a, b) => dist(a) - dist(b));
     let alvo = null, b = null;
     if (bichos.length) {
-      const e = await AR.escolherAlvo(bichos.map((x, i) => ({ x, img: x.img, nome: esc(nomeTok(x)), perto: i === 0 && meu && bichos.length > 1 ? 'o mais perto de você' : '' })), `Atacar com ${esc(arma.n)}`);
+      const e = await AR.escolherAlvo(bichos.map((x, i) => ({ x, img: x.img, nome: esc(x.data?.nomeVisto ? x.nome : bichos.length > 1 ? `Bicho ${i + 1}` : 'O bicho'), perto: meu && bichos.length > 1 ? (i === 0 ? 'o mais perto de você' : `o ${i + 1}º mais perto`) : '' })), `Atacar com ${esc(arma.n)}`);
       if (!e) { pintarDock(); return; }
       if (e !== 'sem') { alvo = e.x; b = M.BESTIARIO.find((y) => y.id === alvo.data?.best) || null; }
     }
     const cf = b ? R.contraFamilia(arma.ess, b.familia) : { t: 'neutra' };
     const aj = cf.t === 'vence' ? 1 : cf.t === 'perde' ? -1 : 0;
-    const rot = `Atacar com ${arma.n}${alvo ? ` em ${nomeTok(alvo)}` : ''}${aj > 0 ? ' (o risco morde: +1 dado)' : aj < 0 ? ' (o risco resvala: −1 dado)' : ''}`;
+    const rot = `Atacar com ${arma.n}${alvo ? ` em ${nomeTok(alvo)}` : ''}${aj > 0 ? ' (o risco morde: +1 dado)' : aj < 0 ? ' (o risco não ajuda: −1 dado)' : ''}`;
     const res = await rolarComo(c, arma.per, null, rot, { ajuste: aj, dif: b?.defesa || 0, alvo: alvo?.id });
     if (!res) return;
     let mudou = false;
     if (mun != null) { c.data.municao = mun - 1; mudou = true; }
-    if (aj && !AR.lido(c.data, arma.k)) { c.data.leu = [...(c.data.leu || []), arma.k]; mudou = true; toast(aj > 0 ? 'A arma entrou fundo: o risco dela vence esse bicho.' : 'A arma resvalou: o risco dela perde para esse bicho.'); }
+    if (aj && !AR.lido(c.data, arma.k)) { c.data.leu = [...(c.data.leu || []), arma.k]; mudou = true; toast(aj > 0 ? 'A arma entrou fundo: o risco dela vence esse bicho.' : 'A arma quase não entrou: o risco dela perde para esse bicho.'); }
     if (mudou) await ctx.salvarChar(c);
     if (b && res.passou) { await new Promise((ok) => setTimeout(ok, 1700)); await danoCom(c, arma, aj > 0, alvo); }
     else if (b) toast('Não passou da defesa dele.');
@@ -687,7 +700,7 @@ export function criarMesa(ctx) {
     animar(r);
   }
   function onPedido(v) { const antes = new Set((S.pedidos || []).map((x) => x.id)); S.pedidos = v?.lista || (v?.id ? [v] : []); repintar(); if (!isGM() && noMapa() && pedidosPara(meuChar()).some((x) => !antes.has(x.id))) toast('O mestre pediu uma rolagem.'); }
-  function onGuia(v) { S.guia = v; MAPA.redraw(); if (JSON.stringify(v) === JSON.stringify(G.estado())) return; G.setEstado(v); pintarGuia(); pintarPainel(); }
+  function onGuia(v) { S.guia = v; MAPA.redraw?.(); if (JSON.stringify(v) === JSON.stringify(G.estado())) return; G.setEstado(v); if (noMapa()) { pintarGuia(); pintarPainel(); } }
   function onNoite() { repintar(); }
 
   return { efeito, baixarVideo: preCarregarVideo, animar, pedirPavor, viewGM, viewJogador, jogDesktop, desktop, mount, dockWrap, pintarDock, repintar, click, onChange, onSubmit, onRoll, onPedido, onGuia, onVideo, onNoite, pintarTopo, pintarPainel };

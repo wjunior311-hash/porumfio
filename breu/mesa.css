@@ -661,3 +661,4 @@ div.g-rec b { font-family: var(--display); color: var(--claro); }
 .dk-lutad summary { cursor: pointer; padding: 4px 0; }
 .dk-lutad[open] summary { margin-bottom: 6px; }
 .dock:not(.lateral) .dk-arma { background: rgba(16,21,27,.96); border-radius: 12px; }
+.g-armado { margin: 4px 0 8px; padding-left: 18px; display: grid; gap: 4px; }
