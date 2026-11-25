@@ -662,3 +662,14 @@ div.g-rec b { font-family: var(--display); color: var(--claro); }
 .dk-lutad[open] summary { margin-bottom: 6px; }
 .dock:not(.lateral) .dk-arma { background: rgba(16,21,27,.96); border-radius: 12px; }
 .g-armado { margin: 4px 0 8px; padding-left: 18px; display: grid; gap: 4px; }
+/* dois personagens no mesmo aparelho */
+.dk-troca { background: rgba(16,21,27,.96); border: 1px solid var(--brasa); border-radius: 12px; padding: 8px 10px; }
+.dk-troca-bts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
+.dk-troca-bts button { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line2); background: var(--raise); color: var(--osso2); min-height: 48px; text-align: left; }
+.dk-troca-bts button.on { border-color: var(--brasa); background: rgba(194,85,47,.18); color: var(--claro); }
+.dk-troca-bts img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; }
+.dk-troca-bts b { font-size: 14px; line-height: 1.15; }
+.dk-troca-bts i { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--brasa); color: #fff; font: 700 12px/20px sans-serif; text-align: center; font-style: normal; }
+.dk-card.outro { border-style: dashed; }
+.ms-dono { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--osso3); margin: 6px 0 2px; }
+.ms-dono select { flex: 1; min-width: 0; background: var(--raise); color: var(--claro); border: 1px solid var(--line2); border-radius: 6px; padding: 3px 6px; font-size: 12.5px; }

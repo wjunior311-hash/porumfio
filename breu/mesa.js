@@ -6,7 +6,7 @@ import * as M from './mestre-dados.js';
 import { abrirTour, jaViu } from './tutorial.js?v=2';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=29';
+import { criarGuia, faixaDe } from './guia.js?v=30';
 import { ROLA, FX_C } from './guia-dados.js?v=17';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
@@ -217,6 +217,7 @@ export function criarMesa(ctx) {
         <div class="ms-cnts">${cnt('sangue', b.sangue, 'Sangue')}${cnt('prumo', b.prumo, 'Prumo')}${cnt('pavor', null, 'Pavor')}${cnt('brasa', b.brasa, 'Brasa')}</div>
         <div class="ms-vig"><span>Vigias</span><button data-trk="${c.id}:vigias:-5">−5</button><button data-trk="${c.id}:vigias:-1">−1</button><b>${t.vigias ?? 25}</b><button data-trk="${c.id}:vigias:1">+1</button><button data-trk="${c.id}:vigias:5">+5</button></div>
         ${t.prumo <= 0 ? `<button class="btn sm" data-panico="${c.id}">Rolar o pânico</button>` : ''}
+        <label class="ms-dono"><span>Quem joga</span><select data-ms-dono="${c.id}" aria-label="Quem joga ${esc(c.data.nome)}">${(S.members || []).map((m) => `<option value="${m.user_id}" ${m.user_id === c.owner ? 'selected' : ''}>${esc(m.display_name || 'Sem nome')}</option>`).join('')}</select></label>
         <button class="ms-fora" data-ms="ausente" data-v="${c.id}">O jogador saiu: tirar da sessão</button></div>`;
     }).join('')}</div>${ausentes().map((c) => `<div class="ms-aus"><span class="ms-pic"><img src="${esc(ctx.picChar(c))}" alt=""></span><div><b>${esc(c.data.nome)}</b><small>Fora desta sessão. Se o jogador chegar, aperte o botão: a peça entra na cena que está no ar. O guia, em Se acontecer, diz como pôr na história.</small></div><button class="btn sm primary" data-ms="chegou" data-v="${c.id}">Chegou: pôr na mesa</button></div>`).join('')}`;
   }
@@ -250,7 +251,12 @@ export function criarMesa(ctx) {
 
   // ---------- o jogador: pedido e dados ----------
   const uid = () => S.session?.user.id;
+  // quem joga com dois personagens no mesmo aparelho escolhe qual está jogando agora
+  const meusChars = () => S.chars.filter((c) => c.owner === uid() && c.status === 'aprovado' && !(S.mesa?.ausentes || []).includes(c.id));
+  try { S.atual = localStorage.getItem('breu-atual') || null; } catch { S.atual = null; }
   function meuChar() {
+    const ms = meusChars();
+    if (ms.length > 1) return ms.find((c) => c.id === S.atual) || ms[0];
     const t = A.tokens().find((x) => x.kind === 'pc' && x.owner === uid());
     return (t && ctx.charById(t.character_id)) || S.chars.find((c) => c.owner === uid() && c.status === 'aprovado') || null;
   }
@@ -264,6 +270,11 @@ export function criarMesa(ctx) {
     const n = Math.min(5, (at[attr] || 1) - pavorDe(c) - feridoDe(c)), b = ATR[per] ? 0 : R.bonusPericia(R.grauPericia(c.data, per));
     return { n, b, txt: `${n <= 0 ? '2d20 (fica o pior)' : n + 'd20'}${b ? '+' + b : ''}`, forca: (n <= 0 ? 0 : n * 10) + b * 2 };
   }
+  const pendente = (c) => pedidosPara(c).some((p) => !S.rolls.find((r) => r.character_id === c.id && r.detail?.pedido === p.id));
+  function trocaHtml(atual) {
+    const ms = meusChars(); if (ms.length < 2) return '';
+    return `<div class="dk-troca"><span class="lbl">Jogando agora como</span><div class="dk-troca-bts">${ms.map((c) => `<button data-dk="trocar" data-v="${c.id}" class="${c.id === atual.id ? 'on' : ''}" aria-pressed="${c.id === atual.id}"><img src="${esc(ctx.picChar(c))}" alt=""><b>${esc(c.data.nome)}</b>${c.id !== atual.id && pendente(c) ? '<i title="O mestre pediu uma rolagem">!</i>' : ''}</button>`).join('')}</div></div>`;
+  }
   function fichaMini(c) {
     const b = R.barras(c.data), t = S.noite?.grupo?.[c.id] || { sangue: b.sangue, prumo: b.prumo, pavor: 0, brasa: b.brasa };
     const barra = (k, n, max, lbl) => `<div class="jg-b ${k}"><span>${lbl}</span><b>${n}${max != null ? `<small>/${max}</small>` : ''}</b>${max ? `<i style="--p:${Math.max(0, Math.min(1, n / max))}"></i>` : ''}</div>`;
@@ -273,7 +284,7 @@ export function criarMesa(ctx) {
   function dockHtml(lateral) {
     if (isGM() && desktop()) return '';
     const c = meuChar(); if (!c || c.owner !== uid()) return lateral ? '<p class="ms-dica">Seu personagem ainda não foi aprovado pelo mestre.</p>' : '';
-    let h = (lateral ? fichaMini(c) : '') + fisicoHtml(c.id);
+    let h = trocaHtml(c) + (lateral ? fichaMini(c) : '') + fisicoHtml(c.id);
     const aberto = lateral || U.dk;
     const meus = pedidosPara(c), ultimo = meus.at(-1);
     for (const p of meus) {
@@ -288,6 +299,7 @@ export function criarMesa(ctx) {
           ${pavorDe(c) ? `<p class="dk-nota">Pavor ${pavorDe(c)}: um dado a menos por Pavor.</p>` : ''}${feridoDe(c) ? '<p class="dk-nota">Ferido: um dado a menos até ser tratado.</p>' : ''}</div>`;
       }
     }
+    for (const o of meusChars().filter((o) => o.id !== c.id && pendente(o))) h += `<div class="dk-card pede outro"><span class="lbl">O mestre também pede para ${esc(o.data.nome)}</span><b class="dk-t">${esc(pedidoPara(o).label)}</b><div class="dk-bts"><button class="btn primary melhor" data-dk="trocar" data-v="${o.id}"><span>Trocar para ${esc(o.data.nome)} e rolar</span></button></div></div>`;
     const pers = [...Object.keys(ATR).map((n) => ({ n, a: true })), ...R.PERICIAS.map(([n]) => ({ n, g: R.grauPericia(c.data, n) }))];
     if (lateral || !aberto) h += arsenalHtml(c) + lutaHtml(c, lateral);
     h += `<div class="dk-livre ${aberto ? 'aberto' : ''}">
@@ -640,6 +652,7 @@ export function criarMesa(ctx) {
     }
     if (a === 'abrir') { U.dk = !U.dk; pintarDock(); return true; }
     if (a === 'fechar') { U.dk = false; pintarDock(); return true; }
+    if (a === 'trocar') { S.atual = t.dataset.v; try { localStorage.setItem('breu-atual', S.atual); } catch {} U.dk = false; pintarDock(); MAPA.redraw(); estadoProprio(); toast('Agora você joga como ' + (ctx.charById(S.atual)?.data.nome || '') + '.'); return true; }
     if (a === 'rolar') { const c = meuChar(); if (!c) return true; t.disabled = true; await rolarComo(c, t.dataset.per, t.dataset.ped || null, t.dataset.rot || null); return true; }
     if (a === 'pegar') { const c = meuChar(); if (!c) return true; const arma = R.ARSENAL.find((x) => x.k === t.dataset.v); if (!arma || S.chars.some((o) => o.id !== c.id && o.data.armaMarcada === arma.k)) { toast('Alguém já pegou essa.'); pintarDock(); return true; } c.data.armaMarcada = arma.k; if (arma.mun) c.data.municao = arma.mun; else delete c.data.municao; await ctx.salvarChar(c); toast(`${arma.n} agora é sua.`); pintarDock(); return true; }
     if (a === 'soltar') { const c = meuChar(); if (!c) return true; delete c.data.armaMarcada; delete c.data.municao; await ctx.salvarChar(c); pintarDock(); return true; }
@@ -653,6 +666,18 @@ export function criarMesa(ctx) {
   }
   async function onChange(t) {
     if (G.change(t)) return true;
+    if (t.matches('[data-ms-dono]')) {
+      const c = ctx.charById(t.dataset.msDono), novo = t.value; if (!c || !novo || novo === c.owner) return true;
+      const quem = (S.members || []).find((m) => m.user_id === novo)?.display_name || 'outra conta';
+      t.disabled = true;
+      const r1 = await sb.from('breu_characters').update({ owner: novo }).eq('id', c.id);
+      const r2 = await sb.from('breu_tokens').update({ owner: novo }).eq('character_id', c.id);
+      t.disabled = false;
+      if (r1.error || r2.error) { toast('Não consegui trocar quem joga. Confira a internet.'); return true; }
+      c.owner = novo; A.tokens().forEach((x) => { if (x.character_id === c.id) x.owner = novo; });
+      toast(`${c.data.nome} agora é jogado por ${quem}. Na tela dessa pessoa aparece a troca de personagem. Para desfazer, escolha de novo.`);
+      pintarPainel(); MAPA.redraw(); return true;
+    }
     if (t.matches('[data-ms-forca]')) {
       const r = Math.max(0, +t.value || 0); if (!t.value) return true;
       const acende = U.aceso && r >= 10, semCal = !S.guia?.rec?.cal;

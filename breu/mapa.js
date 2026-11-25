@@ -50,7 +50,7 @@ export function criarMapa(ctx) {
   const cena = () => MP.cenas.find((c) => c.id === MP.ver) || null;
   const passoPx = () => (cena() ? W / cena().largura : 10);
   const tokPx = () => Math.max(40, Math.min(72, passoPx() * 1.5));
-  const meuPc = () => MP.tokens.find((t) => t.kind === 'pc' && t.owner === uid());
+  const meuPc = () => { const ts = MP.tokens.filter((t) => t.kind === 'pc' && t.owner === uid()); return ts.find((t) => t.character_id === S.atual) || ts[0]; };
   const podeMover = (t) => isGM() || (t.owner === uid() && (t.kind === 'pc' || t.kind === 'circulo'));
   const distPassos = (t, x, y) => { const c = cena(); return Math.hypot(x - t.ax, (y - t.ay) * c.aspecto) * c.largura; };
 
