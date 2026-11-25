@@ -6,7 +6,7 @@ import * as M from './mestre-dados.js';
 import { abrirTour, jaViu } from './tutorial.js?v=2';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=31';
+import { criarGuia, faixaDe } from './guia.js?v=32';
 import { ROLA, FX_C } from './guia-dados.js?v=17';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
@@ -19,6 +19,7 @@ const VIDEOS = {
   noite: { src: 'video/noite.mp4', nome: 'a noite caindo', fim: 'Fechar o vídeo' },
   fenda: { src: 'video/fenda.mp4', nome: 'a fenda abrindo', fim: 'Fechar o vídeo' },
   celeste: { src: 'video/celeste.mp4', nome: 'a bordadeira se revelando', fim: 'Fechar o vídeo' },
+  rasgados: { src: 'video/rasgados.mp4', nome: 'a lenda dos Rasgados', fim: 'Fechar o vídeo' },
 };
 const PROVAS = {
   caderno: { img: 'img/prova/caderno.webp', nome: 'O caderno de Antero', sub: '"O bicho vem pelo nariz, pelo ouvido ou pelo medo. Escolhe por onde ele vem, e espera ele lá."' },
@@ -558,7 +559,7 @@ export function criarMesa(ctx) {
   }
   function mostrarProgresso(q) { if (video?.dataset.qual !== q) return; const b = video.querySelector('.vd-carrega i'); if (b) b.style.width = Math.round(vids[q].progresso * 100) + '%'; }
   // baixa a abertura primeiro, depois os vídeos da noite
-  const preCarregarVideo = () => setTimeout(() => baixarVideo('abertura2').then(() => baixarVideo('noite')).then(() => baixarVideo('fenda')).then(() => baixarVideo('celeste')), 1500);
+  const preCarregarVideo = () => setTimeout(() => baixarVideo('abertura2').then(() => baixarVideo('noite')).then(() => baixarVideo('fenda')).then(() => baixarVideo('celeste')).then(() => baixarVideo('rasgados')), 1500);
   // o vídeo toca para todos, por cima do mapa (não em tela cheia)
   async function tocarVideo(qual) {
     if (!isGM()) return;
