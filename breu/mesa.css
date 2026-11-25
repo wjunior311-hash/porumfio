@@ -673,3 +673,4 @@ div.g-rec b { font-family: var(--display); color: var(--claro); }
 .dk-card.outro { border-style: dashed; }
 .ms-dono { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--osso3); margin: 6px 0 2px; }
 .ms-dono select { flex: 1; min-width: 0; background: var(--raise); color: var(--claro); border: 1px solid var(--line2); border-radius: 6px; padding: 3px 6px; font-size: 12.5px; }
+.dk-assiste { border: 1px solid var(--line2); border-radius: 12px; padding: 10px 12px; } .dk-assiste p { margin: 4px 0 0; font-size: 13.5px; color: var(--osso2); }

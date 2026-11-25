@@ -285,6 +285,7 @@ export function criarMesa(ctx) {
   }
   function dockHtml(lateral) {
     if (isGM() && desktop()) return '';
+    if (S.me?.role === 'espectador') return lateral ? `<div class="dk-assiste"><span class="lbl">Você está assistindo</span><p>Você vê o que os jogadores veem: o mapa, os bichos que o mestre revela, os vídeos e as rolagens. Fique à vontade.</p></div><div class="jg-feed"><span class="lbl">Rolagens da mesa</span>${S.rolls.slice(0, 10).map(linhaRoll).join('') || '<p class="ms-dica">Ninguém rolou ainda.</p>'}</div>` : '';
     const c = meuChar(); if (!c || c.owner !== uid()) return lateral ? '<p class="ms-dica">Seu personagem ainda não foi aprovado pelo mestre.</p>' : '';
     let h = trocaHtml(c) + (lateral ? fichaMini(c) : '') + fisicoHtml(c.id);
     const aberto = lateral || U.dk;

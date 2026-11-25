@@ -5,7 +5,7 @@ import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { criarMapa } from './mapa.js?v=48';
-import { criarMesa } from './mesa.js?v=47';
+import { criarMesa } from './mesa.js?v=48';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -25,7 +25,7 @@ function toast(msg) {
 const role = () => S.me?.role;
 const isGM = () => role() === 'gm' || role() === 'admin';
 const isAdmin = () => role() === 'admin';
-const PAPEL = { player: 'Jogador', gm: 'Mestre', admin: 'Administrador' };
+const PAPEL = { player: 'Jogador', espectador: 'Espectador (só assiste)', gm: 'Mestre', admin: 'Administrador' };
 const STATUS = { rascunho: 'Rascunho', pronto: 'Enviado ao mestre', aprovado: 'Aprovado' };
 const memberName = (uid) => S.members.find((m) => m.user_id === uid)?.display_name || 'Alguém';
 const charById = (id) => S.chars.find((c) => c.id === id);
@@ -262,18 +262,20 @@ function viewMesa() {
   const uid = S.session.user.id;
   const meus = S.chars.filter((c) => c.owner === uid);
   const outros = S.chars.filter((c) => c.owner !== uid);
-  const podeCriar = isGM() || meus.length === 0;
+  const assiste = role() === 'espectador';
+  const podeCriar = !assiste && (isGM() || meus.length === 0);
   return `${top()}
     <section class="hero"><p class="lbl">Olá, ${esc(S.me.display_name)}</p><h1>A mesa</h1></section>
     ${faixaNoite()}
-    <a class="btn primary block mapa-cta" href="#/mapa">${isGM() ? 'Abrir a mesa do mestre' : 'Abrir o mapa da mesa'}</a>
+    <a class="btn primary block mapa-cta" href="#/mapa">${isGM() ? 'Abrir a mesa do mestre' : assiste ? 'Assistir à mesa' : 'Abrir o mapa da mesa'}</a>
+    ${assiste ? '<div class="box" style="margin-top:12px"><b>Você está como espectador.</b> Abra a mesa para ver o mapa, os vídeos e as rolagens ao vivo, do jeito que os jogadores veem. Você não precisa de personagem.</div>' : ''}
     <div class="home"><div class="h-a">
-    <h2>${isGM() && meus.length > 1 ? 'Seus personagens' : 'Seu personagem'}</h2>
-    ${meus.length ? `<div class="chars">${meus.map(charCard).join('')}</div>` : `<div class="empty"><p>Você ainda não tem personagem.</p><p class="small">A criação leva uns 20 minutos e salva sozinha: dá para parar e voltar depois.</p></div>`}
+    ${assiste ? '' : `<h2>${isGM() && meus.length > 1 ? 'Seus personagens' : 'Seu personagem'}</h2>`}
+    ${assiste ? '' : meus.length ? `<div class="chars">${meus.map(charCard).join('')}</div>` : `<div class="empty"><p>Você ainda não tem personagem.</p><p class="small">A criação leva uns 20 minutos e salva sozinha: dá para parar e voltar depois.</p></div>`}
     ${podeCriar ? `<button class="btn primary block" style="margin-top:12px" data-act="novo">${meus.length ? 'Criar outro personagem' : 'Criar meu personagem'}</button>
       <a class="btn block" style="margin-top:8px" href="#/prontos">Ou escolher um personagem pronto</a>` : ''}
-    <h2>Antes de começar</h2>
-    <div class="box">Pense em quem você é antes de pensar em números: de onde veio, o que faz, qual noite te mudou e quem você quer proteger. As regras se encaixam depois.</div>
+    ${assiste ? '' : `<h2>Antes de começar</h2>
+    <div class="box">Pense em quem você é antes de pensar em números: de onde veio, o que faz, qual noite te mudou e quem você quer proteger. As regras se encaixam depois.</div>`}
     </div><div class="h-b">
     <h2>O grupo</h2>
     ${outros.length ? `<div class="chars">${outros.map(charCard).join('')}</div>` : `<p class="muted">Ninguém mais criou personagem ainda.</p>`}
@@ -804,7 +806,7 @@ function viewAdmin() {
     <form class="card form" data-form="invite">
       <div><label class="flab" for="nv-label">Para quem</label><input class="field" id="nv-label" name="label" placeholder="Ex.: Ana, ou Grupo da primeira mesa" maxlength="60" required></div>
       <div><label class="flab" for="nv-max">Quantas pessoas podem usar este link</label><p class="fhelp">1 para mandar no privado. Mais de 1 para mandar no grupo: o link para de funcionar quando todos entrarem.</p><input class="field" id="nv-max" name="max" type="number" min="1" max="30" value="1" style="width:110px"></div>
-      <div><label class="flab" for="nv-role">Papel</label><select class="field" id="nv-role" name="role"><option value="player">Jogador</option><option value="gm">Mestre</option></select></div>
+      <div><label class="flab" for="nv-role">Papel</label><select class="field" id="nv-role" name="role"><option value="player">Jogador</option><option value="espectador">Espectador (só assiste)</option><option value="gm">Mestre</option></select></div>
       <button class="btn primary">Criar link</button>
       <p class="small dim" style="margin:0">Quem já tem conta no Por Um Fio entra com o mesmo e-mail e senha.</p>
     </form>
