@@ -6,7 +6,7 @@ import * as M from './mestre-dados.js';
 import { abrirTour, jaViu } from './tutorial.js?v=2';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=30';
+import { criarGuia, faixaDe } from './guia.js?v=31';
 import { ROLA, FX_C } from './guia-dados.js?v=17';
 
 const ATR = { Vigor: 'vigor', Agilidade: 'agilidade', Juízo: 'juizo', Presença: 'presenca', Firmeza: 'firmeza' };
@@ -15,6 +15,7 @@ const ORDEM_CENAS = Object.keys(CENAS_VIVAS);
 const CURTO = { estrada: 'Estrada', vila: 'Vila', moco: 'Mocó', velorio: 'Velório', farinha: 'Casa de farinha', zuleide: 'Zuleide' };
 const VIDEOS = {
   abertura: { src: 'video/abertura.mp4', nome: 'a abertura', fim: 'Pular e abrir a estrada' },
+  abertura2: { src: 'video/abertura2.mp4', nome: 'a abertura da noite', fim: 'Fechar o vídeo' },
   noite: { src: 'video/noite.mp4', nome: 'a noite caindo', fim: 'Fechar o vídeo' },
   fenda: { src: 'video/fenda.mp4', nome: 'a fenda abrindo', fim: 'Fechar o vídeo' },
   celeste: { src: 'video/celeste.mp4', nome: 'a bordadeira se revelando', fim: 'Fechar o vídeo' },
@@ -557,7 +558,7 @@ export function criarMesa(ctx) {
   }
   function mostrarProgresso(q) { if (video?.dataset.qual !== q) return; const b = video.querySelector('.vd-carrega i'); if (b) b.style.width = Math.round(vids[q].progresso * 100) + '%'; }
   // baixa a abertura primeiro, depois os vídeos da noite
-  const preCarregarVideo = () => setTimeout(() => baixarVideo('abertura').then(() => baixarVideo('noite')).then(() => baixarVideo('fenda')).then(() => baixarVideo('celeste')), 1500);
+  const preCarregarVideo = () => setTimeout(() => baixarVideo('abertura2').then(() => baixarVideo('noite')).then(() => baixarVideo('fenda')).then(() => baixarVideo('celeste')), 1500);
   // o vídeo toca para todos, por cima do mapa (não em tela cheia)
   async function tocarVideo(qual) {
     if (!isGM()) return;
@@ -636,7 +637,7 @@ export function criarMesa(ctx) {
       if (a === 'add') { U.add = !U.add; const box = document.querySelector('[data-ms-add]'); if (box) box.hidden = !U.add; t.classList.toggle('on', U.add); return true; }
       if (a === 'livre') { U.livre = true; pintarPainel(); return true; }
       if (a === 'aba') { U.aba = v; if (v === 'rolagens') U.novas = 0; pintarPainel(); return true; }
-      if (a === 'video') { tocarVideo(v || 'abertura'); return true; }
+      if (a === 'video') { tocarVideo(v || (['noite', 'aurora'].includes(G.estado().aqui) ? 'abertura2' : 'abertura')); return true; }
       if (a === 'fase') { t.disabled = true; await virar(); return true; }
       if (a === 'ausente' || a === 'chegou') {
         const id = t.dataset.v, l = new Set(S.mesa?.ausentes || []);
