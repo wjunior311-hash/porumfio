@@ -1,6 +1,8 @@
 // "Como usar": passeio guiado pela tela do jogador, apontando cada parte de verdade.
 const PASSOS = [
   { t: 'Bem-vindo à mesa', d: 'Este é o lugar do jogo. Tudo o que o mestre mostra aparece aqui sozinho, sem precisar recarregar. Vou te mostrar cada parte. Leva 1 minuto.' },
+  { s: '.dk-troca', t: 'Dois personagens, uma tela', d: 'Esta conta joga <b>dois personagens</b>. Toque no rosto de um deles para jogar com ele: a ficha, os dados, a arma e a peça que você arrasta no mapa mudam junto. O botão aceso é quem está jogando agora. <b>Um ! laranja</b> no outro rosto quer dizer que o mestre pediu uma rolagem para ele também.' },
+  { s: '.dk-card.outro', t: 'O pedido do outro personagem', d: 'Quando o mestre pede uma rolagem para os dois, este cartão aparece. Role primeiro com quem está aceso. Depois toque em <b>Trocar e rolar</b> para rolar com o outro.' },
   { s: '.jg-titulo', t: 'A cena', d: 'O nome do lugar onde a história está agora. Quando o mestre muda de lugar, a tela muda junto.' },
   { s: '.ms-rel', t: 'As fases da noite', d: 'Os cinco desenhos são as fases da noite: Crepúsculo, Breu, Hora Morta, Antes da Aurora e Aurora. A que está acesa é a de agora. Em cada virada de fase, o app pede para todo mundo rolar o medo (o Pavor).' },
   { s: '.mp-wrap', t: 'O mapa', d: 'As bolinhas com rosto são as peças. A sua tem o rosto do seu personagem. <b>Arraste a sua peça</b> para andar. Toque em qualquer peça para ver quem é.' },

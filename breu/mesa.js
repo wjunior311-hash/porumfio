@@ -3,7 +3,7 @@
 import * as R from './regras.js?v=8';
 import * as AR from './armas.js?v=2';
 import * as M from './mestre-dados.js';
-import { abrirTour, jaViu } from './tutorial.js?v=2';
+import { abrirTour, jaViu } from './tutorial.js?v=3';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
 import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
 import { criarGuia, faixaDe } from './guia.js?v=32';
@@ -249,6 +249,8 @@ export function criarMesa(ctx) {
     if (noMapa()) preCarregarVideo();
     estadoProprio();
     if (!isGM() && meuChar() && !jaViu()) setTimeout(() => { if (noMapa() && !document.querySelector('.vd')) abrirTour(); }, 1800);
+    // quem acabou de ganhar um segundo personagem vê o passeio de novo, uma vez
+    else if (!isGM() && meusChars().length > 1) { let v = '1'; try { v = localStorage.getItem('breu-tour-casal'); } catch {} if (v !== '1') setTimeout(() => { if (noMapa() && !document.querySelector('.vd')) { try { localStorage.setItem('breu-tour-casal', '1'); } catch {} abrirTour(); } }, 1800); }
   }
 
   // ---------- o jogador: pedido e dados ----------
