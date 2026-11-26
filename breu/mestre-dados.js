@@ -21,7 +21,7 @@ export const BESTIARIO = [
 "grau": "Comum",
 "tam": "Miúdo",
 "sentido": "Sente medo",
-"sangue": 12,
+"sangue": 6,
 "defesa": 11,
 "atq": "1d20+2",
 "dano": "d6"
@@ -33,7 +33,7 @@ export const BESTIARIO = [
 "grau": "Comum",
 "tam": "Pequeno",
 "sentido": "Fareja",
-"sangue": 12,
+"sangue": 10,
 "defesa": 11,
 "atq": "1d20+2",
 "dano": "d6"
@@ -57,7 +57,7 @@ export const BESTIARIO = [
 "grau": "Forte",
 "tam": "Grande",
 "sentido": "Ouve",
-"sangue": 24,
+"sangue": 30,
 "defesa": 12,
 "atq": "2d20+3",
 "dano": "d8"
@@ -117,7 +117,7 @@ export const BESTIARIO = [
 "grau": "Comum",
 "tam": "Pequeno",
 "sentido": "Ouve",
-"sangue": 12,
+"sangue": 16,
 "defesa": 13,
 "atq": "1d20+2",
 "dano": "d6"

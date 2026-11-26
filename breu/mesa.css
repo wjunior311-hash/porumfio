@@ -687,3 +687,39 @@ div.g-rec b { font-family: var(--display); color: var(--claro); }
 .dk-pausa { border-color: var(--brasa); }
 .dk-pausa p, .ms-pausa p { margin: 6px 0 10px; line-height: 1.5; }
 .ms-pausa input { margin-bottom: 8px; }
+/* a luta: ordem, vez, ao vivo, efeitos */
+.lt { display: grid; gap: 12px; }
+.lt-bts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.lt-vt { font-size: 13px; color: var(--osso3); }
+.lt-ordem { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.lt-ordem button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; border: 1px solid transparent; background: rgba(255,255,255,.03); color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.lt-ordem li.vez button { border-color: var(--brasa); background: rgba(196,92,52,.16); }
+.lt-ordem li.caido span { text-decoration: line-through; opacity: .6; }
+.lt-ordem b { min-width: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+.lt-ordem span { flex: 1; }
+.lt-ordem em { font-style: normal; font-size: 11px; padding: 1px 7px; border-radius: 6px; }
+.lt-pj { background: rgba(80,160,150,.2); color: #9fd6cc; } .lt-np { background: rgba(150,120,200,.2); color: #c9b8ef; } .lt-bi { background: rgba(200,80,70,.2); color: #f0a49a; }
+.lt-vez { border: 1px solid var(--linha, rgba(255,255,255,.12)); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
+.lt-vez > b { font-size: 18px; } .lt-vez small { color: var(--osso3); }
+.lt-vivo { display: grid; gap: 4px; } .lt-vivo p { margin: 0; font-size: 14px; line-height: 1.45; }
+.lt-efs { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+.lt-efs li, .mp-ef { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+.mp-efs { margin: 8px 0; display: grid; gap: 4px; }
+.mp-per .mp-row { display: flex; gap: 6px; } .mp-per select { flex: 1; min-width: 0; }
+.dk-ordem.minha { border-color: var(--brasa); }
+.dk-ol { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 2px; font-size: 14px; }
+.dk-ol li.vez { font-weight: 600; color: var(--brasa2, #e8a07a); } .dk-ol li.eu::after { content: ' (você)'; color: var(--osso3); }
+.dk-efs p { margin: 4px 0; } .dk-vant.on { border-color: var(--brasa); } .dk-vant p { margin: 6px 0 10px; }
+/* fases da noite em abas, passo de agora, o que vem */
+.g-fases { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 12px; position: sticky; top: 0; z-index: 2; background: var(--fundo, #14100c); padding: 6px 0; }
+.g-fases button { border: 1px solid rgba(255,255,255,.14); background: transparent; color: inherit; border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 14px; cursor: pointer; }
+.g-fases button.on { background: var(--brasa); border-color: var(--brasa); color: #fff; }
+.g-fases button.passou { opacity: .6; }
+.g-fases i { font-style: normal; font-size: 11px; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,.18); }
+.g-vem { border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; }
+.g-vem ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.g-passos li.g-feito { opacity: .55; } .g-passos li.g-feito .g-pf { text-decoration: line-through; }
+.g-passos li.g-agora-p { outline: 2px solid var(--brasa); outline-offset: 6px; border-radius: 4px; }
+.g-agora-t { display: inline-block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--brasa); margin-bottom: 4px; }
+.g-fb { margin-top: 8px; border: 1px solid rgba(255,255,255,.16); background: transparent; color: var(--osso3); border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.g-fb.on { color: inherit; }

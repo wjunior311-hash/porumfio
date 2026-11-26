@@ -1,6 +1,6 @@
 // As cartas do arsenal de Antero: o desenho, o símbolo riscado, o que a peça faz.
 // Quem não leu o símbolo vê o risco, mas não sabe a essência.
-import * as R from './regras.js?v=8';
+import * as R from './regras.js?v=9';
 
 const T = 'stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';
 // os riscos de Antero, como estão no couro: triângulo, círculo, losango, cruz e xis
@@ -56,12 +56,12 @@ export function cartaHtml(a, { p = null, botoes = '', dono = '', mini = false } 
 }
 
 // escolher em quem bater: só os bichos que os jogadores estão vendo
-export function escolherAlvo(alvos, titulo) {
+export function escolherAlvo(alvos, titulo, pergunta = 'Em quem você ataca?') {
   return new Promise((ok) => {
     const fundo = document.createElement('div'); fundo.className = 'fis-fundo';
     fundo.innerHTML = `<div class="fis-caixa alvo-caixa" role="dialog" aria-label="Em quem você ataca">
-      <span class="fis-lbl">${titulo}</span><b class="fis-t">Em quem você ataca?</b>
-      <div class="alvo-lista">${alvos.map((x, i) => `<button type="button" data-i="${i}"><img src="${x.img}" alt=""><span><b>${x.nome}</b><small>${x.perto}</small></span></button>`).join('')}</div>
+      <span class="fis-lbl">${titulo}</span><b class="fis-t">${pergunta}</b>
+      <div class="alvo-lista">${alvos.map((x, i) => `<button type="button" data-i="${i}">${x.img ? `<img src="${x.img}" alt="">` : ''}<span><b>${x.nome}</b><small>${x.perto}</small></span></button>`).join('')}</div>
       <div class="fis-bts"><button type="button" class="btn ghost" data-x>Cancelar</button><button type="button" class="btn" data-sem>Outra coisa (o mestre diz)</button></div>
     </div>`;
     document.body.appendChild(fundo);

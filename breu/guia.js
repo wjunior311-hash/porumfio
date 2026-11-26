@@ -2,7 +2,7 @@
 import { ASS_TEXTO as AT } from './ass-texto.js?v=3';
 import { GENTE, VISTO, ROLA, FX_C, PISTAS, PISTA_ONDE, MUNDO, ATOS, RESOLVER, SITUACOES, MOMENTOS as M } from './guia-dados.js?v=18';
 
-export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {}, armado: [] };
+export const PADRAO_GUIA = { aqui: 'inicio', trecho: '', corpo: '', celeste: '', bras: '', pistas: [], tarefas: {}, rec: {}, armado: [], feitos: [] };
 // o que o grupo conseguiu durante o dia; muda o conserto, o corpo e a noite
 export const RECURSOS = [
   ['cal', 'Saco de cal', 'do mocó', 'Sem ele, o conserto do círculo tem −2.'],
@@ -23,7 +23,7 @@ export function criarGuia(ctx) {
   const { S, R, esc } = ctx;
   let E = { ...PADRAO_GUIA };
   const estado = () => E;
-  function setEstado(v) { E = { ...PADRAO_GUIA, ...(v || {}) }; E.rec ||= {}; E.armado ||= []; }
+  function setEstado(v) { E = { ...PADRAO_GUIA, ...(v || {}) }; E.rec ||= {}; E.armado ||= []; E.feitos ||= []; }
   const rec = (k) => E.rec?.[k] || 0;
   // o que vale agora no conserto do círculo, pelo que o grupo juntou
   function bonusConserto() {
@@ -101,8 +101,12 @@ export function criarGuia(ctx) {
     }).join('')}</div>`;
   }
 
+  let colhe = null;
+  const chaveP = (titulo, p) => (titulo || '') + '|' + String(p.f).replace(/<[^>]+>/g, '').slice(0, 40);
   function passosHtml(ps, titulo) {
-    return `<section class="g-bloco"><h3 class="g-rot">${titulo || 'Faça nesta ordem'}</h3><ol class="g-passos">${ps.filter(Boolean).map((p) => `<li><div class="g-pf">${p.f}</div>
+    const lista = ps.filter(Boolean), feitos = new Set(E.feitos || []);
+    const agora = colhe ? lista.findIndex((p) => !feitos.has(chaveP(titulo, p))) : -1;
+    const h = `<section class="g-bloco"><h3 class="g-rot">${titulo || 'Faça nesta ordem'}</h3><ol class="g-passos">${lista.map((p, i) => colhe && feitos.has(chaveP(titulo, p)) ? `<li class="g-feito"><div class="g-pf">${p.f}</div><button class="g-fb on" data-g="feito" data-v="${esc(chaveP(titulo, p))}">✓ Feito (desfazer)</button></li>` : `<li class="${i === agora ? 'g-agora-p' : ''}">${i === agora ? '<span class="g-agora-t">Agora</span>' : ''}<div class="g-pf">${p.f}</div>
       ${p.d ? `<p class="g-pd">${p.d}</p>` : ''}
       ${p.app ? `<p class="g-papp"><span>No app</span>${p.app}</p>` : ''}
       ${p.acoes ? `<div class="g-acoes">${p.acoes.map(acaoBtn).join('')}</div>` : ''}
@@ -110,7 +114,10 @@ export function criarGuia(ctx) {
       ${p.leia ? leiaHtml(p.leia) : ''}
       ${p.ganchos ? ganchosHtml(p.ganchos) : ''}
       ${p.rola ? rolaHtml(p.rola) : ''}
-      ${p.arm ? armBtn(p.arm) : ''}</li>`).join('')}</ol></section>`;
+      ${p.arm ? armBtn(p.arm) : ''}
+      ${colhe ? `<button class="g-fb" data-g="feito" data-v="${esc(chaveP(titulo, p))}">Passo feito ✓</button>` : ''}</li>`).join('')}</ol></section>`;
+    if (!colhe) return h;
+    colhe.push({ titulo, h }); return `<!--FASE${colhe.length - 1}-->`;
   }
 
   // o que ficou armado na preparação: o mestre marca, e cada fase lembra o que acontece
@@ -160,7 +167,8 @@ function noiteHtml() {
     ? { f: 'O trecho está aberto', d: 'Eles não investem: passam pelo vão. Quem estiver no caminho, luta.' }
     : { f: 'Quando um bicho investe contra a linha', d: 'Clique no bicho, escolha <b>O círculo da vila</b> e aperte <b>Rolar o ataque</b>. <b>Não superou:</b> a linha segura e perde 3 de força (o Rolador tira 4). <b>Superou:</b> abre uma brecha. Fechar a brecha é Riscar na hora, ou alguém segura a brecha com a lança enquanto outro risca.' };
 
-  return `
+  colhe = [];
+  const corpo = `
   <div class="g-meta"><span class="g-pill tempo">80 min</span>${acaoBtn(['cena', 'farinha'])}${acaoBtn(['cena', 'vila'])}</div>
   <p class="g-instr" style="margin-top:0">Esta noite foi montada pelo que você marcou na aba A história: <b>trecho ${aberto ? 'aberto' : E.trecho === 'forte' ? 'consertado forte' : 'consertado fino'}</b>, <b>corpo ${E.corpo === 'queimado' ? 'queimado' : E.corpo === 'fechada' ? 'na casa fechada' : 'no velório'}</b>. A bordadeira ainda não foi descoberta.</p>
 
@@ -225,6 +233,7 @@ function noiteHtml() {
   ], 'Breu')}
 
   ${passosHtml([
+    { f: 'Para voltar, se a sessão parou aqui', d: 'Leia antes de qualquer coisa. Depois siga para a luta (abaixo: Se lutarem com a bordadeira e o moço), a Rosário e a viúva.', leia: [['', 'É a Hora Morta, a hora em que até o escuro para. A bordadeira e o moço dos baldes saíram da casa de farinha sem ninguém ver, e apagaram mais um pedaço do círculo.'], ['', 'Agora vocês veem o que eles são. A bordadeira tirou o chapéu e arregaçou as mangas: os braços são cobertos de riscos escuros, furados na pele, brilhando fraco como brasa. O moço também.'], ['', 'Dentro da vila, a Corcunda anda abaixada, escutando. E os bichos que sobraram rondam a brecha. O que vocês fazem?']] },
     { f: 'Vire para a Hora Morta', d: 'Cada jogador rola o Pavor no celular. Não revele a Corcunda ainda: ela entra pela linha, ao lado da bordadeira.', acoes: [['fase', 2]] },
     { f: 'Leia o silêncio', leia: [['', 'É o meio da noite, a hora em que até o escuro para. Nenhum barulho. Nenhum fungado. E então, pela fresta da porta, vocês veem uma coisa que não veem há horas.'], ['', 'Luz. Uma lanterna amarela, lá fora, no trecho. A única luz da noite inteira.']] },
     { f: 'A bordadeira recebe visita', d: 'Antes, no mapa, <b>arraste a bordadeira e o moço dos baldes para o trecho</b> do círculo, do lado da estrada. Depois o vídeo da fenda (13 segundos). Depois leia. A linha perde força: <b>' + (E.trecho === 'forte' ? '−2, porque o conserto foi 20 ou mais' : '−4') + '</b>.', acoes: [['video', 'fenda']], leia: [['', 'A bordadeira está ajoelhada em cima da linha de cal, com a lanterna acesa do lado. O moço dos baldes, de pé atrás dela, segura o chapéu no peito. Ela passa a mão na cal em meia-lua, devagar, como quem alisa um lençol, e canta baixinho. Onde a mão passa, a linha some.'], ['', 'Do escuro, por cima dela, sai uma coisa curvada, de costas de cinza, maior que um homem agachado. Passa a um palmo do rosto dela. Fareja. E segue em frente. Não toca nela.']] },
@@ -247,6 +256,26 @@ function noiteHtml() {
     rodadas,
   ], 'Antes da aurora')}
   <div class="g-seguir"><button class="g-acao forte" data-g="ir" data-v="aurora">O sol nasceu: Aurora →</button></div>`;
+  const blocos = colhe; colhe = null;
+  const atual = Math.min(4, (S.noite?.fase ?? -1) + 1);
+  if (atual !== ultimaFase) { faseVista = null; ultimaFase = atual; }
+  const ver = faseVista ?? atual;
+  const nav = `<nav class="g-fases">${blocos.map((b, i) => `<button class="${i === ver ? 'on' : ''} ${i < atual ? 'passou' : ''}" data-g="fasev" data-v="${i}">${esc(b.titulo)}${i === atual ? '<i>agora</i>' : ''}</button>`).join('')}</nav>`;
+  return nav + vemHtml(ver) + corpo.replace(/<!--FASE(\d+)-->/g, (m, i) => (+i === ver ? blocos[+i].h : ''));
+}
+// o que vem nesta fase, já com o que o grupo conseguiu ligado
+let faseVista = null, ultimaFase = null;
+function vemHtml(i) {
+  const arm = (k) => E.armado.includes(k), erros = S.mesa?.cadeado?.erros || 0, n = S.noite || {};
+  const L = [
+    [`O arsenal ${S.mesa?.arsenal ? 'já está com eles' : '<b>ainda não apareceu</b>: tem que aparecer antes do fim da 3ª rodada (passo 12)'}.`, `3 rodadas de preparação: cada um faz uma coisa por rodada.`, erros >= 3 ? '<b>Erraram o cadeado 3 vezes</b>: a bordadeira sabe do esconderijo e leva o caderno na Hora Morta.' : ''],
+    [`Chegam <b>2 Farejadores</b> pela pira. ${arm('isca') ? 'A isca está armada: o primeiro vai para ela e perde uma rodada.' : 'Sem isca: vão direto farejar a linha.'} ${arm('sal') ? 'O sal segura quem fareja (força 12).' : ''}`, `Eles investem contra a linha procurando o ponto fino (o trecho).`],
+    [`Chega o <b>bando de Tisnados</b>. ${arm('criancas') ? 'As crianças estão quietas: o bando não acha elas.' : '<b>As crianças não foram acalmadas</b>: o bando vai direto para elas.'}`, 'Chega o <b>Rolador</b>, pela estrada. Bento tenta ajudar e precisa ser salvo.'],
+    ['A bordadeira e o moço vão ao trecho e apagam a linha. A Corcunda entra.', 'A bordadeira e o moço mostram quem são. Eles são muito mais fortes e <b>não matam</b>: se a bordadeira cair pela metade, o moço a puxa para cima da Corcunda e eles vão embora.', 'A Rosário corre para a linha e morre. A Dona Lindalva vai com eles, por vontade própria.', erros >= 3 ? '<b>A bordadeira leva o caderno</b> (erraram o cadeado 3 vezes).' : 'O caderno fica com o grupo.'],
+    ['Os bichos que sobraram fogem para as fendas. Encurralado ataca com +2 dados.'],
+  ][i] || [];
+  const circ = `Círculo: força <b>${n.circulo ?? 14}</b>${n.circulo === 0 ? ' (brecha aberta)' : ''}.`;
+  return `<div class="g-vem"><span class="lbl">O que vem nesta fase</span><ul>${[...L.filter(Boolean), i > 0 ? circ : ''].filter(Boolean).map((x) => `<li>${x}</li>`).join('')}</ul></div>`;
 }
 
 function auroraHtml() {
@@ -421,6 +450,8 @@ function mapaHtml() {
       const novo = v === 't' ? (n ? 0 : 1) : Math.max(0, Math.min(r[4] || 1, n + +v));
       mudar({ rec: { ...E.rec, [k]: novo } }); ctx.repintar(); return true;
     }
+    if (g === 'fasev') { faseVista = +v; ctx.repintar(true); return true; }
+    if (g === 'feito') { const f = new Set(E.feitos || []); f.has(v) ? f.delete(v) : f.add(v); mudar({ feitos: [...f] }); ctx.repintar(); return true; }
     if (g === 'arm') { mudar({ armado: E.armado.includes(v) ? E.armado.filter((x) => x !== v) : [...E.armado, v] }); ctx.repintar(); return true; }
     if (g === 'pista') { mudar({ pistas: E.pistas.includes(v) ? E.pistas.filter((x) => x !== v) : [...E.pistas, v] }); ctx.repintar(); return true; }
     if (g === 'set') { const k = t.dataset.k; mudar({ [k]: E[k] === v && v ? '' : v }); ctx.repintar(); return true; }

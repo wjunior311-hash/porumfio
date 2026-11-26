@@ -1,8 +1,9 @@
 // Mapa compartilhado da mesa: cena, peças, escuro, círculos e movimento limitado por rodada.
 // Posições são guardadas de 0 a 1 (fração da largura e da altura da imagem).
-import * as M from './mestre-dados.js';
+import * as M from './mestre-dados.js?v=2';
+import * as C from './combate.js?v=1';
 import { ASS_TEXTO, JOGADAS, JOGADA_BASE, FAMILIA, RASGADOS } from './ass-texto.js?v=3';
-import * as R from './regras.js?v=8';
+import * as R from './regras.js?v=9';
 import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=22';
 
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
@@ -84,6 +85,7 @@ export function criarMapa(ctx) {
       .on('broadcast', { event: 'dado' }, ({ payload: p }) => ctx.animar?.(p))
       .on('broadcast', { event: 'efeito' }, ({ payload: p }) => ctx.efeito?.(p))
       .on('broadcast', { event: 'reload' }, async () => { if (!el) return; await loadTokens(); draw(); })
+      .on('broadcast', { event: 'escolhe' }, ({ payload: p }) => ctx.escolhe?.(p))
       .subscribe();
   }
   const enviar = (event, payload) => bc?.send({ type: 'broadcast', event, payload });
@@ -191,7 +193,7 @@ export function criarMapa(ctx) {
     const t = MP.tokens.find((x) => x.id === MP.sel);
     let sel = '';
     if (t) {
-      const d = t.data || {};
+      const d = t.kind === 'npc' || t.kind === 'assombro' ? vidaDe(t) : t.data || {};
       if (t.kind === 'circulo') {
         sel = `<div class="mp-sel"><b>${esc(t.nome || 'Círculo')}</b>
           <div class="mp-row"><span>Força</span><button class="btn sm" data-mp="forca" data-v="-1">−</button><b>${d.forca ?? 0}</b><button class="btn sm" data-mp="forca" data-v="1">+</button></div>
@@ -211,7 +213,7 @@ export function criarMapa(ctx) {
         sel = `<div class="mp-sel ${oculto ? 'oculto' : ''}">
           <div class="mp-selh"><b>${esc(t.nome)}</b>${b ? `<span>Defesa ${b.defesa} · ${esc(b.sentido)}</span>` : ''}${oculto ? '<em>escondido</em>' : ''}</div>
           ${oculto ? `<button class="btn primary block" data-mp="visivel">Mostrar aos jogadores</button>` : ''}
-          ${t.kind === 'assombro' && b && !oculto ? ataqueHtml(t, b) : ''}
+          ${C.fichaDe(t) && !oculto ? ataqueHtml(t, C.fichaDe(t)) + periciaHtml(t, C.fichaDe(t)) : ''}${efeitosHtml('tok:' + t.id)}
           ${t.kind === 'assombro' && b ? narraHtml(oculto, b) + jogadasHtml(b) : ''}
           ${t.kind !== 'pc' ? `<div class="mp-row mp-ver"><button class="btn sm" data-mp="retrato">Ver a imagem grande</button>${oculto ? '' : '<button class="btn sm" data-mp="retodos">Mostrar grande para todos</button>'}</div>` : ''}
           ${t.kind === 'npc' ? rasgadoHtml(t) : ''}
@@ -260,30 +262,69 @@ export function criarMapa(ctx) {
     const vis = paraTodos ? t.data?.nomeVisto : isGM() || t.data?.nomeVisto, T = t.data?.best ? ASS_TEXTO[t.data.best] : null;
     return { tipo: 'retrato', img: grande(t), peq: t.img, nome: vis ? t.nome : '', sub: T?.alt ? `${T.alt} (a sombra cinza é uma pessoa, para comparar)` : '' };
   }
-  // o ataque do Assombro: contra a Defesa de um personagem ou contra a força de um círculo
-  function ataqueHtml(t, b) {
-    const n = ctx.noite?.() || {}, pcs = MP.tokens.filter((x) => x.kind === 'pc' && x.character_id && charById(x.character_id));
-    const perto = (x) => Math.hypot(x.x - t.x, (x.y - t.y) * cena().aspecto) * cena().largura;
-    pcs.sort((a, c) => perto(a) - perto(c));
+  // a vida de uma peça: bicho pelo bestiário, NPC pela ficha curta
+  function vidaDe(t) {
+    const f = C.fichaDe(t), d = { ...(t.data || {}) };
+    if (f && d.max == null) { d.max = f.sangue; if (d.sangue == null) d.sangue = f.sangue; }
+    return d;
+  }
+  const pertoDe = (t) => (x) => Math.hypot(x.x - t.x, (x.y - t.y) * (cena()?.aspecto || 1)) * (cena()?.largura || 1);
+  const nomeVivo = (x) => `${esc(x.nome)}${x.visivel ? '' : ' (escondido)'}`;
+  // o ataque de um bicho ou de um NPC: contra um personagem, outra peça (bicho ou NPC) ou um círculo
+  function ataqueHtml(t, f) {
+    const n = ctx.noite?.() || {}, perto = pertoDe(t);
+    const pcs = MP.tokens.filter((x) => x.kind === 'pc' && x.character_id && charById(x.character_id)).sort((a, c) => perto(a) - perto(c));
+    const pecas = MP.tokens.filter((x) => x.id !== t.id && (x.kind === 'assombro' || x.kind === 'npc') && C.fichaDe(x) && (vidaDe(x).sangue ?? 1) > 0).sort((a, c) => perto(a) - perto(c));
     const circs = MP.tokens.filter((x) => x.kind === 'circulo');
     const ops = [...pcs.map((x) => { const ch = charById(x.character_id); return `<option value="pc:${ch.id}">${esc(ch.data.nome)} (Defesa ${R.barras(ch.data).defesa})</option>`; }),
+      ...pecas.map((x) => `<option value="peca:${x.id}">${nomeVivo(x)} (Defesa ${C.fichaDe(x).defesa})</option>`),
       `<option value="circ">O círculo da vila (força ${n.circulo ?? 14})</option>`, ...circs.map((x) => `<option value="tok:${x.id}">${esc(x.nome || 'Círculo')} (força ${x.data?.forca ?? 0})</option>`)];
-    return `<div class="mp-atq"><span class="lbl">Atacar</span><select class="field sm" data-mp-alvo aria-label="Alvo do ataque">${ops.join('')}</select><button class="btn primary block" data-mp="atacar">Rolar o ataque (${esc(b.atq)})</button></div>`;
+    const ex = C.dadosExtra(n, 'tok:' + t.id);
+    return `<div class="mp-atq"><span class="lbl">Atacar</span><select class="field sm" data-mp-alvo aria-label="Alvo do ataque">${ops.join('')}</select><button class="btn primary block" data-mp="atacar">Rolar o ataque (${esc(f.atq)}${ex ? `, ${ex > 0 ? '+' : '−'}${Math.abs(ex)} dado` : ''})</button></div>`;
+  }
+  // um teste de perícia do bicho ou do NPC, rolado pelo mestre
+  function periciaHtml(t, f) {
+    const ps = Object.entries(f.pericias || {}); if (!ps.length) return '';
+    return `<div class="mp-atq mp-per"><span class="lbl">Rolar um teste</span><div class="mp-row"><select class="field sm" data-mp-per aria-label="Perícia">${ps.map(([k, v]) => `<option value="${esc(k)}">${esc(k)} (${esc(v)})</option>`).join('')}</select><button class="btn sm" data-mp="pericia">Rolar</button></div></div>`;
+  }
+  function efeitosHtml(alvo) {
+    const es = C.efeitosDe(ctx.noite?.(), alvo); if (!es.length) return '';
+    return `<div class="mp-efs"><span class="lbl">Valendo agora</span>${es.map((e) => `<div class="mp-ef"><span>${esc(C.efeitoTxt(e))}</span>${isGM() ? `<button class="btn sm ghost" data-mp="tiraef" data-v="${e.id}" aria-label="Tirar">✕</button>` : ''}</div>`).join('')}</div>`;
+  }
+  async function rolarPericia(t) {
+    const f = C.fichaDe(t); if (!f) return;
+    const per = el.querySelector('[data-mp-per]')?.value; if (!per) return;
+    const ex = C.dadosExtra(ctx.noite?.(), 'tok:' + t.id), r = C.rolarExpr(f.pericias[per], ex);
+    if (ex) ctx.mexerNoite?.((n) => C.gastarProxima(n, 'tok:' + t.id));
+    const row = { id: 'per-' + Date.now(), nome: t.nome, img: t.img, label: `${t.nome}: ${per}`, total: r.total, detail: { tipo: 'ataque', dados: r.dados, fica: r.fica, bonus: r.bonus, resultado: `${per}: ${r.total}` } };
+    ctx.animar?.(row); if (t.visivel) enviar('dado', t.data?.nomeVisto || t.kind === 'npc' ? row : { ...row, nome: '??', label: 'Teste' });
+    ctx.logNoite?.(`${t.nome} rolou ${per}: ${r.total}.`);
   }
   async function atacar(t) {
-    const b = M.BESTIARIO.find((x) => x.id === t.data?.best); if (!b) return;
+    const f = C.fichaDe(t); if (!f) return;
     const alvo = el.querySelector('[data-mp-alvo]')?.value || '';
-    const m = /(\d+)d20\s*\+?\s*(\d*)/.exec(b.atq) || [0, 1, 0], n = +m[1], bonus = +(m[2] || 0);
-    const dados = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 20)), fica = Math.max(...dados), total = fica + bonus;
+    const ex = C.dadosExtra(ctx.noite?.(), 'tok:' + t.id), r = C.rolarExpr(f.atq, ex);
+    const dados = r.dados, fica = r.fica, bonus = r.bonus, total = r.total;
+    if (C.efeitosDe(ctx.noite?.(), 'tok:' + t.id).some((e) => e.dura === 'proxima')) ctx.mexerNoite?.((n) => C.gastarProxima(n, 'tok:' + t.id));
     let texto = '', ruim = false;
     if (alvo.startsWith('pc:')) {
       const ch = charById(alvo.slice(3)), def = R.barras(ch.data).defesa;
       if (total >= def) {
-        const dn = R.rolarDano(b.dano) || { total: 1 }; ruim = true;
-        texto = `acertou ${ch.data.nome}: ${dn.total} de dano`;
-        ctx.ferir?.(ch, dn.total, `${t.nome} acertou ${ch.data.nome} (${total} contra Defesa ${def}): ${dn.total} de dano.`);
-        setTimeout(() => efeitoTodos({ tipo: 'dano', cid: ch.id, nome: ch.data.nome, valor: dn.total }), 1400);
+        let dn = (C.rolarDanoExpr(f.dano) || { total: 1 }).total; ruim = true;
+        const atual = ctx.noite?.()?.grupo?.[ch.id]?.sangue;
+        if (f.poupa && atual != null && atual - dn < 1) dn = Math.max(0, atual - 1);
+        texto = `acertou ${ch.data.nome}: ${dn} de dano${f.poupa && dn === 0 ? ' (ela não deixa cair)' : ''}`;
+        ctx.ferir?.(ch, dn, `${t.nome} acertou ${ch.data.nome} (${total} contra Defesa ${def}): ${dn} de dano.`);
+        setTimeout(() => efeitoTodos({ tipo: 'dano', cid: ch.id, nome: ch.data.nome, valor: dn }), 1400);
       } else texto = `errou ${ch.data.nome} (Defesa ${def})`;
+    } else if (alvo.startsWith('peca:')) {
+      const o = MP.tokens.find((x) => x.id === alvo.slice(5)), fo = C.fichaDe(o); if (!o || !fo) return;
+      if (total >= fo.defesa) {
+        const dn = (C.rolarDanoExpr(f.dano) || { total: 1 }).total; ruim = true;
+        const x = await ferirAssombro(o.id, dn);
+        texto = `acertou ${o.nome}: ${dn} de dano${x ? ` (Sangue ${x.sangue}/${x.max})` : ''}${x?.sangue === 0 ? '. Caiu' : ''}`;
+        ctx.logNoite?.(`${t.nome} acertou ${o.nome} (${total} contra Defesa ${fo.defesa}): ${dn} de dano.`);
+      } else { texto = `errou ${o.nome} (Defesa ${fo.defesa})`; ctx.logNoite?.(`${t.nome} errou ${o.nome}.`); }
     } else if (alvo === 'circ') {
       const f = ctx.noite?.()?.circulo ?? 14;
       if (total > f) { texto = `abriu uma brecha no círculo!`; ruim = true; ctx.forcaCirculo?.(0, `${t.nome} abriu uma brecha no círculo (${total} contra força ${f}).`); setTimeout(() => efeitoTodos({ tipo: 'brecha' }), 1400); }
@@ -528,13 +569,8 @@ export function criarMapa(ctx) {
       if (c.fog.on === false) MP.tool = 'mover';
       await sb.from('breu_cenas').update({ fog: c.fog }).eq('id', c.id); drawFog(); draw(); return;
     }
-    if (a === 'rodada') {
-      t.disabled = true;
-      await Promise.all(MP.tokens.filter((x) => x.kind === 'pc' || x.kind === 'npc' || x.kind === 'assombro').map((x) => { x.ax = x.x; x.ay = x.y; return sb.from('breu_tokens').update({ ax: x.x, ay: x.y }).eq('id', x.id); }));
-      c.rodada = (c.rodada || 1) + 1;
-      await sb.from('breu_cenas').update({ rodada: c.rodada }).eq('id', c.id);
-      t.disabled = false; draw(); toast(`Rodada ${c.rodada}.`); return;
-    }
+    if (a === 'rodada') { t.disabled = true; await novaRodada(); t.disabled = false; return; }
+
     if (a === 'grupo') { await porGrupo(); return; }
     if (a === 'entrar') {
       const ch = charById(v); if (!ch) return;
@@ -559,10 +595,12 @@ export function criarMapa(ctx) {
       if (!MP.tokens.some((x2) => x2.id === data.id)) MP.tokens.push(data);
       MP.sel = data.id; draw(); paintSide(); return;
     }
+    if (a === 'tiraef') { ctx.mexerNoite?.((n) => { n.efeitos = (n.efeitos || []).filter((e) => e.id !== v); }); paintSide(); return; }
     if (!sel) return;
     if (a === 'atacar') { t.disabled = true; await atacar(sel); t.disabled = false; return; }
+    if (a === 'pericia') { await rolarPericia(sel); return; }
     if (a === 'levar') { const v2 = el.querySelector('[data-mp-levar]')?.value; if (v2) await levar(sel.character_id, v2); return; }
-    const d = { ...(sel.data || {}) };
+    const d = vidaDe(sel);
     if (a === 'forca') { d.forca = Math.max(0, (d.forca || 0) + +v); }
     else if (a === 'raio') { d.raio = +v; }
     else if (a === 'sangue') { d.sangue = Math.max(0, Math.min(d.max || 999, (d.sangue ?? d.max ?? 0) + +v)); }
@@ -747,19 +785,33 @@ export function criarMapa(ctx) {
     // a revelação: o retrato grande abre na tela de todo mundo, rasgando
     if (t.img === alt) efeitoTodos({ tipo: 'forma', img: alt.replace('img/tok/', 'img/npc/'), nome: t.data?.nomeVisto ? t.nome : '' });
   }
+  async function novaRodada() {
+    const c = cena(); if (!c) return;
+    await Promise.all(MP.tokens.filter((x) => x.kind === 'pc' || x.kind === 'npc' || x.kind === 'assombro').map((x) => { x.ax = x.x; x.ay = x.y; return sb.from('breu_tokens').update({ ax: x.x, ay: x.y }).eq('id', x.id); }));
+    c.rodada = (c.rodada || 1) + 1;
+    await sb.from('breu_cenas').update({ rodada: c.rodada }).eq('id', c.id);
+    ctx.mexerNoite?.((n) => { C.limparEfeitos(n, 'rodada'); if (n.ordem) n.ordem.vez = 0; });
+    draw(); paintBar(); toast(`Rodada ${c.rodada}: todos podem andar de novo.`);
+  }
+  async function curarPeca(id, n) {
+    const t = MP.tokens.find((x) => x.id === id); if (!t) return null;
+    const d = vidaDe(t); d.sangue = Math.min(d.max ?? 999, (d.sangue ?? 0) + n); t.data = d;
+    await sb.from('breu_tokens').update({ data: d }).eq('id', id); draw(); paintSide();
+    return { t, sangue: d.sangue, max: d.max };
+  }
   // o golpe de um jogador chega pela rolagem: o app do mestre tira o Sangue do bicho (uma vez por golpe)
   async function ferirAssombro(id, n, rid) {
     const t = MP.tokens.find((x) => x.id === id); if (!t) return null;
     const d = { ...(t.data || {}) }, golpes = d.golpes || [];
     if (rid && golpes.includes(rid)) return null;
     if (rid) d.golpes = [...golpes.slice(-30), rid];
-    const antes = d.sangue ?? d.max ?? 0; d.sangue = Math.max(0, antes - n); t.data = d;
+    const v = vidaDe(t); d.max = v.max; const antes = v.sangue ?? v.max ?? 0; d.sangue = Math.max(0, antes - n); t.data = d;
     await sb.from('breu_tokens').update({ data: d }).eq('id', id);
     draw(); paintSide();
     return { t, antes, sangue: d.sangue, max: d.max };
   }
   const api = {
-    ferirAssombro,
+    ferirAssombro, curarPeca, novaRodada, enviar, vidaDe, selecionar: (id) => { if (!MP.tokens.some((x) => x.id === id)) return; MP.sel = id; draw(); paintSide(); },
     setMesa: (v) => { MP.mesa = v; }, efeitoTodos, levar, separados, minhaCena, cenas: () => MP.cenas, ativa: () => MP.ativa, ver: () => MP.ver, cena, cenaDe, garantirCena, verCena, mostrarCena, esconderCena,
     porGrupo, porNpc, npcEscondido: (nome) => MP.tokens.some((x) => x.kind === 'npc' && !x.visivel && semAcento(x.nome) === semAcento(nome)), porAssombro, revelarAssombro, trocarForma, formaDe, tokens: () => MP.tokens,
     temNpc: (nome) => MP.tokens.some((x) => x.kind === 'npc' && semAcento(x.nome) === semAcento(nome)),

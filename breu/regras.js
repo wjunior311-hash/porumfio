@@ -467,8 +467,9 @@ export const ACOES_LUTA = [
   { k: 'enganar', n: 'Enganar o sentido', per: 'Furtividade', d: 'Dificuldade 12. Ele perde o alvo por uma rodada. Quem fareja: sal ou erva forte (Sobrevivência). Quem ouve: barulho longe. Quem vê movimento: ficar imóvel. Quem sente medo: cantar (Canto).' },
   { k: 'ler', n: 'Ler o bicho', per: 'Saberes', d: 'Dificuldade 15 (ou Percepção 15). Revela a família e o sentido dele: todos passam a saber qual arma e qual traço servem.' },
   { k: 'riscar', n: 'Riscar na hora', per: 'Traços', d: 'Um traço pequeno, numa rodada, com metade da força. Tapa um buraco ou arma uma armadilha no chão.' },
-  { k: 'tratar', n: 'Tratar', per: 'Ervas e Cura', d: 'Dificuldade 15. Quem está caído volta com 1 de Sangue e ferido.' },
-  { k: 'encorajar', n: 'Encorajar', per: 'Lábia', d: 'Uma palavra ou um canto do lado de alguém: ele perde 1 Pavor.' },
+  { k: 'tratar', n: 'Tratar', per: 'Ervas e Cura', d: 'Cuida de alguém. Ferido: dificuldade 10, cura d6 (15 ou mais: 2d6). Caído: dificuldade 15, volta com 1 de Sangue. Atadura dá +1 dado; unguento cura +2. Vai sozinho para a ficha de quem recebeu.' },
+  { k: 'ajudar', n: 'Ajudar alguém', per: 'Lábia', d: 'Dificuldade 10. Você ajuda alguém do grupo: ele ganha +1 dado na próxima rolagem.' },
+  { k: 'encorajar', n: 'Encorajar', per: 'Lábia', d: 'Dificuldade 10. Uma palavra ou um canto do lado de alguém: ele perde 1 Pavor (sem Pavor, ganha +1 dado na próxima rolagem).' },
 ];
 
 // as armadilhas que se preparam antes da luta (cada uma leva uma rodada de preparação)

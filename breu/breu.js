@@ -1,11 +1,12 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import * as R from './regras.js?v=8';
-import * as AR from './armas.js?v=2';
-import * as M from './mestre-dados.js';
+import * as R from './regras.js?v=9';
+import * as AR from './armas.js?v=3';
+import * as M from './mestre-dados.js?v=2';
+import * as C from './combate.js?v=1';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
-import { criarMapa } from './mapa.js?v=49';
-import { criarMesa } from './mesa.js?v=53';
+import { criarMapa } from './mapa.js?v=50';
+import { criarMesa } from './mesa.js?v=54';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -35,16 +36,18 @@ const canEditCreation = (c) => c && (isGM() || (c.owner === S.session?.user.id &
 
 const MAPA = criarMapa({ sb, S, isGM: () => isGM(), esc, toast, picOf: (p) => picOf(p), picChar: (c) => picChar(c), estCls: (c) => estCls(c), charById: (id) => charById(id), rerender: () => rerender(),
   onCenas: () => MESA?.pintarTopo(), onSel: () => {},
-  animar: (r) => MESA?.animar(r), efeito: (e) => MESA?.efeito(e), noite: () => S.noite,
+  animar: (r) => MESA?.animar(r), efeito: (e) => MESA?.efeito(e), noite: () => S.noite, escolhe: (p) => MESA?.onEscolhe?.(p),
   ferir: (c, dano, txt) => { S.noite ||= novaNoite(); const t = trackerDe(c); t.sangue = Math.max(0, t.sangue - dano); logNoite(txt); salvarNoite(); MESA?.repintar(); },
-  forcaCirculo: (v, txt) => { S.noite ||= novaNoite(); S.noite.circulo = v; if (txt) logNoite(txt); salvarNoite(); MESA?.repintar(); } });
+  forcaCirculo: (v, txt) => { S.noite ||= novaNoite(); S.noite.circulo = v; if (txt) logNoite(txt); salvarNoite(); MESA?.repintar(); },
+  mexerNoite: (fn) => { if (!isGM()) return; S.noite ||= novaNoite(); fn(S.noite); salvarNoite(); MESA?.repintar(); },
+  logNoite: (t) => { if (!isGM()) return; S.noite ||= novaNoite(); logNoite(t); salvarNoite(); } });
 let MESA = null;
 quandoMudar(() => { if (route().name === 'ficha') rerender(); });
 function criarAMesa() {
   MESA = criarMesa({ sb, S, esc, toast, isGM: () => isGM(), MAPA, route: () => route(), go: (p) => go(p), rerender: () => rerender(),
     charById: (id) => charById(id), picChar: (c) => picChar(c), estCls: (c) => estCls(c), estadoDe: (c) => estadoDe(c), ESTADOS,
     trackerDe: (c) => trackerDe(c), garantirNoite: () => { S.noite ||= novaNoite(); }, virarFase: () => virarFase(), salvarNoite: () => salvarNoite(),
-    registrar: (c, l, r, d) => registrar(c, l, r, d), logNoite: (t) => logNoite(t), salvarChar: (c) => saveNow(c) });
+    registrar: (c, l, r, d) => registrar(c, l, r, d), logNoite: (t) => logNoite(t), mexerNoite: (fn) => { S.noite ||= novaNoite(); fn(S.noite); salvarNoite(); MESA?.repintar(); }, salvarChar: (c) => saveNow(c) });
 }
 // repinta a tela certa: a mesa do mestre se repinta por partes, o resto recarrega
 function rr() { if (route().name === 'mapa' && MESA) { MESA.repintar(); MAPA.redraw(); } else rerender(); }
@@ -381,6 +384,7 @@ async function virarFase() {
   const n = S.noite, prox = n.fase + 1;
   if (prox > 4) return;
   n.fase = prox; if (prox === 0) n.dia = -1;
+  C.limparEfeitos(n, prox === 4 ? 'noite' : 'fase'); n.ordem = null;
   const f = M.FASES[prox];
   const res = [];
   if (prox === 4) {
@@ -1108,6 +1112,25 @@ let largo = formato();
 window.addEventListener('resize', () => { const l = formato(); if (l !== largo) { largo = l; if (route().name === 'mapa') render(); } });
 
 window.addEventListener('hashchange', () => { ui.saved = ''; ui.evo = null; ui.roller = null; render(); window.scrollTo(0, 0); });
+
+// o celular bloqueado ou o app em segundo plano perde o tempo real: ao voltar, busca tudo de novo
+let escondidoEm = 0;
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden) { escondidoEm = Date.now(); return; }
+  if (!S.me || Date.now() - escondidoEm < 15000) return;
+  const nt = await sb.from('breu_state').select('*').in('key', ['noite', 'mesa', 'pedido', 'guia', 'video']);
+  const est = Object.fromEntries((nt.data || []).map((r) => [r.key, r.value]));
+  if (est.noite && !noiteSalvando) S.noite = est.noite;
+  if (est.mesa) S.mesa = est.mesa;
+  MESA?.onPedido(est.pedido);
+  if (est.guia) MESA?.onGuia(est.guia);
+  const v = est.video;
+  if (v?.id && v.acao === 'tocar' && v.id !== S.videoVisto && Date.now() - v.em < 5 * 60e3) MESA?.onVideo(v);
+  const rl = await sb.from('breu_rolls').select('*').order('created_at', { ascending: false }).limit(30);
+  if (rl.data) S.rolls = rl.data;
+  subscribe();
+  if (route().name === 'mapa') { await MAPA.load?.(); MESA?.repintar(); MAPA.redraw(); } else rerender();
+});
 
 // ---------- início ----------
 async function boot() {
