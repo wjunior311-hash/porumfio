@@ -638,7 +638,7 @@ export function criarMesa(ctx) {
         if (t >= fim) { if (!el.classList.contains('pousou')) { alvo.textContent = el.dataset.v; el.classList.add('pousou'); } ok++; }
         else if (Math.floor(t / 55) !== +el.dataset.q) { el.dataset.q = Math.floor(t / 55); alvo.textContent = 1 + Math.floor(Math.random() * max); }
       });
-      if (ok < ds.length) requestAnimationFrame(tick); else { card.classList.add('pronto'); if (!dano && !ataque && dados.includes(20) && !card.dataset.vinte) { card.dataset.vinte = 1; efeito({ tipo: 'vinte', nome: quem }); } }
+      if (ok < ds.length) requestAnimationFrame(tick); else { card.classList.add('pronto'); if (!dano && !ataque && !card.dataset.somou) { card.dataset.somou = 1; const k = d.vazia ? Math.min(...dados) : d.fica ?? Math.max(...dados); if (k === 20) tocarSom('vinte'); else if (k === 1) tocarSom('um'); } if (!dano && !ataque && dados.includes(20) && !card.dataset.vinte) { card.dataset.vinte = 1; efeito({ tipo: 'vinte', nome: quem }); } }
     };
     requestAnimationFrame(tick);
     som(ds.length);
@@ -648,6 +648,10 @@ export function criarMesa(ctx) {
     if (!caixa?.classList.contains('on')) return;
     caixa.classList.add('saindo'); clearTimeout(some);
     setTimeout(() => { caixa.classList.remove('on', 'saindo'); caixa.innerHTML = ''; }, 380);
+  }
+  const sons = {};
+  function tocarSom(q) {
+    try { if (!navigator.userActivation?.hasBeenActive) return; const a = (sons[q] ||= new Audio(`som/${q}.mp3?v=1`)); a.currentTime = 0; a.volume = 0.8; a.play().catch(() => {}); } catch { /* sem som, tudo bem */ }
   }
   let ac = null;
   function som(n) {
