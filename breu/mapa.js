@@ -4,7 +4,7 @@ import * as M from './mestre-dados.js?v=2';
 import * as C from './combate.js?v=1';
 import { ASS_TEXTO, JOGADAS, JOGADA_BASE, FAMILIA, RASGADOS } from './ass-texto.js?v=3';
 import * as R from './regras.js?v=9';
-import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=22';
+import { criarCenaViva, CENAS_VIVAS, ASPECTO_VIVO, horaDaNoite } from './cenas-vivas.js?v=23';
 
 const HORAS = [['', 'Seguir a noite'], [0.06, 'Tarde'], [0.2, 'Entardecer'], [0.34, 'Crepúsculo'], [0.52, 'Breu'], [0.7, 'Hora Morta'], [0.86, 'Antes da aurora'], [0.95, 'Aurora']];
 const VENTOS = [[0.15, 'Vento calmo'], [0.45, 'Vento médio'], [0.85, 'Vento forte']];

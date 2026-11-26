@@ -5,8 +5,8 @@ import * as AR from './armas.js?v=3';
 import * as M from './mestre-dados.js?v=2';
 import { abrirTour, jaViu } from './tutorial.js?v=3';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
-import { CENAS_VIVAS } from './cenas-vivas.js?v=22';
-import { criarGuia, faixaDe } from './guia.js?v=35';
+import { CENAS_VIVAS } from './cenas-vivas.js?v=23';
+import { criarGuia, faixaDe } from './guia.js?v=36';
 import { ROLA, FX_C } from './guia-dados.js?v=18';
 
 import * as C from './combate.js?v=1';

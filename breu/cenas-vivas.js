@@ -1615,6 +1615,176 @@ function cenaZuleide() {
   return { ajustar, alternar, ligado: () => ligado };
 })();
 
+// ================= OS FUNDOS DA CASA DE FARINHA =================
+// atrás do barracão, entre a parede e o círculo; do outro lado da linha, o aberto
+function cenaFundos() {
+  R = rng(93);
+  const C = { x: -1250, y: 520 }, RAIO = 2060; // o círculo é enorme: aqui ele passa quase reto, de cima a baixo
+  const GAP = { a: -0.075, b: 0.035 }; // o pedaço que a bordadeira apagou
+  const noCirc = (a, r = RAIO) => [C.x + Math.cos(a) * r, C.y + Math.sin(a) * r];
+  const angDe = (x, y) => Math.atan2(y - C.y, x - C.x), rDe = (x, y) => Math.hypot(x - C.x, y - C.y);
+  const naFenda = (a) => a > GAP.a && a < GAP.b;
+  const casa = { x: 175, y: 470, w: 300, h: 640, ang: -0.03, tipo: 'palha', op: { chamine: [60, -170] } };
+  casa.sprite = telhado(casa.tipo, casa.w, casa.h, casa.op);
+  const porta = { x: casa.x + casa.w / 2 + 6, y: 560 };
+  const lanterna = { x: 1062, y: 432 };
+  const roda = { x: 470, y: 250 }, cocho = { x: 520, y: 770 }, varal = [[380, 120], [700, 170]];
+  const trilha = caminhoSuave([[860, 470], [960, 440], [1062, 448], [1180, 400], [1320, 330], [1540, 300]]);
+  const sombraCasa = (L) => vetorSombra(L);
+  const plantas = caatinga(93, (x, y, tipo) => {
+    if (trilha.dist(x, y) < (tipo === 'capim' ? 18 : 50)) return false;
+    if (Math.hypot(x - lanterna.x, y - lanterna.y) < 90) return false;
+    const r = rDe(x, y);
+    if (Math.abs(r - RAIO) < 40) return false;
+    if (r < RAIO) return tipo === 'capim' && x > casa.x + casa.w / 2 + 40 && R() < .5;
+    return true;
+  }, { jurema: 70, macambira: 34, xique: 26, mandacaru: 16, capim: 360 });
+  const traco = []; for (let a = -0.36; a < 0.32; a += 0.0016) traco.push({ a, r: RAIO + Math.sin(a * 90) * 2.2 + Math.sin(a * 23) * 3 });
+  const glifos = []; for (let k = 0; k < 9; k++) glifos.push({ a: -0.3 + k * 0.072, tipo: k % 3 });
+  const olhos = [[1240, 210], [1300, 690], [1400, 520], [1180, 820], [1460, 140], [1350, 380]].map(([x, y]) => ({ x, y, f: R() * 6.28 }));
+  // os rastros da Corcunda: grandes, arrastados, vindo da fenda para o quintal
+  const rastro = caminhoSuave([[1010, 520], [900, 512], [800, 500], [700, 520], [610, 560], [560, 620]]);
+  function fixo(g) {
+    terreno(g, 93, { escuro: [104, 78, 50], base: [140, 106, 70], claro: [176, 142, 100] }, (x, y, c) => {
+      const r = rDe(x, y);
+      if (r < RAIO) c = mix(c, [178, 146, 104], .28); // o quintal varrido, mais claro
+      else c = mix(c, [96, 76, 52], Math.min(.5, (r - RAIO) / 900)); // o aberto, mais escuro e cheio de mato
+      if (x < casa.x + casa.w / 2 + 140) c = mix(c, [150, 116, 76], .2);
+      return c;
+    });
+    estradaTerra(g, trilha, 16, 0, false);
+    // a soleira da porta dos fundos, pisada de tanto entrar e sair
+    for (let k = 0; k < 40; k++) { const gr = g.createRadialGradient(porta.x + 30 + R() * 90, porta.y + (R() - .5) * 70, 2, porta.x + 40, porta.y, 70); gr.addColorStop(0, 'rgba(200,170,124,.08)'); gr.addColorStop(1, 'rgba(200,170,124,0)'); g.fillStyle = gr; g.beginPath(); g.arc(porta.x + 40, porta.y, 70, 0, 7); g.fill(); }
+    // cascas de mandioca por todo o quintal, mais perto do cocho
+    for (let i = 0; i < 420; i++) { const x = cocho.x + (R() - .5) * 520, y = cocho.y + (R() - .5) * 380; if (rDe(x, y) > RAIO - 30 || x < casa.x + casa.w / 2 + 10) continue; g.save(); g.translate(x, y); g.rotate(R() * 6.28); g.strokeStyle = R() > .5 ? 'rgba(106,62,34,.85)' : 'rgba(150,100,60,.8)'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(-6, 0); g.quadraticCurveTo(0, -3, 7, 1); g.stroke(); g.restore(); }
+    // as raízes de mandioca empilhadas, esperando a ralação de amanhã
+    [[600, 360, 40], [655, 405, 30], [575, 425, 26]].forEach(([mx, my, r]) => { for (let k = 0; k < r * 1.1; k++) { const a = R() * 6.28, d = Math.sqrt(R()) * r, x = mx + Math.cos(a) * d, y = my + Math.sin(a) * d * .8; g.save(); g.translate(x, y); g.rotate(R() * 6.28); const L2 = 18 + R() * 10; g.fillStyle = 'rgba(30,16,6,.3)'; g.beginPath(); g.moveTo(-L2 + 3, 3); g.quadraticCurveTo(0, -1, L2 + 3, 4); g.quadraticCurveTo(0, 8, -L2 + 3, 3); g.fill(); const gr = g.createLinearGradient(0, -4, 0, 4); gr.addColorStop(0, '#8e5c34'); gr.addColorStop(1, '#4e301a'); g.fillStyle = gr; g.beginPath(); g.moveTo(-L2, 0); g.quadraticCurveTo(-2, -4.2, L2 * .8, -1.6); g.lineTo(L2, 0); g.lineTo(L2 * .8, 1.6); g.quadraticCurveTo(-2, 4.2, -L2, 0); g.fill(); g.fillStyle = '#efe4c8'; g.beginPath(); g.ellipse(L2 * .82, 0, 1.6, 1.8, 0, 0, 7); g.fill(); g.restore(); } });
+    // o cocho velho, rachado, virado de lado
+    g.save(); g.translate(cocho.x, cocho.y); g.rotate(.22); g.fillStyle = 'rgba(30,16,6,.45)'; g.fillRect(-120, -18, 252, 52); tabuas(g, -126, -26, 252, 52, '#5a3e26', false); g.fillStyle = '#2e1e12'; g.fillRect(-114, -16, 228, 32); g.strokeStyle = 'rgba(20,10,4,.7)'; g.lineWidth = 2; g.beginPath(); g.moveTo(-40, -26); g.lineTo(-30, 0); g.lineTo(-46, 26); g.stroke(); g.restore();
+    // a roda de ralar parada, com a correia solta
+    g.save(); g.translate(roda.x, roda.y); g.fillStyle = 'rgba(30,16,6,.4)'; g.beginPath(); g.ellipse(8, 10, 70, 70, 0, 0, 7); g.fill();
+    g.strokeStyle = '#4e3420'; g.lineWidth = 10; g.beginPath(); g.arc(0, 0, 62, 0, 7); g.stroke(); g.strokeStyle = '#7a5636'; g.lineWidth = 6; g.beginPath(); g.arc(0, 0, 62, 0, 7); g.stroke();
+    for (let k = 0; k < 8; k++) { const a = k * .785; g.strokeStyle = '#6a4a2e'; g.lineWidth = 5; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a) * 60, Math.sin(a) * 60); g.stroke(); }
+    g.fillStyle = '#3a2614'; g.beginPath(); g.arc(0, 0, 11, 0, 7); g.fill();
+    g.strokeStyle = 'rgba(120,96,64,.8)'; g.lineWidth = 2; g.beginPath(); g.moveTo(-58, 20); g.bezierCurveTo(-90, 90, -40, 120, 10, 100); g.stroke(); g.restore();
+    // lenha cortada e um machado de rachar fincado no toco
+    g.save(); g.translate(430, 640); lenhaPilha(g, 0, 0, 9); g.restore();
+    { const x = 450, y = 520; g.fillStyle = 'rgba(30,16,6,.4)'; g.beginPath(); g.arc(x + 4, y + 5, 22, 0, 7); g.fill(); const gr = g.createRadialGradient(x - 6, y - 6, 2, x, y, 22); gr.addColorStop(0, '#b48a5a'); gr.addColorStop(1, '#6a4a2e'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, 22, 0, 7); g.fill(); g.strokeStyle = 'rgba(70,46,24,.6)'; g.lineWidth = 1; for (let k = 1; k < 5; k++) { g.beginPath(); g.arc(x, y, k * 4.5, 0, 7); g.stroke(); } g.strokeStyle = '#6a4c32'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 2, y); g.lineTo(x + 46, y - 36); g.stroke(); g.fillStyle = '#4a4c50'; g.beginPath(); g.moveTo(x - 10, y - 8); g.lineTo(x + 8, y - 10); g.lineTo(x + 6, y + 10); g.closePath(); g.fill(); }
+    // potes d'água encostados na parede
+    [[380, 700], [380, 744], [410, 724]].forEach(([x, y], k) => pote(g, x, y, 18, k < 2));
+    // a pá de virar farinha e um balaio caído
+    g.save(); g.translate(700, 640); g.rotate(-.7); g.fillStyle = 'rgba(30,16,6,.35)'; g.fillRect(4, 4, 180, 7); g.fillStyle = '#8a6844'; g.fillRect(0, -3, 180, 7); g.fillStyle = '#6a4c2e'; g.fillRect(170, -18, 40, 36); g.restore();
+    { const x = 690, y = 300; g.fillStyle = 'rgba(30,16,6,.35)'; g.beginPath(); g.ellipse(x + 4, y + 5, 30, 24, .3, 0, 7); g.fill(); g.fillStyle = '#a8865a'; g.beginPath(); g.ellipse(x, y, 30, 24, .3, 0, 7); g.fill(); g.strokeStyle = 'rgba(90,64,34,.8)'; g.lineWidth = 1.2; for (let k = 0; k < 6; k++) { g.beginPath(); g.ellipse(x, y, 30 - k * 4, 24 - k * 3.2, .3, 0, 7); g.stroke(); } }
+    // o pó de cal da linha, mais forte perto dela
+    for (let i = 0; i < 3200; i++) { const a = rr(-0.36, 0.32); if (naFenda(a)) continue; const d = RAIO + (R() - .5) * (R() < .7 ? 16 : 50), [x, y] = noCirc(a, d); g.fillStyle = `rgba(240,234,220,${.08 + R() * .22})`; g.beginPath(); g.arc(x, y, .6 + R() * 1.8, 0, 7); g.fill(); }
+    // a fenda: a cal esfregada em meia-lua, com marcas de dedo, e a terra revolvida
+    for (let k = 0; k < 10; k++) { const a = lerp(GAP.a, GAP.b, k / 9), [x, y] = noCirc(a); g.strokeStyle = `rgba(232,224,206,${.14 + R() * .1})`; g.lineWidth = 9 + R() * 6; g.lineCap = 'round'; g.beginPath(); g.arc(x - 12, y, 20 + R() * 6, -Math.PI * .45, Math.PI * .45); g.stroke(); }
+    for (let k = 0; k < 18; k++) { const a = rr(GAP.a, GAP.b), [x, y] = noCirc(a, RAIO + (R() - .5) * 20); g.strokeStyle = 'rgba(60,36,18,.45)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x - 6, y - 2); g.lineTo(x + 6, y + 3); g.stroke(); }
+    // o rastro da Corcunda: duas mãos enormes e um arrasto no meio
+    for (let s = 0; s < rastro.len; s += 30) { const p = rastro.P(s), q = rastro.P(s + 2), a = Math.atan2(q[1] - p[1], q[0] - p[0]), lado = (s / 30) % 2 ? 1 : -1; g.save(); g.translate(p[0] + Math.cos(a + 1.57) * 22 * lado, p[1] + Math.sin(a + 1.57) * 22 * lado); g.rotate(a); g.fillStyle = 'rgba(46,26,12,.38)'; g.beginPath(); g.ellipse(-2, 0, 11, 8, 0, 0, 7); g.fill(); g.strokeStyle = 'rgba(40,22,10,.5)'; g.lineWidth = 2; g.lineCap = 'round'; for (let d = -1; d <= 1; d++) { g.beginPath(); g.moveTo(7, d * 4); g.lineTo(22, d * 9); g.stroke(); } g.restore(); }
+    g.strokeStyle = 'rgba(40,22,10,.13)'; g.lineWidth = 26; g.lineCap = 'round'; g.beginPath(); for (let s = 0; s < rastro.len; s += 6) { const p = rastro.P(s); s ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); } g.stroke();
+    // pegadas pequenas, de quem apagou a linha, indo e voltando da porta
+    { const cam = caminhoSuave([[porta.x + 20, porta.y - 30], [700, 470], [880, 470]]); g.fillStyle = 'rgba(80,46,22,.35)'; for (let s = 10; s < cam.len; s += 16) { const p = cam.P(s), q = cam.P(s + 2), a = Math.atan2(q[1] - p[1], q[0] - p[0]); g.save(); g.translate(p[0] + Math.cos(a + 1.57) * ((s / 16) % 2 ? 4 : -4), p[1] + Math.sin(a + 1.57) * ((s / 16) % 2 ? 4 : -4)); g.rotate(a); g.beginPath(); g.ellipse(0, 0, 4, 1.8, 0, 0, 7); g.fill(); g.restore(); } }
+    // no canto de baixo: telhas velhas empilhadas, sacos vazios e um pilão
+    for (let k = 0; k < 14; k++) { const x = 90 + (k % 5) * 26 + R() * 6, y = 880 + Math.floor(k / 5) * 18 + R() * 4; g.fillStyle = 'rgba(30,16,6,.35)'; g.fillRect(x + 3, y + 3, 24, 14); const gr = g.createLinearGradient(x, y, x, y + 14); gr.addColorStop(0, '#b4683e'); gr.addColorStop(1, '#7a3e22'); g.fillStyle = gr; g.fillRect(x, y, 24, 14); g.strokeStyle = 'rgba(60,24,10,.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x + 12, y); g.lineTo(x + 12, y + 14); g.stroke(); }
+    [[300, 880, '#cbbd98'], [330, 905, '#b8a882']].forEach(([x, y, cor]) => saco(g, x, y, 16, cor));
+    { const x = 260, y = 950; g.fillStyle = 'rgba(30,16,6,.4)'; g.beginPath(); g.arc(x + 4, y + 5, 20, 0, 7); g.fill(); const gr = g.createRadialGradient(x - 5, y - 5, 2, x, y, 20); gr.addColorStop(0, '#9a7650'); gr.addColorStop(1, '#5a3e26'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, 20, 0, 7); g.fill(); g.fillStyle = '#2a1a10'; g.beginPath(); g.arc(x, y, 11, 0, 7); g.fill(); g.strokeStyle = '#7a5636'; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(x + 4, y - 4); g.lineTo(x + 50, y - 50); g.stroke(); }
+    // capim seco e folhas no pé da parede
+    for (let i = 0; i < 160; i++) { const x = casa.x + casa.w / 2 + 6 + R() * 30, y = 140 + R() * 680; g.strokeStyle = `rgba(${150 + R() * 40},${126 + R() * 30},${70},.6)`; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (R() - .2) * 10, y - 4 - R() * 8); g.stroke(); }
+    // pedras soltas do lado de fora
+    pintarPedrinhas(g, 60);
+  }
+  function casaD(L) {
+    const sv = sombraCasa(L), c = casa;
+    sombraForma(() => { ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.ang); ctx.beginPath(); ctx.rect(-c.w / 2 - 4, -c.h / 2 - 4, c.w + 8, c.h + 8); ctx.restore(); }, sv.x * 40, sv.y * 40, .55);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.ang); ctx.drawImage(c.sprite.cv, -c.sprite.ox, -c.sprite.oy); ctx.restore();
+    // a porta dos fundos: tábuas, fechada por dentro
+    ctx.save(); ctx.translate(porta.x, porta.y); ctx.fillStyle = 'rgba(20,10,4,.6)'; ctx.fillRect(-4, -40, 14, 80); tabuas(ctx, -6, -38, 12, 76, '#5a3a22', true); ctx.restore();
+  }
+  // o varal da roupa do morto, ainda pendurada, mexendo com o vento
+  function varalD(t) {
+    const [[x0, y0], [x1, y1]] = varal, v = rajada(t);
+    [[x0, y0], [x1, y1]].forEach(([x, y]) => { ctx.fillStyle = '#4a3220'; ctx.beginPath(); ctx.arc(x, y, 6, 0, 7); ctx.fill(); });
+    ctx.strokeStyle = 'rgba(200,190,170,.7)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 + 14, x1, y1); ctx.stroke();
+    [['#d8d0bc', .22, 34, 46], ['#6a5a48', .45, 28, 40], ['#cfc4ae', .68, 40, 30]].forEach(([cor, f, w, h], k) => {
+      const x = lerp(x0, x1, f), y = lerp(y0, y1, f) + 10, s = Math.sin(t * 1.6 + k) * v * 6;
+      ctx.fillStyle = 'rgba(20,10,4,.35)'; ctx.fillRect(x - w / 2 + 8 + s, y + 8, w, h * .5);
+      ctx.fillStyle = cor; ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.lineTo(x + w / 2, y); ctx.lineTo(x + w / 2 + s, y + h * .5); ctx.lineTo(x - w / 2 + s, y + h * .5); ctx.closePath(); ctx.fill();
+    });
+  }
+  function circulo(L, t) {
+    const noite = Math.min(1, L.escuro * 1.2);
+    ctx.lineCap = 'round';
+    [[7, 'rgba(150,140,120,.4)'], [3.4, `rgba(246,242,230,${0.8 + noite * .18})`], [1.2, 'rgba(255,255,250,.6)']].forEach(([lw, cor]) => {
+      ctx.strokeStyle = cor; ctx.lineWidth = lw; ctx.beginPath(); let abriu = false;
+      traco.forEach((p) => { if (naFenda(p.a)) { abriu = false; return; } const [x, y] = noCirc(p.a, p.r); abriu ? ctx.lineTo(x, y) : ctx.moveTo(x, y); abriu = true; });
+      ctx.stroke();
+    });
+    glifos.forEach((gl) => {
+      if (naFenda(gl.a) || Math.abs(gl.a - (GAP.a + GAP.b) / 2) < .07) return;
+      const [x, y] = noCirc(gl.a, RAIO - 28);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(gl.a + Math.PI / 2);
+      const brilho = noite > .3 ? 0.35 + 0.25 * Math.sin(t * 1.3 + gl.a * 30) : 0;
+      if (brilho > 0) { ctx.shadowColor = `rgba(255,240,200,${brilho})`; ctx.shadowBlur = 14; }
+      ctx.strokeStyle = 'rgba(245,240,226,.88)'; ctx.lineWidth = 2.6; ctx.beginPath();
+      if (gl.tipo === 0) { ctx.moveTo(-2, -12); ctx.lineTo(-4, 12); ctx.moveTo(-1, -4); ctx.lineTo(10, -4); ctx.moveTo(-12, 7); ctx.lineTo(12, 7); }
+      else if (gl.tipo === 1) { ctx.moveTo(0, -12); ctx.lineTo(0, 12); ctx.moveTo(-10, -9); ctx.quadraticCurveTo(-17, 0, -10, 9); ctx.moveTo(10, -9); ctx.quadraticCurveTo(17, 0, 10, 9); }
+      else { ctx.moveTo(0, -12); ctx.lineTo(0, 8); ctx.moveTo(-11, -2); ctx.quadraticCurveTo(-8, 12, 0, 12); ctx.quadraticCurveTo(8, 12, 11, -2); }
+      ctx.stroke(); ctx.restore();
+    });
+    ctx.shadowBlur = 0;
+    // a brecha: a linha racha para fora, com uma luz vermelha baixa que pulsa
+    if (noite > .3) {
+      const [x, y] = noCirc((GAP.a + GAP.b) / 2), p = .5 + .5 * Math.sin(t * 2.4);
+      const gr = ctx.createRadialGradient(x, y, 4, x, y, 110); gr.addColorStop(0, `rgba(255,70,30,${.28 + p * .22})`); gr.addColorStop(1, 'rgba(255,70,30,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 110, 0, 7); ctx.fill();
+      // pedaços de cal que sobraram, soltos e tortos
+      ctx.strokeStyle = 'rgba(236,228,210,.55)'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+      [[.08, 6, .3], [.22, -4, -.4], [.47, 9, .6], [.7, -7, .2], [.9, 3, -.5]].forEach(([f, dr, rot]) => { const [cx, cy] = noCirc(lerp(GAP.a, GAP.b, f), RAIO + dr); ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot + 1.57); ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, 0); ctx.stroke(); ctx.restore(); });
+    }
+  }
+  // a lanterna dos Rasgados: a única luz da noite, no chão, do lado de fora
+  function lanternaD(t) {
+    const { x, y } = lanterna, b = Math.sin(t * 1.1) * 2;
+    ctx.fillStyle = 'rgba(20,10,4,.5)'; ctx.beginPath(); ctx.ellipse(x + 6, y + 14, 16, 7, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#2a2420'; ctx.fillRect(x - 11, y - 14 + b * .2, 22, 26);
+    const gr = ctx.createRadialGradient(x, y + b * .2, 1, x, y, 12); gr.addColorStop(0, '#fff2c0'); gr.addColorStop(1, '#e0a030'); ctx.fillStyle = gr; ctx.fillRect(x - 8, y - 10 + b * .2, 16, 18);
+    ctx.strokeStyle = '#1a1410'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 8, y - 1); ctx.lineTo(x + 8, y - 1); ctx.moveTo(x, y - 10); ctx.lineTo(x, y + 8); ctx.stroke();
+    ctx.strokeStyle = '#3a3028'; ctx.beginPath(); ctx.arc(x, y - 18, 7, Math.PI, 0); ctx.stroke();
+  }
+  function olhosFora(L, t) {
+    if (L.escuro < .45) return;
+    const forca = Math.min(1, (L.escuro - .45) * 3);
+    olhos.forEach((o, k) => {
+      if (Math.sin(t * .6 + o.f) < -0.7) return;
+      const x = o.x + Math.sin(t * .18 + o.f) * 16, y = o.y + Math.cos(t * .22 + k) * 9;
+      ctx.fillStyle = `rgba(255,110,40,${.8 * forca})`; ctx.shadowColor = 'rgba(255,90,30,.9)'; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(x - 4, y, 2.1, 0, 7); ctx.arc(x + 4, y, 2.1, 0, 7); ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+  }
+  return {
+    titulo: 'Os fundos da casa de farinha', legenda: 'Atrás do barracão, entre a parede e o círculo. No quintal: a roda de ralar parada, a mandioca empilhada, o cocho rachado, a lenha e o toco de rachar, os potes, o varal com a roupa do morto. A linha de cal passa quase reta, com o pedaço que a bordadeira apagou e a brecha brilhando vermelha. Do outro lado, o aberto: mato fechado e, no chão, a lanterna amarela dos Rasgados, a única luz da noite. O rastro da Corcunda vem da fenda até o quintal. Escala sugerida: 30 passos de largura.',
+    horaInicial: 0.70, fogo: true,
+    fixo,
+    desenhar(L, t, dt) {
+      desenharCaatinga(plantas, t, L, true);
+      circulo(L, t);
+      casaD(L);
+      varalD(t);
+      lanternaD(t);
+      desenharCaatinga(plantas, t, L, false);
+      poeiraD(t, dt, L);
+    },
+    luzes(L, t) {
+      const f = .9 + .1 * Math.sin(t * 7) * Math.sin(t * 3.3);
+      const [bx, by] = noCirc((GAP.a + GAP.b) / 2);
+      return [{ x: lanterna.x, y: lanterna.y, r: 230 * f, cor: [255, 190, 90], forca: .95 }, ...(L.escuro > .3 ? [{ x: bx, y: by, r: 110, cor: [255, 60, 30], forca: .55 }] : [])];
+    },
+    depois(L, t) { olhosFora(L, t); },
+  };
+}
+
 export const CENAS_VIVAS = {
   estrada: { nome: 'A estrada ao entardecer', largura: 80, fabrica: cenaEstrada },
   vila: { nome: 'A vila de luto', largura: 40, fabrica: cenaVila },
@@ -1622,6 +1792,7 @@ export const CENAS_VIVAS = {
   velorio: { nome: 'A casa do velório', largura: 16, fabrica: cenaVelorio },
   farinha: { nome: 'A casa de farinha', largura: 18, fabrica: cenaFarinha },
   zuleide: { nome: 'A casa de Dona Zuleide', largura: 12, fabrica: cenaZuleide },
+  fundos: { nome: 'Os fundos da casa de farinha', largura: 30, fabrica: cenaFundos },
 };
 export const ASPECTO_VIVO = H / W;
 
