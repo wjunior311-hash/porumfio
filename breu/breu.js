@@ -4,8 +4,8 @@ import * as AR from './armas.js?v=2';
 import * as M from './mestre-dados.js';
 import * as CT from './conteudo.js';
 import { ligado as fisico, chaveHtml as fisicoHtml, pedirDados, quandoMudar } from './fisico.js?v=1';
-import { criarMapa } from './mapa.js?v=48';
-import { criarMesa } from './mesa.js?v=52';
+import { criarMapa } from './mapa.js?v=49';
+import { criarMesa } from './mesa.js?v=53';
 
 // Mesmo projeto e mesmas contas do Por Um Fio; as tabelas do Breu são separadas (breu_*).
 const SUPABASE_URL = 'https://pziqkepgluxvdikllfwq.supabase.co';
@@ -105,7 +105,7 @@ function subscribe() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_tokens' }, (p) => MAPA.onToken(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'breu_state' }, (p) => {
       if (p.new?.key === 'cena') { MAPA.onAtiva(p.new.value); return; }
-      if (p.new?.key === 'mesa') { S.mesa = p.new.value || {}; if (route().name === 'mapa' && MESA) { if (isGM()) MESA.repintar(); else MESA.pintarDock(); } return; }
+      if (p.new?.key === 'mesa') { S.mesa = p.new.value || {}; if (route().name === 'mapa' && MESA) { if (isGM()) MESA.repintar(); else MESA.pintarDock(); MAPA.redraw(); } return; }
       if (p.new?.key === 'pedido') { MESA.onPedido(p.new.value); return; }
       if (p.new?.key === 'guia') { MESA.onGuia(p.new.value); return; }
       if (p.new?.key === 'video') { MESA.onVideo(p.new.value); return; }

@@ -171,10 +171,15 @@ export function criarMesa(ctx) {
 
   function abaHtml() {
     if (U.aba === 'grupo') return grupoHtml();
-    if (U.aba === 'mesa') return `${circuloHtml()}${G.estadoHtml()}${S.noite?.log?.length ? `<div class="g-painel"><h4>O que aconteceu na noite</h4><ol class="ms-log">${S.noite.log.slice(0, 12).map((l) => `<li>${esc(l.t)}</li>`).join('')}</ol></div>` : ''}`;
+    if (U.aba === 'mesa') return `${pausaHtml()}${circuloHtml()}${G.estadoHtml()}${S.noite?.log?.length ? `<div class="g-painel"><h4>O que aconteceu na noite</h4><ol class="ms-log">${S.noite.log.slice(0, 12).map((l) => `<li>${esc(l.t)}</li>`).join('')}</ol></div>` : ''}`;
     return rolagensHtml();
   }
 
+  const pausado = () => !!(S.mesa?.pausa?.ate && new Date(S.mesa.pausa.ate) > new Date());
+  const dataPausa = () => new Date(S.mesa.pausa.ate).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' });
+  function pausaHtml() {
+    return `<div class="g-painel ms-pausa"><h4>Pausa entre sessões</h4>${pausado() ? `<p>Os jogadores estão travados até <b>${esc(dataPausa())}</b>: não mexem no mapa, não rolam e não mudam a ficha. Destrava sozinho nesse dia.</p><button class="btn block" data-ms="pausa" data-v="0">Destravar agora</button>` : `<p>A mesa está aberta: os jogadores mexem no mapa e rolam. Para travar até a próxima sessão, escolha o dia dela:</p><input class="field sm" type="date" data-ms-pausa-data aria-label="Dia da próxima sessão"><button class="btn block" data-ms="pausa" data-v="1">Travar até esse dia</button>`}</div>`;
+  }
   function circuloHtml() {
     const f = S.noite?.circulo ?? 14;
     return `<div class="g-painel ms-circ"><h4>O círculo da vila <small>os Assombros investem contra isto</small></h4>
@@ -293,6 +298,7 @@ export function criarMesa(ctx) {
   function dockHtml(lateral) {
     if (isGM() && desktop()) return '';
     if (S.me?.role === 'espectador') return lateral ? `<div class="dk-assiste"><span class="lbl">Você está assistindo</span><p>Você vê o que os jogadores veem: o mapa, os bichos que o mestre revela, os vídeos e as rolagens. Fique à vontade.</p></div><div class="jg-feed"><span class="lbl">Rolagens da mesa</span>${S.rolls.slice(0, 10).map(linhaRoll).join('') || '<p class="ms-dica">Ninguém rolou ainda.</p>'}</div>` : '';
+    if (!isGM() && pausado()) return `<div class="dk-card dk-pausa"><span class="lbl">A noite está pausada</span><b class="dk-t">Vocês pararam na Hora Morta</b><p>Até a próxima sessão, ${esc(dataPausa())}, ninguém mexe no mapa, rola dado ou muda a ficha. Tudo fica exatamente como estava.</p></div>`;
     const c = meuChar(); if (!c || c.owner !== uid()) return lateral ? '<p class="ms-dica">Seu personagem ainda não foi aprovado pelo mestre.</p>' : '';
     let h = trocaHtml(c) + (lateral ? fichaMini(c) : '') + fisicoHtml(c.id);
     const aberto = lateral || U.dk;
@@ -666,6 +672,11 @@ export function criarMesa(ctx) {
         pintarPainel(); repintar(); return true;
       }
       if (a === 'aceso') { U.aceso = t.dataset.v === '1'; pintarPainel(); return true; }
+      if (a === 'pausa') {
+        if (t.dataset.v === '0') { await salvaMesa({ pausa: null }); toast('Mesa destravada: os jogadores já podem mexer.'); return true; }
+        const d = document.querySelector('[data-ms-pausa-data]')?.value; if (!d) { toast('Escolha o dia da próxima sessão.'); return true; }
+        await salvaMesa({ pausa: { ate: d + 'T00:00:00-03:00' } }); toast('Mesa travada até ' + dataPausa() + '.'); return true;
+      }
       if (a === 'circ') { ctx.garantirNoite(); const f = S.noite.circulo ?? 14, v = +t.dataset.v; S.noite.circulo = v === 0 ? 0 : Math.max(0, f + v); ctx.logNoite(v === 0 ? 'O círculo abriu uma brecha.' : `Força do círculo: ${S.noite.circulo}.`); await ctx.salvarNoite(); pintarPainel(); return true; }
       if (a === 'tela-preta') { await A.esconderCena(); pintarTopo(); toast('Os jogadores estão sem cena.'); return true; }
     }

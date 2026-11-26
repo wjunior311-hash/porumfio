@@ -684,3 +684,6 @@ div.g-rec b { font-family: var(--display); color: var(--claro); }
 .cad-fala { margin: 10px 0 0; font-style: italic; color: var(--osso2); line-height: 1.5; }
 .cad-n { color: var(--osso3); }
 .rt-papel { max-width: 520px; margin: 0; padding: 28px 30px; background: #e9dcc0; color: #3a2a1a; font-family: Georgia, serif; font-style: italic; font-size: 22px; line-height: 1.55; border-radius: 4px; }
+.dk-pausa { border-color: var(--brasa); }
+.dk-pausa p, .ms-pausa p { margin: 6px 0 10px; line-height: 1.5; }
+.ms-pausa input { margin-bottom: 8px; }

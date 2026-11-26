@@ -51,7 +51,8 @@ export function criarMapa(ctx) {
   const passoPx = () => (cena() ? W / cena().largura : 10);
   const tokPx = () => Math.max(40, Math.min(72, passoPx() * 1.5));
   const meuPc = () => { const ts = MP.tokens.filter((t) => t.kind === 'pc' && t.owner === uid()); return ts.find((t) => t.character_id === S.atual) || ts[0]; };
-  const podeMover = (t) => isGM() || (t.owner === uid() && (t.kind === 'pc' || t.kind === 'circulo'));
+  const pausado = () => !!(S.mesa?.pausa?.ate && new Date(S.mesa.pausa.ate) > new Date());
+  const podeMover = (t) => isGM() || (!pausado() && t.owner === uid() && (t.kind === 'pc' || t.kind === 'circulo'));
   const distPassos = (t, x, y) => { const c = cena(); return Math.hypot(x - t.ax, (y - t.ay) * c.aspecto) * c.largura; };
 
   // ---------- dados ----------
